@@ -235,7 +235,7 @@ export function StaffManager() {
         category: 'staff',
         changes: [
           { field: '名前', newValue: safeStaffData.name },
-          { field: '役割', newValue: safeStaffData.role },
+          { field: '役割', newValue: safeStaffData.role.join(', ') },
           { field: '勤務店舗', newValue: safeStaffData.stores.join(', ') }
         ]
       });
@@ -255,7 +255,7 @@ export function StaffManager() {
       category: 'staff',
       changes: [
         { field: '名前', oldValue: staffData.name, newValue: '削除済み' },
-        { field: '役割', oldValue: staffData.role, newValue: '削除済み' }
+        { field: '役割', oldValue: staffData.role.join(', '), newValue: '削除済み' }
       ]
     });
   };
@@ -364,7 +364,7 @@ export function StaffManager() {
                   console.log('=== スタッフ側連携テスト ===');
                   console.log('現在のスタッフ数:', staff.length);
                   staff.forEach(member => {
-                    if (member.role === 'GM' || member.role === 'マネージャー') {
+                    if (member.role.includes('GM') || member.role.includes('マネージャー')) {
                       console.log(`${member.name} (${member.role})の公演可能シナリオ:`, member.availableScenarios);
                     }
                   });
@@ -667,7 +667,7 @@ export function StaffManager() {
                                 onClick={() => {
                                   const password = prompt('連絡先を表示するにはパスワードを入力してください:');
                                   if (password === '0909') {
-                                    alert(`${member.name}の連絡先:\n電話: ${member.phoneNumber}\nメール: ${member.email}`);
+                                    alert(`${member.name}の連絡先:\n電話: ${member.contact.phone}\nメール: ${member.contact.email}`);
                                   } else if (password !== null) {
                                     alert('パスワードが間違っています。');
                                   }

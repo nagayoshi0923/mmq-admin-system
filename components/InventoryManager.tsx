@@ -181,7 +181,8 @@ export function InventoryManager() {
       condition: 'excellent',
       purchaseDate: '2025-01-01',
       purchasePrice: 800,
-      supplier: 'オフィス用品店'
+      supplier: 'オフィス用品店',
+      usedInScenarios: []
     },
     {
       id: '5',
@@ -196,7 +197,8 @@ export function InventoryManager() {
       purchaseDate: '2024-09-05',
       purchasePrice: 12000,
       nextMaintenance: '2025-03-05',
-      notes: '定期点検必要'
+      notes: '定期点検必要',
+      usedInScenarios: []
     }
   ];
 

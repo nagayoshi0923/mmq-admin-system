@@ -44,7 +44,7 @@ export function useSupabaseData<T>(options: UseSupabaseDataOptions<T>) {
       setLoading(true);
       setError(null);
 
-      let query = supabase.from(options.table);
+      let query: any = supabase.from(options.table);
 
       // SELECT句の設定
       if (options.select) {

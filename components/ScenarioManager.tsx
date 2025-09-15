@@ -1140,8 +1140,8 @@ export function ScenarioManager() {
                               <TooltipContent>
                                 <div className="space-y-1">
                                   {kitInfo.kitsByStore.map((entry) => (
-                                    <div key={entry.store.id} className="text-xs">
-                                      {entry.store.name}: {entry.kits.length}キット
+                                    <div key={entry.storeId} className="text-xs">
+                                      {entry.storeName}: {entry.kits.length}キット
                                     </div>
                                   ))}
                                 </div>

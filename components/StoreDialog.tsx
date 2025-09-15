@@ -124,7 +124,9 @@ export function StoreDialog({ store, onSave, trigger, open, onOpenChange }: Stor
       capacity: formData.capacity!,
       rooms: formData.rooms!,
       notes: formData.notes || '',
-      performanceKits: formData.performanceKits || []
+      performanceKits: formData.performanceKits || [],
+      color: '#3B82F6', // デフォルト色
+      shortName: formData.name!.substring(0, 2) // 名前の最初の2文字
     };
 
     if (store) {

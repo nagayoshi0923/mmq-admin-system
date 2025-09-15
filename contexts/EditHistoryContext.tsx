@@ -7,7 +7,7 @@ export interface EditHistoryEntry {
   action: 'create' | 'update' | 'delete';
   target: string;
   summary: string;
-  category: 'staff' | 'scenario' | 'schedule' | 'reservation' | 'sales' | 'customer' | 'inventory';
+  category: 'staff' | 'scenario' | 'schedule' | 'reservation' | 'sales' | 'customer' | 'inventory' | 'store' | 'license';
   changes: {
     field: string;
     oldValue?: string;

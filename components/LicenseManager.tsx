@@ -128,8 +128,9 @@ export function LicenseManager() {
       return [];
     }
     return availableScenarios
-      .filter((scenario) => scenario && typeof scenario === 'string' && scenario.trim() !== '')
-      .filter((scenario, index, self) => self.indexOf(scenario) === index);
+      .map(scenario => typeof scenario === 'string' ? scenario : scenario.title)
+      .filter((title): title is string => title && title.trim() !== '')
+      .filter((title, index, self) => self.indexOf(title) === index);
   }, [availableScenarios]);
 
   // 状態管理

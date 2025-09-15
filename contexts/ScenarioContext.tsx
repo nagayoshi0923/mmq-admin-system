@@ -83,7 +83,8 @@ const mockScenarios: Scenario[] = [
     requiredProps: ['Keynoteあり'],
     genre: ['ミステリー'],
     hasPreReading: true,
-    releaseDate: '2022-12-10'
+    releaseDate: '2022-12-10',
+    licenseAmount: 2500
   },
   {
     id: '4',
@@ -99,7 +100,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['Keynoteあり'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '5',
@@ -115,7 +117,8 @@ const mockScenarios: Scenario[] = [
     status: 'maintenance',
     requiredProps: ['準備中'],
     genre: ['ミステリー'],
-    hasPreReading: false
+    hasPreReading: false,
+    licenseAmount: 2500
   },
   {
     id: '6',
@@ -131,7 +134,8 @@ const mockScenarios: Scenario[] = [
     status: 'retired',
     requiredProps: ['現在公演中止'],
     genre: ['ミステリー'],
-    hasPreReading: false
+    hasPreReading: false,
+    licenseAmount: 2500
   },
   {
     id: '7',
@@ -147,7 +151,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['Keynoteあり', 'ハッシュタグ案内あり'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '8',
@@ -163,7 +168,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['Keynoteあり'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '9',
@@ -179,7 +185,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['Keynoteあり', '2キット'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '10',
@@ -195,7 +202,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['Keynoteあり'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '11',
@@ -211,7 +219,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['Keynoteあり'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '12',
@@ -227,7 +236,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['Keynoteあり', '2キット'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '13',
@@ -243,7 +253,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['Keynoteあり', '2キット'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '14',
@@ -259,7 +270,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['Keynoteあり', '2キット'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '15',
@@ -275,7 +287,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['Keynoteあり', '期間限定'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '16',
@@ -291,7 +304,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['Keynoteあり', '床が綺麗なところ'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '17',
@@ -307,7 +321,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['Keynoteあり', '2キット'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '18',
@@ -323,7 +338,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['機械人形', '歯車セット', 'スチーム演出'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '19',
@@ -339,7 +355,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['Keynoteあり'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '20',
@@ -355,7 +372,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['Keynoteあり', 'ハッシュタグ案内あり', '2キット'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '21',
@@ -371,7 +389,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['鳥の羽根', '森の音効果', 'ファンタジー装飾'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '22',
@@ -387,7 +406,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['Keynoteあり'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '23',
@@ -403,7 +423,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['Keynoteあり'],
     genre: ['ミステリー'],
-    hasPreReading: false
+    hasPreReading: false,
+    licenseAmount: 2500
   },
   {
     id: '24',
@@ -419,7 +440,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['Keynoteあり', '3キット'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '25',
@@ -435,7 +457,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['双子の写真', '祭りの装飾', '火の演出'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '26',
@@ -451,7 +474,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['Keynoteあり'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '27',
@@ -467,7 +491,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['Keynoteあり', 'ハッシュタグ案内あり', '2GM制'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '28',
@@ -483,7 +508,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['Keynoteあり'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '29',
@@ -499,7 +525,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['Keynoteあり', '各GMキット有り'],
     genre: ['ミステリー'],
-    hasPreReading: false
+    hasPreReading: false,
+    licenseAmount: 2500
   },
   {
     id: '30',
@@ -515,7 +542,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['Keynoteあり', '2キット'],
     genre: ['ミステリー'],
-    hasPreReading: false
+    hasPreReading: false,
+    licenseAmount: 2500
   },
   {
     id: '31',
@@ -531,7 +559,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['年表', '時代衣装', '長編演出セット'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '32',
@@ -547,7 +576,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['森の背景', '獣の鳴き声', '投票箱'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '33',
@@ -563,7 +593,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['Keynoteあり', '2キット'],
     genre: ['ミステリー'],
-    hasPreReading: false
+    hasPreReading: false,
+    licenseAmount: 2500
   },
   {
     id: '34',
@@ -579,7 +610,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['館の模型', 'カメラ小道具', 'コメディ演出セット'],
     genre: ['ミステリー'],
-    hasPreReading: false
+    hasPreReading: false,
+    licenseAmount: 2500
   },
   {
     id: '35',
@@ -595,7 +627,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['和室セット', '刀レプリカ', '月光演出'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '36',
@@ -611,7 +644,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['GM席', 'メタ演出道具', '衝撃演出セット'],
     genre: ['ミステリー'],
-    hasPreReading: false
+    hasPreReading: false,
+    licenseAmount: 2500
   },
   {
     id: '37',
@@ -627,7 +661,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['水の演出', '波紋エフェクト', '幻想装飾'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '38',
@@ -643,7 +678,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['桜の装飾', '月光演出', '季節感演出'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '39',
@@ -659,7 +695,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['未来装飾', 'ハイテク小道具', 'サイバー演出'],
     genre: ['ミステリー'],
-    hasPreReading: true
+    hasPreReading: true,
+    licenseAmount: 2500
   },
   {
     id: '40',
@@ -675,7 +712,8 @@ const mockScenarios: Scenario[] = [
     status: 'available',
     requiredProps: ['鬼の面', '和風背景', '感動演出セット'],
     genre: ['ミステリー'],
-    hasPreReading: false
+    hasPreReading: false,
+    licenseAmount: 2500
   }
 ];
 

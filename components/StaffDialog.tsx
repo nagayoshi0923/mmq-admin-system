@@ -13,27 +13,6 @@ import { useScenarios } from '../contexts/ScenarioContext';
 import { Staff } from '../contexts/StaffContext';
 import { ItemEditHistory } from './ItemEditHistory';
 
-interface Staff {
-  id: string;
-  name: string;
-  lineName: string;
-  xAccount: string;
-  role: 'GM' | 'サポート' | 'マネージャー' | '社長' | '企画' | '事務';
-  stores: string[];
-  ngDays: string[];
-  wantToLearn: string[];
-  availableScenarios: string[]; // 公演可能シナリオ
-  notes: string;
-  contact: {
-    phone: string;
-    email: string;
-  };
-  availability: string[];
-  experience: number;
-  specialScenarios: string[];
-  status: 'active' | 'inactive' | 'on-leave';
-}
-
 interface StaffDialogProps {
   staff?: Staff;
   onSave: (staff: Staff) => void;
@@ -53,7 +32,7 @@ export function StaffDialog({ staff, onSave, trigger }: StaffDialogProps) {
     name: '',
     lineName: '',
     xAccount: '',
-    role: 'GM',
+    role: ['GM'],
     stores: [],
     ngDays: [],
     wantToLearn: [],
@@ -86,7 +65,7 @@ export function StaffDialog({ staff, onSave, trigger }: StaffDialogProps) {
           name: '',
           lineName: '',
           xAccount: '',
-          role: 'GM',
+          role: ['GM'],
           stores: [],
           ngDays: [],
           wantToLearn: [],
@@ -179,16 +158,24 @@ export function StaffDialog({ staff, onSave, trigger }: StaffDialogProps) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="role">役割</Label>
-                <Select value={formData.role} onValueChange={(value: any) => setFormData(prev => ({ ...prev, role: value }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {roleOptions.map(role => (
-                      <SelectItem key={role} value={role}>{role}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="space-y-2">
+                  {roleOptions.map((roleOption) => (
+                    <div key={roleOption} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={roleOption}
+                        checked={formData.role.includes(roleOption)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setFormData(prev => ({ ...prev, role: [...prev.role, roleOption] }));
+                          } else {
+                            setFormData(prev => ({ ...prev, role: prev.role.filter(r => r !== roleOption) }));
+                          }
+                        }}
+                      />
+                      <Label htmlFor={roleOption}>{roleOption}</Label>
+                    </div>
+                  ))}
+                </div>
               </div>
               <div>
                 <Label htmlFor="status">ステータス</Label>
@@ -297,7 +284,7 @@ export function StaffDialog({ staff, onSave, trigger }: StaffDialogProps) {
           </div>
 
           {/* 公演可能シナリオ */}
-          {(formData.role === 'GM' || formData.role === 'マネージャー' || formData.role === '企画') && (
+          {(formData.role.includes('GM') || formData.role.includes('マネージャー') || formData.role.includes('企画')) && (
             <div className="space-y-4">
               <h3>公演可能シナリオ</h3>
               <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto border rounded-lg p-3">

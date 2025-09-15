@@ -7,6 +7,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { AlertCircle, RefreshCw, Calendar, User, Clock, CheckCircle, AlertTriangle, Wifi, WifiOff, Mail, Phone, CreditCard, Users, Search, Filter } from 'lucide-react';
+import { EditHistoryEntry } from '../contexts/EditHistoryContext';
 
 
 interface StoresReservation {
@@ -602,7 +603,7 @@ const mockReservations: StoresReservation[] = [
     '予約金額': 4500,
     'かんざしポイント利用料': 0,
     'かんざし支払金額': 0,
-    '予約���モ': '',
+    '予約メモ': '',
     
     // 店舗情報
     'merchant-public-id': 'queens-waltz',
@@ -752,6 +753,7 @@ export function ReservationManager() {
       action: 'create',
       target: 'ストアーズ予約連携',
       summary: 'ストアーズ予約APIとの連携を開始しました',
+      category: 'reservation',
       changes: [
         { field: 'API連携', newValue: '有効' },
         { field: '取得件数', newValue: '4件' }
@@ -826,6 +828,7 @@ export function ReservationManager() {
         action: 'update',
         target: 'ストアーズ予約データ',
         summary: `予約情報を更新しました（${transformedData.length}件取得）`,
+        category: 'reservation',
         changes: [
           { field: '取得件数', newValue: `${transformedData.length}件` },
           { field: '最終更新', newValue: new Date().toLocaleString('ja-JP') },
@@ -857,6 +860,7 @@ export function ReservationManager() {
         action: 'update',
         target: 'ストアーズ予約データ（フォールバック）',
         summary: `API接続失敗によりモックデータを表示（${mockReservations.length}件）`,
+        category: 'reservation',
         changes: [
           { field: 'エラー', newValue: 'CORS制限によりAPI接続不可' },
           { field: 'データソース', newValue: 'モック（デモ用）' }

@@ -137,13 +137,13 @@ export function SalesManager() {
     const savedSales = localStorage.getItem('murder-mystery-sales');
     if (savedSales) {
       try {
-        setSalesRecords(JSON.parse(savedSales));
+        setSalesRecords(JSON.parse(savedSales) as SalesRecord[]);
       } catch (error) {
         console.error('Failed to load sales data:', error);
-        setSalesRecords(initialSalesRecords);
+        setSalesRecords(initialSalesRecords as SalesRecord[]);
       }
     } else {
-      setSalesRecords(initialSalesRecords);
+      setSalesRecords(initialSalesRecords as SalesRecord[]);
     }
   }, []);
 
