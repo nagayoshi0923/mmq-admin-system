@@ -9,7 +9,7 @@ import { cn } from "./utils";
 const Dialog = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>
->(({ ...props }, ref) => {
+>(({ ...props }) => {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />;
 });
 Dialog.displayName = "Dialog";
@@ -25,7 +25,7 @@ DialogTrigger.displayName = "DialogTrigger";
 const DialogPortal = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Portal>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Portal>
->(({ ...props }, ref) => {
+>(({ ...props }) => {
   return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
 });
 DialogPortal.displayName = "DialogPortal";

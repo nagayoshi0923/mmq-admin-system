@@ -90,3 +90,4 @@ index-distribution.html
 package-distribution.json
 tsconfig-distribution.json
 vite.config-distribution.ts
+.vercel

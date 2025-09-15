@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { dataStorage, performStartupHealthCheck } from '../utils/dataStorage';
 import { useScenarios } from '../contexts/ScenarioContext';
 import { useStaff } from '../contexts/StaffContext';
 import { useStores } from '../contexts/StoreContext';
@@ -16,38 +17,6 @@ interface DataStatus {
   status: 'healthy' | 'warning' | 'error';
 }
 
-// Basic data storage utility
-const hasData = (key: string): boolean => {
-  const data = localStorage.getItem(key);
-  return data !== null && data !== '';
-};
-
-const getLastSavedTime = (key: string): Date | null => {
-  const data = localStorage.getItem(key);
-  if (!data) return null;
-  try {
-    const parsed = JSON.parse(data);
-    return new Date(); // Simplified - just return current time
-  } catch {
-    return null;
-  }
-};
-
-const getStorageUsage = () => {
-  let total = 0;
-  for (let key in localStorage) {
-    if (localStorage.hasOwnProperty(key)) {
-      total += localStorage[key].length;
-    }
-  }
-  const maxSize = 5 * 1024 * 1024; // 5MB typical limit
-  return {
-    percentage: (total / maxSize) * 100,
-    used: total,
-    max: maxSize
-  };
-};
-
 export function DataIntegrityMonitor() {
   const { scenarios } = useScenarios();
   const { staff } = useStaff();
@@ -64,32 +33,32 @@ export function DataIntegrityMonitor() {
       {
         key: 'murder-mystery-scenarios',
         name: 'シナリオデータ',
-        hasData: hasData('murder-mystery-scenarios'),
-        lastSaved: getLastSavedTime('murder-mystery-scenarios'),
+        hasData: dataStorage.hasData('murder-mystery-scenarios'),
+        lastSaved: dataStorage.getLastSavedTime('murder-mystery-scenarios'),
         dataCount: scenarios.length,
         status: scenarios.length > 0 ? 'healthy' : 'warning'
       },
       {
         key: 'murder-mystery-staff',
         name: 'スタッフデータ',
-        hasData: hasData('murder-mystery-staff'),
-        lastSaved: getLastSavedTime('murder-mystery-staff'),
+        hasData: dataStorage.hasData('murder-mystery-staff'),
+        lastSaved: dataStorage.getLastSavedTime('murder-mystery-staff'),
         dataCount: staff.length,
         status: staff.length > 0 ? 'healthy' : 'warning'
       },
       {
         key: 'murderMystery_stores',
         name: '店舗データ',
-        hasData: hasData('murderMystery_stores'),
-        lastSaved: getLastSavedTime('murderMystery_stores'),
+        hasData: dataStorage.hasData('murderMystery_stores'),
+        lastSaved: dataStorage.getLastSavedTime('murderMystery_stores'),
         dataCount: stores.length,
         status: stores.length > 0 ? 'healthy' : 'warning'
       },
       {
         key: 'murder-mystery-edit-history',
         name: '編集履歴',
-        hasData: hasData('murder-mystery-edit-history'),
-        lastSaved: getLastSavedTime('murder-mystery-edit-history'),
+        hasData: dataStorage.hasData('murder-mystery-edit-history'),
+        lastSaved: dataStorage.getLastSavedTime('murder-mystery-edit-history'),
         dataCount: editHistory.length,
         status: 'healthy'
       }
@@ -106,6 +75,10 @@ export function DataIntegrityMonitor() {
 
   // 起動時の健全性チェック
   useEffect(() => {
+    const isHealthy = performStartupHealthCheck();
+    if (!isHealthy) {
+      setSystemHealth('error');
+    }
     checkDataIntegrity();
   }, [scenarios, staff, stores, editHistory]);
 
@@ -216,7 +189,7 @@ export function DataIntegrityMonitor() {
               
               <div className="mt-3 pt-2 border-t">
                 <div className="text-xs text-muted-foreground">
-                  ストレージ使用量: {getStorageUsage().percentage.toFixed(1)}%
+                  ストレージ使用量: {dataStorage.getStorageUsage().percentage.toFixed(1)}%
                 </div>
               </div>
             </div>

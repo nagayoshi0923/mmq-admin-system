@@ -1,50 +1,39 @@
-import { useEditHistory, EditHistoryEntry } from '../contexts/EditHistoryContext';
-import { Badge } from './ui/badge';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Badge } from './ui/badge';
+import { ScrollArea } from './ui/scroll-area';
 import { Clock, User, Edit, Plus, Trash2 } from 'lucide-react';
+import { useEditHistory } from '../contexts/EditHistoryContext';
 
 interface ItemEditHistoryProps {
   itemId: string;
   itemName: string;
-  category: EditHistoryEntry['category'];
-  maxEntries?: number;
+  category: 'staff' | 'scenario' | 'schedule' | 'reservation' | 'sales' | 'customer' | 'inventory';
 }
 
-export function ItemEditHistory({ itemId, itemName, category, maxEntries = 5 }: ItemEditHistoryProps) {
-  const { getHistoryByItem } = useEditHistory();
-  
-  const history = getHistoryByItem(itemId, itemName, category).slice(0, maxEntries);
+export function ItemEditHistory({ itemId, itemName, category }: ItemEditHistoryProps) {
+  const { editHistory } = useEditHistory();
 
-  if (history.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="w-4 h-4" />
-            編集履歴
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground text-sm">編集履歴はありません。</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  // 特定の項目に関連する編集履歴をフィルタリング
+  const itemHistory = editHistory.filter(entry => 
+    entry.category === category && 
+    (entry.target.includes(itemName) || entry.target.includes(itemId))
+  );
 
-  const getActionIcon = (action: EditHistoryEntry['action']) => {
+  const getActionIcon = (action: string) => {
     switch (action) {
       case 'create':
-        return <Plus className="w-3 h-3 text-green-600" />;
+        return <Plus className="w-4 h-4 text-green-600" />;
       case 'update':
-        return <Edit className="w-3 h-3 text-blue-600" />;
+        return <Edit className="w-4 h-4 text-blue-600" />;
       case 'delete':
-        return <Trash2 className="w-3 h-3 text-red-600" />;
+        return <Trash2 className="w-4 h-4 text-red-600" />;
       default:
-        return <Edit className="w-3 h-3" />;
+        return <Edit className="w-4 h-4 text-muted-foreground" />;
     }
   };
 
-  const getActionColor = (action: EditHistoryEntry['action']) => {
+  const getActionBadgeColor = (action: string) => {
     switch (action) {
       case 'create':
         return 'bg-green-100 text-green-800';
@@ -57,80 +46,104 @@ export function ItemEditHistory({ itemId, itemName, category, maxEntries = 5 }: 
     }
   };
 
-  const getActionText = (action: EditHistoryEntry['action']) => {
-    switch (action) {
-      case 'create':
-        return '作成';
-      case 'update':
-        return '更新';
-      case 'delete':
-        return '削除';
-      default:
-        return '変更';
-    }
-  };
-
-  const formatDate = (timestamp: string) => {
-    return new Intl.DateTimeFormat('ja-JP', {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('ja-JP', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit'
-    }).format(new Date(timestamp));
+    });
   };
 
+  if (itemHistory.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="w-5 h-5" />
+            編集履歴
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            <Clock className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p>この項目の編集履歴はありません</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card className="w-full">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Clock className="w-4 h-4" />
+          <Clock className="w-5 h-5" />
           編集履歴
+          <Badge variant="secondary">{itemHistory.length}件</Badge>
         </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          {itemName} の編集履歴
+        </p>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {history.map((entry) => (
-          <div key={entry.id} className="border rounded-lg p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {getActionIcon(entry.action)}
-                <Badge className={getActionColor(entry.action)}>
-                  {getActionText(entry.action)}
-                </Badge>
-                <span className="text-sm font-medium">{entry.summary}</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <User className="w-3 h-3" />
-                {entry.user}
-              </div>
-            </div>
-            
-            <div className="text-xs text-muted-foreground">
-              {formatDate(entry.timestamp)}
-            </div>
-
-            {entry.changes.length > 0 && (
-              <div className="space-y-1">
-                {entry.changes.map((change, index) => (
-                  <div key={index} className="text-xs bg-muted/50 rounded px-2 py-1">
-                    <span className="font-medium">{change.field}:</span>{' '}
-                    {change.oldValue && (
-                      <span className="text-red-600 line-through">{change.oldValue}</span>
-                    )}
-                    {change.oldValue && ' → '}
-                    <span className="text-green-600">{change.newValue}</span>
+      <CardContent>
+        <ScrollArea className="h-64">
+          <div className="space-y-4">
+            {itemHistory.map((entry) => (
+              <div key={entry.id} className="border rounded-lg p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    {getActionIcon(entry.action)}
+                    <Badge className={getActionBadgeColor(entry.action)}>
+                      {entry.action === 'create' ? '作成' :
+                       entry.action === 'update' ? '更新' :
+                       entry.action === 'delete' ? '削除' : entry.action}
+                    </Badge>
                   </div>
-                ))}
+                  <div className="text-xs text-muted-foreground">
+                    {formatDate(entry.timestamp)}
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <User className="w-3 h-3 text-muted-foreground" />
+                    <span className="text-sm font-medium">{entry.user}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{entry.summary}</p>
+                </div>
+
+                {entry.changes && entry.changes.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      変更内容
+                    </h4>
+                    <div className="space-y-1">
+                      {entry.changes.map((change, index) => (
+                        <div key={index} className="text-xs">
+                          <span className="font-medium">{change.field}:</span>
+                          {change.oldValue && (
+                            <span className="text-red-600 line-through ml-1">
+                              {change.oldValue}
+                            </span>
+                          )}
+                          {change.oldValue && change.newValue && (
+                            <span className="mx-1">→</span>
+                          )}
+                          <span className="text-green-600 ml-1">
+                            {change.newValue}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+            ))}
           </div>
-        ))}
-        
-        {history.length === maxEntries && (
-          <p className="text-xs text-muted-foreground text-center">
-            最新{maxEntries}件を表示中
-          </p>
-        )}
+        </ScrollArea>
       </CardContent>
     </Card>
   );

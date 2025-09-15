@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useSupabase } from '../contexts/SupabaseContext';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { Alert, AlertDescription } from './ui/alert';
