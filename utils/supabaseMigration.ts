@@ -61,6 +61,9 @@ export class SupabaseMigration {
 
       const staff: Staff[] = JSON.parse(staffData);
       
+      // 既存データをクリア（必要に応じて）
+      // await supabase.from('staff').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      
       // データの変換と挿入
       const insertData = staff.map(s => ({
         id: s.id,
@@ -195,6 +198,30 @@ export class SupabaseMigration {
         return { success: false, count: 0, error: error.message };
       }
 
+      // 公演キットデータも移行
+      for (const store of stores) {
+        if (store.performanceKits && store.performanceKits.length > 0) {
+          const kitInsertData = store.performanceKits.map(kit => ({
+            id: kit.id,
+            scenario_id: kit.scenarioId,
+            scenario_title: kit.scenarioTitle,
+            kit_number: kit.kitNumber,
+            condition: kit.condition as 'excellent' | 'good' | 'fair' | 'poor' | 'damaged',
+            last_used: kit.lastUsed || null,
+            notes: kit.notes || null,
+            store_id: store.id
+          }));
+
+          const { error: kitError } = await supabase
+            .from('performance_kits')
+            .upsert(kitInsertData, { onConflict: 'id' });
+
+          if (kitError) {
+            console.warn(`店舗 ${store.name} のキットデータ移行で警告:`, kitError);
+          }
+        }
+      }
+
       this.setMigrationStatus({ stores: true });
       console.log(`店舗データ移行完了: ${stores.length}件`);
       
@@ -299,7 +326,7 @@ export class SupabaseMigration {
         };
       }
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('stores')
         .select('count')
         .limit(1);

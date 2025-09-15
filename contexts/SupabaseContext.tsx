@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { isSupabaseConfigured } from '../lib/supabase';
 import { SupabaseMigration } from '../utils/supabaseMigration';
 
 interface SupabaseContextType {
