@@ -1,0 +1,92 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+.next/
+.vercel/
+.netlify/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Cache directories
+.cache/
+.parcel-cache/
+.vite/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# Logs
+logs
+*.log
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+temp-*.txt
+*.tmp
+
+# Backup files
+App-*.tsx
+*-backup.*
+*-old.*
+
+# Scripts (exclude from repo)
+*.js
+!vite.config.js
+
+# Documentation (most)
+BRANCH_MANAGEMENT.md
+CHANGELOG.md
+CONTRIBUTING.md
+DOMAIN_PREPARATION.md
+PROJECT_CLEANUP.md
+README-Distribution.md
+RESERVATION_SITE_STRUCTURE.md
+SAFE_VERSION_NOTES.md
+SETUP.md
+SUPABASE_*.md
+URGENT-CLEANUP.md
+VERSIONS.json
+Attributions.md
+
+# Old src folder
+src/
+
+# Distribution files
+*-distribution.*
+index-distribution.html
+package-distribution.json
+tsconfig-distribution.json
+vite.config-distribution.ts
