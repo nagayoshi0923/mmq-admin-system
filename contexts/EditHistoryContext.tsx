@@ -144,7 +144,7 @@ export function EditHistoryProvider({ children }: { children: ReactNode }) {
 export function useEditHistory() {
   const context = useContext(EditHistoryContext);
   if (context === undefined) {
-    throw new error('useEditHistory must be used within an EditHistoryProvider');
+    throw new Error('useEditHistory must be used within an EditHistoryProvider');
   }
   return context;
 }

@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
 // 環境変数の取得（未設定の場合はダミー値を使用）
-const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL || 'https://your-project.supabase.co';
-const supabaseAnonKey = import.meta.env?.VITE_SUPABASE_ANON_KEY || 'your-anon-key';
+const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL || 'https://your-project.supabase.co';
+const supabaseAnonKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || 'your-anon-key';
 
 // Supabaseクライアントの作成（環境変数が正しく設定されていない場合でも動作）
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
