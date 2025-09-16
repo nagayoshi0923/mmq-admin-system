@@ -391,8 +391,7 @@ export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
     table: 'staff',
     realtime: true,
     fallbackKey: 'murder-mystery-staff',
-    orderBy: { column: 'name', ascending: true },
-    validator: isValidStaff // 型ガードを追加
+    orderBy: { column: 'name', ascending: true }
   });
 
   // シナリオとスタッフの連携機能

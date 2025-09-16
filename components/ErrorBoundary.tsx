@@ -43,7 +43,7 @@ export class ErrorBoundary extends Component<Props, State> {
     }
     
     // 統一エラーハンドラーに送信
-    handleReactError(error, errorInfo);
+    handleReactError(error, { componentStack: errorInfo.componentStack || '' });
   }
 
   handleReload = () => {
@@ -177,7 +177,7 @@ export class SimpleErrorBoundary extends Component<SimpleErrorBoundaryProps, Sim
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    handleReactError(error, errorInfo);
+    handleReactError(error, { componentStack: errorInfo.componentStack || '' });
   }
 
   render() {

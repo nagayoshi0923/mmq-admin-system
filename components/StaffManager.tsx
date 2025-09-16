@@ -233,7 +233,8 @@ export const StaffManager = React.memo(() => {
     const safeStaffData: Staff = {
       ...staffData,
       name: safeToString(staffData.name),
-      role: safeGetArray(staffData.role, (item): item is string => typeof item === 'string'),
+      role: safeGetArray(staffData.role, (item): item is 'GM' | 'サポート' | 'マネージャー' | '社長' | '企画' | '事務' => 
+        typeof item === 'string' && ['GM', 'サポート', 'マネージャー', '社長', '企画', '事務'].includes(item)),
       stores: safeGetArray(staffData.stores, (item): item is string => typeof item === 'string'),
       availableScenarios: safeGetArray(staffData.availableScenarios, (item): item is string => typeof item === 'string', [])
     };

@@ -1,0 +1,86 @@
+# 共有環境変数設定ファイル
+# 予約サイトと管理ツールの両方で使用する環境変数
+
+# ===========================================
+# Supabase設定（両システム共通）
+# ===========================================
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# ===========================================
+# システム識別子
+# ===========================================
+# 管理ツール用
+VITE_SYSTEM_TYPE=admin
+VITE_SYSTEM_NAME=MMQ Admin System
+
+# 予約サイト用（予約サイトで使用）
+# VITE_SYSTEM_TYPE=reservation
+# VITE_SYSTEM_NAME=MMQ Reservation Site
+
+# ===========================================
+# API設定
+# ===========================================
+# 内部API通信用の共有シークレット
+VITE_API_SECRET_KEY=your-shared-secret-key-for-internal-api
+
+# Webhook URL（予約サイト→管理ツール通知用）
+VITE_ADMIN_WEBHOOK_URL=https://your-admin-system.netlify.app/api/webhook
+VITE_RESERVATION_WEBHOOK_URL=https://your-reservation-site.netlify.app/api/webhook
+
+# ===========================================
+# 外部サービス連携
+# ===========================================
+# ストアーズ予約API
+VITE_STORES_API_KEY=your-stores-api-key
+VITE_STORES_MERCHANT_ID=your-merchant-id
+
+# メール通知サービス（SendGrid, Resend等）
+VITE_EMAIL_SERVICE_API_KEY=your-email-service-key
+VITE_EMAIL_FROM_ADDRESS=noreply@your-domain.com
+
+# SMS通知サービス（Twilio等）
+VITE_SMS_SERVICE_SID=your-sms-service-sid
+VITE_SMS_AUTH_TOKEN=your-sms-auth-token
+
+# ===========================================
+# リアルタイム同期設定
+# ===========================================
+# Supabaseリアルタイム機能の有効化
+VITE_ENABLE_REALTIME=true
+
+# 同期間隔（ミリ秒）
+VITE_SYNC_INTERVAL=30000
+
+# 同期対象テーブル
+VITE_SYNC_TABLES=reservations,customers,staff,scenarios,stores
+
+# ===========================================
+# セキュリティ設定
+# ===========================================
+# CORS設定
+VITE_ALLOWED_ORIGINS=https://your-admin-system.netlify.app,https://your-reservation-site.netlify.app
+
+# JWT設定
+VITE_JWT_SECRET=your-jwt-secret-key
+VITE_JWT_EXPIRES_IN=24h
+
+# ===========================================
+# 通知設定
+# ===========================================
+# 新規予約通知
+VITE_NOTIFY_NEW_RESERVATION=true
+VITE_NOTIFY_RESERVATION_CHANGE=true
+VITE_NOTIFY_CANCELLATION=true
+
+# 通知先メールアドレス
+VITE_ADMIN_EMAIL=admin@your-domain.com
+VITE_MANAGER_EMAIL=manager@your-domain.com
+
+# ===========================================
+# デバッグ・開発用設定
+# ===========================================
+VITE_DEBUG_MODE=false
+VITE_LOG_LEVEL=info
+VITE_ENABLE_MOCK_DATA=false
