@@ -27,7 +27,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { setupGlobalErrorHandlers } from './utils/errorHandler';
 
 // Lazy load components for better performance
-const ScheduleManager = lazy(() => import('./components/ScheduleManager').then(module => ({ default: module.NewScheduleManager })));
+const ScheduleManager = lazy(() => import('./components/ScheduleManager').then(module => ({ default: module.ScheduleManager })));
 const StaffManager = lazy(() => import('./components/StaffManager').then(module => ({ default: module.StaffManager })));
 const ScenarioManager = lazy(() => import('./components/ScenarioManager').then(module => ({ default: module.ScenarioManager })));
 const StoreManager = lazy(() => import('./components/StoreManager').then(module => ({ default: module.StoreManager })));
