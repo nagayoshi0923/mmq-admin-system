@@ -525,7 +525,7 @@ export function ScenarioManager() {
       <TableCell 
         className={`${className} cursor-pointer hover:bg-muted/50 p-1 rounded`}
         onClick={() => startEdit(scenario.id, field, scenario[field as keyof Scenario])}
-        title="クリックし���編集"
+        title="クリックして編集"
       >
         {children}
       </TableCell>
