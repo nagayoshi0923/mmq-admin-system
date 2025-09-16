@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { setStaffUpdateFunction, setStaffBatchSyncFunction } from './ScenarioContext';
 import { useSupabaseData } from '../hooks/useSupabaseData';
+import { isValidStaff, isValidArray, parseLocalStorageData, safeGetArray } from '../utils/typeGuards';
 
 export interface Staff {
   id: string;
@@ -390,7 +391,8 @@ export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
     table: 'staff',
     realtime: true,
     fallbackKey: 'murder-mystery-staff',
-    orderBy: { column: 'name', ascending: true }
+    orderBy: { column: 'name', ascending: true },
+    validator: isValidStaff // 型ガードを追加
   });
 
   // シナリオとスタッフの連携機能

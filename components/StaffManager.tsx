@@ -27,6 +27,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { useEditHistory } from '../contexts/EditHistoryContext';
 import { useStaff, Staff } from '../contexts/StaffContext';
 import { setStaffUpdateFunction } from '../contexts/ScenarioContext';
+import { isValidStaff, isNotNullish, safeGetArray, safeToString } from '../utils/typeGuards';
 import { StaffDialog } from './StaffDialog';
 import { StaffScheduleDialog } from './StaffScheduleDialog';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
@@ -222,10 +223,19 @@ export const StaffManager = React.memo(() => {
   
   // スタッフ保存関数（useCallbackで最適化）
   const handleSaveStaff = useCallback((staffData: Staff) => {
+    // 型安全性を確保
+    if (!isValidStaff(staffData)) {
+      console.error('Invalid staff data:', staffData);
+      return;
+    }
+
     // データの安全性を確保
-    const safeStaffData = {
+    const safeStaffData: Staff = {
       ...staffData,
-      availableScenarios: staffData.availableScenarios || []
+      name: safeToString(staffData.name),
+      role: safeGetArray(staffData.role, (item): item is string => typeof item === 'string'),
+      stores: safeGetArray(staffData.stores, (item): item is string => typeof item === 'string'),
+      availableScenarios: safeGetArray(staffData.availableScenarios, (item): item is string => typeof item === 'string', [])
     };
     
     const existingIndex = staff.findIndex(s => s.id === safeStaffData.id);
@@ -558,26 +568,20 @@ export const StaffManager = React.memo(() => {
                                 </AvatarFallback>
                               </Avatar>
                               <div className="min-w-0 flex-1">
-                                <div className="truncate">{member.name}</div>
+                                <div className="truncate">{safeToString(member.name)}</div>
                                 <div className="text-sm text-muted-foreground truncate">
-                                  {member.lineName}
+                                  {safeToString(member.lineName)}
                                 </div>
                               </div>
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-wrap gap-1">
-                              {Array.isArray(member.role) ? (
-                                member.role.map((role, index) => (
-                                  <Badge key={index} className={`${roleColors[role]} text-xs`}>
-                                    {role}
-                                  </Badge>
-                                ))
-                              ) : (
-                                <Badge className={`${roleColors[member.role as string]} text-xs`}>
-                                  {member.role}
+                              {safeGetArray(member.role, (item): item is string => typeof item === 'string').map((role, index) => (
+                                <Badge key={index} className={`${roleColors[role] || 'bg-gray-100 text-gray-800'} text-xs`}>
+                                  {safeToString(role)}
                                 </Badge>
-                              )}
+                              ))}
                             </div>
                           </TableCell>
                           <TableCell>
