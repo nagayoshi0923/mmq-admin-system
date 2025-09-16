@@ -231,6 +231,51 @@ export interface Database {
         };
       };
 
+      // スケジュールイベントテーブル
+      schedule_events: {
+        Row: {
+          id: string;
+          date: string;
+          venue: string;
+          scenario: string;
+          gms: string[];
+          start_time: string;
+          end_time: string;
+          category: 'オープン公演' | '貸切公演' | 'GMテスト' | 'テストプレイ' | '出張公演';
+          reservation_info: string | null;
+          notes: string | null;
+          is_cancelled: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          date: string;
+          venue: string;
+          scenario: string;
+          gms?: string[];
+          start_time: string;
+          end_time: string;
+          category: 'オープン公演' | '貸切公演' | 'GMテスト' | 'テストプレイ' | '出張公演';
+          reservation_info?: string | null;
+          notes?: string | null;
+          is_cancelled?: boolean;
+        };
+        Update: {
+          id?: string;
+          date?: string;
+          venue?: string;
+          scenario?: string;
+          gms?: string[];
+          start_time?: string;
+          end_time?: string;
+          category?: 'オープン公演' | '貸切公演' | 'GMテスト' | 'テストプレイ' | '出張公演';
+          reservation_info?: string | null;
+          notes?: string | null;
+          is_cancelled?: boolean;
+        };
+      };
+
       // 編集履歴テーブル
       edit_history: {
         Row: {

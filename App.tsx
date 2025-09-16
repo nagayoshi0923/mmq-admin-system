@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { ScenarioProvider } from './contexts/ScenarioContext';
 import { StaffProvider } from './contexts/StaffContext';
 import { StoreProvider } from './contexts/StoreContext';
+import { ScheduleProvider } from './contexts/ScheduleContext';
 import { EditHistoryProvider } from './contexts/EditHistoryContext';
 import { SupabaseProvider } from './contexts/SupabaseContext';
 // 最適化されたアイコンインポート
@@ -26,7 +27,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { setupGlobalErrorHandlers } from './utils/errorHandler';
 
 // Lazy load components for better performance
-const ScheduleManager = lazy(() => import('./components/ScheduleManager').then(module => ({ default: module.ScheduleManager })));
+const ScheduleManager = lazy(() => import('./components/ScheduleManager').then(module => ({ default: module.NewScheduleManager })));
 const StaffManager = lazy(() => import('./components/StaffManager').then(module => ({ default: module.StaffManager })));
 const ScenarioManager = lazy(() => import('./components/ScenarioManager').then(module => ({ default: module.ScenarioManager })));
 const StoreManager = lazy(() => import('./components/StoreManager').then(module => ({ default: module.StoreManager })));
@@ -111,7 +112,8 @@ export default function App() {
           <ScenarioProvider>
             <StaffProvider>
               <StoreProvider>
-              <EditHistoryProvider>
+                <ScheduleProvider>
+                  <EditHistoryProvider>
               <div className="min-h-screen bg-background">
             <Tabs value={activeTab} onValueChange={handleTabChange} className="min-h-screen">
               <header className="border-b bg-card">
@@ -241,10 +243,11 @@ export default function App() {
           />
           <DataIntegrityMonitor />
           <SupabaseStatus />
-              </EditHistoryProvider>
-            </StoreProvider>
-          </StaffProvider>
-        </ScenarioProvider>
+                  </EditHistoryProvider>
+                </ScheduleProvider>
+              </StoreProvider>
+            </StaffProvider>
+          </ScenarioProvider>
       </AdminAuthGuard>
     </SupabaseProvider>
     </ErrorBoundary>

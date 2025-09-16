@@ -96,11 +96,33 @@ CREATE TABLE IF NOT EXISTS edit_history (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- スケジュールイベントテーブル
+CREATE TABLE IF NOT EXISTS schedule_events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    date DATE NOT NULL,
+    venue TEXT NOT NULL,
+    scenario TEXT NOT NULL,
+    gms TEXT[] DEFAULT '{}',
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    category TEXT NOT NULL CHECK (category IN ('オープン公演', '貸切公演', 'GMテスト', 'テストプレイ', '出張公演')),
+    reservation_info TEXT,
+    notes TEXT,
+    is_cancelled BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- インデックスの作成
 CREATE INDEX IF NOT EXISTS idx_staff_status ON staff(status);
 CREATE INDEX IF NOT EXISTS idx_staff_stores ON staff USING GIN(stores);
 CREATE INDEX IF NOT EXISTS idx_scenarios_status ON scenarios(status);
 CREATE INDEX IF NOT EXISTS idx_scenarios_genre ON scenarios USING GIN(genre);
+CREATE INDEX IF NOT EXISTS idx_schedule_events_date ON schedule_events(date);
+CREATE INDEX IF NOT EXISTS idx_schedule_events_venue ON schedule_events(venue);
+CREATE INDEX IF NOT EXISTS idx_schedule_events_scenario ON schedule_events(scenario);
+CREATE INDEX IF NOT EXISTS idx_schedule_events_category ON schedule_events(category);
+CREATE INDEX IF NOT EXISTS idx_schedule_events_gms ON schedule_events USING GIN(gms);
 CREATE INDEX IF NOT EXISTS idx_stores_status ON stores(status);
 CREATE INDEX IF NOT EXISTS idx_performance_kits_scenario ON performance_kits(scenario_id);
 CREATE INDEX IF NOT EXISTS idx_performance_kits_store ON performance_kits(store_id);
