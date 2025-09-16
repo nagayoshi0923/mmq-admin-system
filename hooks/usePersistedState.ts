@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { storageError } from '../utils/errorHandler';
 
 /**
  * LocalStorageと同期するuseStateフック
@@ -26,7 +27,7 @@ export const usePersistedState = <T>(
       }
       return deserialize(item);
     } catch (error) {
-      console.error(`Failed to read from localStorage (key: ${key}):`, error);
+      const appError = storageError('read', key, error as Error, 'usePersistedState');
       onError?.(error as Error, 'read');
       return defaultValue;
     }
@@ -51,7 +52,7 @@ export const usePersistedState = <T>(
         localStorage.setItem(key, serialize(newValue));
         prevValueRef.current = newValue;
       } catch (error) {
-        console.error(`Failed to save to localStorage (key: ${key}):`, error);
+        const appError = storageError('write', key, error as Error, 'usePersistedState');
         onError?.(error as Error, 'write');
         
         // 保存に失敗した場合でも状態は更新する（メモリ上では動作継続）
@@ -71,7 +72,7 @@ export const usePersistedState = <T>(
         prevValueRef.current = newValue;
       }
     } catch (error) {
-      console.error(`Failed to reload from localStorage (key: ${key}):`, error);
+      const appError = storageError('read', key, error as Error, 'usePersistedState');
       onError?.(error as Error, 'read');
     }
   }, [key, deserialize, onError]);
@@ -83,7 +84,7 @@ export const usePersistedState = <T>(
       setState(defaultValue);
       prevValueRef.current = defaultValue;
     } catch (error) {
-      console.error(`Failed to remove from localStorage (key: ${key}):`, error);
+      const appError = storageError('delete', key, error as Error, 'usePersistedState');
       onError?.(error as Error, 'write');
     }
   }, [key, defaultValue, onError]);

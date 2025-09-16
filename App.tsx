@@ -22,6 +22,8 @@ import { Toaster } from './components/ui/sonner';
 import { DataIntegrityMonitor } from './components/DataIntegrityMonitor';
 import { SupabaseStatus } from './components/SupabaseStatus';
 import { AdminAuthGuard } from './components/AdminAuthGuard';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { setupGlobalErrorHandlers } from './utils/errorHandler';
 
 // Lazy load components for better performance
 const ScheduleManager = lazy(() => import('./components/ScheduleManager').then(module => ({ default: module.ScheduleManager })));
@@ -70,6 +72,11 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState(getDefaultTab);
 
+  // グローバルエラーハンドラーを設定
+  useEffect(() => {
+    setupGlobalErrorHandlers();
+  }, []);
+
   // ハッシュ変更の監視とタブ切り替え
   useEffect(() => {
     const handleHashChange = () => {
@@ -98,11 +105,12 @@ export default function App() {
   };
 
   return (
-    <SupabaseProvider>
-      <AdminAuthGuard>
-        <ScenarioProvider>
-          <StaffProvider>
-            <StoreProvider>
+    <ErrorBoundary>
+      <SupabaseProvider>
+        <AdminAuthGuard>
+          <ScenarioProvider>
+            <StaffProvider>
+              <StoreProvider>
               <EditHistoryProvider>
               <div className="min-h-screen bg-background">
             <Tabs value={activeTab} onValueChange={handleTabChange} className="min-h-screen">
@@ -239,5 +247,6 @@ export default function App() {
         </ScenarioProvider>
       </AdminAuthGuard>
     </SupabaseProvider>
+    </ErrorBoundary>
   );
 }
