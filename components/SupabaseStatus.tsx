@@ -66,62 +66,61 @@ export function SupabaseStatus() {
                       migrationStatus.editHistory;
 
   return (
-    <div className="fixed top-4 right-4 z-50 max-w-sm">
-      {/* メインステータス表示 */}
-      <Alert variant={error ? 'destructive' : 'default'} className="mb-2 bg-white shadow-lg">
-        <div className="flex items-center gap-2">
-          <Database className="w-4 h-4" />
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              {getStatusIcon()}
-              <span className="text-sm font-medium">{getStatusText()}</span>
-              <Badge variant={getStatusColor() === 'green' ? 'default' : 'secondary'}>
-                {enableRealtime ? 'リアルタイム' : 'ローカル'}
-              </Badge>
-            </div>
-            
-            {error && (
-              <AlertDescription className="mt-1 text-xs">
-                {error}
-              </AlertDescription>
-            )}
-          </div>
-          
-          <div className="flex gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowDetails(!showDetails)}
-            >
-              <Database className="w-4 h-4" />
-            </Button>
-            
-            {enableRealtime ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setEnableRealtime(false)}
-                title="リアルタイム同期を無効にする"
-              >
-                <Wifi className="w-4 h-4" />
-              </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setEnableRealtime(true)}
-                title="リアルタイム同期を有効にする"
-              >
-                <WifiOff className="w-4 h-4" />
-              </Button>
-            )}
-          </div>
+    <div className="fixed bottom-4 right-4 z-50 max-w-xs">
+      {/* コンパクトなステータス表示 */}
+      <div 
+        className={`flex items-center gap-2 px-3 py-2 rounded-lg shadow-lg cursor-pointer transition-all duration-200 ${
+          error ? 'bg-red-50 border border-red-200' : 'bg-white border border-gray-200'
+        } hover:shadow-xl`}
+        onClick={() => setShowDetails(!showDetails)}
+      >
+        {getStatusIcon()}
+        <span className="text-xs font-medium">{isConnected ? 'DB接続済み' : 'ローカル'}</span>
+        <Badge 
+          variant={getStatusColor() === 'green' ? 'default' : 'secondary'}
+          className="text-xs px-1.5 py-0.5"
+        >
+          {enableRealtime && isConnected ? 'RT' : 'Local'}
+        </Badge>
+        
+        {enableRealtime && isConnected ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setEnableRealtime(false);
+            }}
+            title="リアルタイム同期を無効にする"
+            className="h-6 w-6 p-0"
+          >
+            <Wifi className="w-3 h-3" />
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setEnableRealtime(true);
+            }}
+            title="リアルタイム同期を有効にする"
+            className="h-6 w-6 p-0"
+          >
+            <WifiOff className="w-3 h-3" />
+          </Button>
+        )}
+      </div>
+      
+      {error && (
+        <div className="mt-1 px-3 py-1 bg-red-50 border border-red-200 rounded text-xs text-red-700">
+          {error}
         </div>
-      </Alert>
+      )}
 
       {/* 詳細情報表示 */}
       {showDetails && (
-        <Card className="bg-white shadow-lg">
+        <Card className="mt-2 bg-white shadow-lg max-w-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
               <Cloud className="w-5 h-5" />

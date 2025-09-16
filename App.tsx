@@ -104,7 +104,6 @@ export default function App() {
                     </h1>
                     
                     <div className="flex items-center gap-4">
-                      <SupabaseStatus />
                       <TabsList className="grid grid-cols-10 w-fit">
                       <TabsTrigger value="schedule" className="flex items-center gap-2">
                         <Calendar className="w-4 h-4" />
@@ -222,6 +221,7 @@ export default function App() {
             }}
           />
           <DataIntegrityMonitor />
+          <SupabaseStatus />
               </EditHistoryProvider>
             </StoreProvider>
           </StaffProvider>

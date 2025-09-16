@@ -11,5 +11,5 @@
   status = 200
 
 [context.production.environment]
-  VITE_SUPABASE_URL = "https://your-project.supabase.co"
-  VITE_SUPABASE_ANON_KEY = "your-anon-key"
+  VITE_SUPABASE_URL = "https://lgyhbagdfdyycerijtmk.supabase.co"
+  VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxneWhiYWdkZmR5eWNlcmlqdG1rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTczMjA5ODMsImV4cCI6MjA3Mjg5Njk4M30.J4o6O65dr4EwM4Ak1fq5qE479EFMpLT4rOxuHQfRQC4"

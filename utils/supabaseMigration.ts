@@ -4,6 +4,32 @@ import { Staff } from '../contexts/StaffContext';
 import { Store } from '../contexts/StoreContext';
 import { EditHistoryEntry } from '../contexts/EditHistoryContext';
 
+// UUID生成関数
+function generateUUID(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+// 既存IDからUUIDへのマッピングを管理
+class IDMapper {
+  private static mappings: { [key: string]: string } = {};
+  
+  static getOrCreateUUID(oldId: string, prefix: string = ''): string {
+    const key = `${prefix}_${oldId}`;
+    if (!this.mappings[key]) {
+      this.mappings[key] = generateUUID();
+    }
+    return this.mappings[key];
+  }
+  
+  static clear() {
+    this.mappings = {};
+  }
+}
+
 // 既存のlocalStorageデータをSupabaseに移行する関数
 
 export class SupabaseMigration {
@@ -64,23 +90,23 @@ export class SupabaseMigration {
       // 既存データをクリア（必要に応じて）
       // await supabase.from('staff').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       
-      // データの変換と挿入
+      // データの変換と挿入（IDをUUIDに変換）
       const insertData = staff.map(s => ({
-        id: s.id,
+        id: IDMapper.getOrCreateUUID(s.id, 'staff'),
         name: s.name,
         line_name: s.lineName,
         x_account: s.xAccount || null,
         role: s.role,
-        stores: s.stores,
+        stores: s.stores.map(storeId => IDMapper.getOrCreateUUID(storeId, 'store')),
         ng_days: s.ngDays,
         want_to_learn: s.wantToLearn,
-        available_scenarios: s.availableScenarios,
+        available_scenarios: s.availableScenarios.map(scenarioId => IDMapper.getOrCreateUUID(scenarioId, 'scenario')),
         notes: s.notes || null,
         phone: s.contact?.phone || null,
         email: s.contact?.email || null,
         availability: s.availability,
         experience: s.experience,
-        special_scenarios: s.specialScenarios,
+        special_scenarios: s.specialScenarios.map(scenarioId => IDMapper.getOrCreateUUID(scenarioId, 'scenario')),
         status: s.status as 'active' | 'inactive' | 'on-leave'
       }));
 
@@ -119,7 +145,7 @@ export class SupabaseMigration {
       const scenarios: Scenario[] = JSON.parse(scenarioData);
       
       const insertData = scenarios.map(s => ({
-        id: s.id,
+        id: IDMapper.getOrCreateUUID(s.id, 'scenario'),
         title: s.title,
         description: s.description || null,
         author: s.author,
@@ -128,7 +154,7 @@ export class SupabaseMigration {
         player_count_min: s.playerCount.min,
         player_count_max: s.playerCount.max,
         difficulty: s.difficulty,
-        available_gms: s.availableGMs || [],
+        available_gms: s.availableGMs?.map(gmId => IDMapper.getOrCreateUUID(gmId, 'staff')) || [],
         rating: s.rating,
         play_count: s.playCount,
         status: s.status as 'available' | 'maintenance' | 'retired',
@@ -145,6 +171,7 @@ export class SupabaseMigration {
 
       if (error) {
         console.error('シナリオデータ移行エラー:', error);
+        console.error('シナリオデータ詳細:', insertData);
         return { success: false, count: 0, error: error.message };
       }
 
@@ -174,7 +201,7 @@ export class SupabaseMigration {
       const stores: Store[] = JSON.parse(storeData);
       
       const insertData = stores.map(s => ({
-        id: s.id,
+        id: IDMapper.getOrCreateUUID(s.id, 'store'),
         name: s.name,
         short_name: s.shortName,
         address: s.address,
@@ -202,14 +229,14 @@ export class SupabaseMigration {
       for (const store of stores) {
         if (store.performanceKits && store.performanceKits.length > 0) {
           const kitInsertData = store.performanceKits.map(kit => ({
-            id: kit.id,
-            scenario_id: kit.scenarioId,
+            id: IDMapper.getOrCreateUUID(kit.id, 'kit'),
+            scenario_id: IDMapper.getOrCreateUUID(kit.scenarioId, 'scenario'),
             scenario_title: kit.scenarioTitle,
             kit_number: kit.kitNumber,
             condition: kit.condition as 'excellent' | 'good' | 'fair' | 'poor' | 'damaged',
             last_used: kit.lastUsed || null,
             notes: kit.notes || null,
-            store_id: store.id
+            store_id: IDMapper.getOrCreateUUID(store.id, 'store')
           }));
 
           const { error: kitError } = await supabase
@@ -248,9 +275,9 @@ export class SupabaseMigration {
       const history: EditHistoryEntry[] = JSON.parse(historyData);
       
       const insertData = history.map(h => ({
-        id: h.id,
+        id: IDMapper.getOrCreateUUID(h.id, 'history'),
         timestamp: h.timestamp,
-        user: h.user,
+        user_name: h.user || 'システム',
         action: h.action as 'create' | 'update' | 'delete',
         target: h.target,
         summary: h.summary,
@@ -293,6 +320,9 @@ export class SupabaseMigration {
     };
   }> {
     console.log('Supabaseデータ移行を開始します...');
+    
+    // IDマッピングをクリア
+    IDMapper.clear();
     
     const results = {
       staff: await this.migrateStaff(),
@@ -349,5 +379,20 @@ export class SupabaseMigration {
   static resetMigrationStatus() {
     localStorage.removeItem(this.migrationKey);
     console.log('移行状況をリセットしました');
+  }
+
+  // 強制的に移行を再実行
+  static async forceMigration(): Promise<{
+    success: boolean;
+    results: {
+      staff: { success: boolean; count: number; error?: string };
+      scenarios: { success: boolean; count: number; error?: string };
+      stores: { success: boolean; count: number; error?: string };
+      editHistory: { success: boolean; count: number; error?: string };
+    };
+  }> {
+    console.log('🔄 強制移行を開始します...');
+    this.resetMigrationStatus();
+    return await this.migrateAllData();
   }
 }
