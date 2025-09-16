@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -162,7 +162,7 @@ function DraggableScenarioRow({ index, scenario, moveRow, children }: DraggableS
   );
 }
 
-export function ScenarioManager() {
+export const ScenarioManager = React.memo(() => {
   const { scenarios, addScenario, updateScenario, removeScenario, updateScenarios } = useScenarios();
   const { staff } = useStaff();
   const { stores, getKitsByScenario } = useStores();
@@ -1303,4 +1303,4 @@ export function ScenarioManager() {
       </DndProvider>
     </TooltipProvider>
   );
-}
+});

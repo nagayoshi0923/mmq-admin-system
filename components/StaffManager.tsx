@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -140,7 +140,7 @@ function DraggableRow({ index, member, moveRow, children }: DraggableRowProps) {
   );
 }
 
-export function StaffManager() {
+export const StaffManager = React.memo(() => {
   const { staff, addStaff, updateStaff, updateStaffList, addScenarioToStaff, removeScenarioFromStaff, removeStaff } = useStaff();
   const { addEditEntry } = useEditHistory();
   
@@ -153,10 +153,10 @@ export function StaffManager() {
   const [selectedStaffForSchedule, setSelectedStaffForSchedule] = useState<Staff | null>(null);
   
   // スケジュールダイアログを開く
-  const openScheduleDialog = (staff: Staff) => {
+  const openScheduleDialog = useCallback((staff: Staff) => {
     setSelectedStaffForSchedule(staff);
     setScheduleDialogOpen(true);
-  };
+  }, []);
   
   // スタッフスケジュールのモックデータ
   const [schedules] = useState<StaffSchedule[]>([
@@ -207,8 +207,8 @@ export function StaffManager() {
     };
   });
   
-  // スタッフ保存関数
-  const handleSaveStaff = (staffData: Staff) => {
+  // スタッフ保存関数（useCallbackで最適化）
+  const handleSaveStaff = useCallback((staffData: Staff) => {
     // データの安全性を確保
     const safeStaffData = {
       ...staffData,
@@ -250,10 +250,10 @@ export function StaffManager() {
         ]
       });
     }
-  };
+  }, [staff, updateStaff, addStaff, addEditEntry]);
 
-  // スタッフ削除関数
-  const handleDeleteStaff = (staffData: Staff) => {
+  // スタッフ削除関数（useCallbackで最適化）
+  const handleDeleteStaff = useCallback((staffData: Staff) => {
     removeStaff(staffData.id);
     
     // 編集履歴に追加
@@ -268,7 +268,7 @@ export function StaffManager() {
         { field: '役割', oldValue: staffData.role.join(', '), newValue: '削除済み' }
       ]
     });
-  };
+  }, [removeStaff, addEditEntry]);
 
   const getTimeSlotLabel = (timeSlot: string) => {
     const labels = {
@@ -289,8 +289,8 @@ export function StaffManager() {
     return labels[status as keyof typeof labels] || status;
   };
 
-  // ソート処理関数
-  const handleSort = (field: keyof Staff) => {
+  // ソート処理関数（useCallbackで最適化）
+  const handleSort = useCallback((field: keyof Staff) => {
     if (sortField === field) {
       // 同じフィールドをクリックした場合は方向を切り替え
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -299,7 +299,7 @@ export function StaffManager() {
       setSortField(field);
       setSortDirection('asc');
     }
-  };
+  }, [sortField, sortDirection]);
 
   // データ永続化 - localStorage から初期データを読み込み
   useEffect(() => {
@@ -317,31 +317,33 @@ export function StaffManager() {
       <ArrowDown className="w-4 h-4" />;
   };
 
-  // ソートされたスタッフリスト
-  const sortedStaff = [...staff].sort((a, b) => {
-    if (!sortField) return 0;
+  // ソートされたスタッフリスト（useMemoで最適化）
+  const sortedStaff = useMemo(() => {
+    if (!sortField) return staff;
     
-    let aValue = a[sortField];
-    let bValue = b[sortField];
-    
-    // 配列の場合は長さで比較（nullチェック追加）
-    if (Array.isArray(aValue)) aValue = aValue.length as any;
-    if (Array.isArray(bValue)) bValue = bValue.length as any;
-    if (aValue === undefined || aValue === null) aValue = 0 as any;
-    if (bValue === undefined || bValue === null) bValue = 0 as any;
-    
-    // 文字列の場合は大文字小文字を無視して比較
-    if (typeof aValue === 'string') aValue = aValue.toLowerCase() as any;
-    if (typeof bValue === 'string') bValue = bValue.toLowerCase() as any;
-    
-    if (aValue < bValue) {
-      return sortDirection === 'asc' ? -1 : 1;
-    }
-    if (aValue > bValue) {
-      return sortDirection === 'asc' ? 1 : -1;
-    }
-    return 0;
-  });
+    return [...staff].sort((a, b) => {
+      let aValue = a[sortField];
+      let bValue = b[sortField];
+      
+      // 配列の場合は長さで比較（nullチェック追加）
+      if (Array.isArray(aValue)) aValue = aValue.length as any;
+      if (Array.isArray(bValue)) bValue = bValue.length as any;
+      if (aValue === undefined || aValue === null) aValue = 0 as any;
+      if (bValue === undefined || bValue === null) bValue = 0 as any;
+      
+      // 文字列の場合は大文字小文字を無視して比較
+      if (typeof aValue === 'string') aValue = aValue.toLowerCase() as any;
+      if (typeof bValue === 'string') bValue = bValue.toLowerCase() as any;
+      
+      if (aValue < bValue) {
+        return sortDirection === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortDirection === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  }, [staff, sortField, sortDirection]);
 
   // データ永続化 - staff が変更されるたびに localStorage に保存
   useEffect(() => {
@@ -849,4 +851,4 @@ export function StaffManager() {
       )}
     </DndProvider>
   );
-}
+});
