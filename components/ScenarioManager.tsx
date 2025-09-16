@@ -8,7 +8,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Checkbox } from './ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
-import { Clock, Users, Plus, BookOpen, Pencil, Eye, Trash2, ArrowUpDown, ArrowUp, ArrowDown, GripVertical, TestTube, X, Check, Package, DollarSign, Calendar, Cloud, CloudOff, Loader2, RefreshCw } from 'lucide-react';
+// 最適化されたアイコンインポート
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import Users from 'lucide-react/dist/esm/icons/users';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import BookOpen from 'lucide-react/dist/esm/icons/book-open';
+import Pencil from 'lucide-react/dist/esm/icons/pencil';
+import Eye from 'lucide-react/dist/esm/icons/eye';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import ArrowUpDown from 'lucide-react/dist/esm/icons/arrow-up-down';
+import ArrowUp from 'lucide-react/dist/esm/icons/arrow-up';
+import ArrowDown from 'lucide-react/dist/esm/icons/arrow-down';
+import GripVertical from 'lucide-react/dist/esm/icons/grip-vertical';
+import TestTube from 'lucide-react/dist/esm/icons/test-tube';
+import X from 'lucide-react/dist/esm/icons/x';
+import Check from 'lucide-react/dist/esm/icons/check';
+import Package from 'lucide-react/dist/esm/icons/package';
+import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import Cloud from 'lucide-react/dist/esm/icons/cloud';
+import CloudOff from 'lucide-react/dist/esm/icons/cloud-off';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 import { useEditHistory } from '../contexts/EditHistoryContext';
@@ -21,7 +42,6 @@ import { SupabaseSyncIndicator } from './SupabaseSyncIndicator';
 import { ScenarioDialog } from './ScenarioDialog';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import React from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 
 const difficultyLabels = {

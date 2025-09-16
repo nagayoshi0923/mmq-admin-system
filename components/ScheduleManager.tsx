@@ -12,7 +12,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Checkbox } from './ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Calendar, Plus, Edit, AlertTriangle, X, Trash2, Users, ChevronLeft, ChevronRight, Ban } from 'lucide-react';
+// 最適化されたアイコンインポート
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Edit from 'lucide-react/dist/esm/icons/edit';
+import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
+import X from 'lucide-react/dist/esm/icons/x';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import Users from 'lucide-react/dist/esm/icons/users';
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
+import Ban from 'lucide-react/dist/esm/icons/ban';
 import { ItemEditHistory } from './ItemEditHistory';
 import { useEditHistory, EditHistoryEntry } from '../contexts/EditHistoryContext';
 

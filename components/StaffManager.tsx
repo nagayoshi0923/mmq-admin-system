@@ -5,8 +5,22 @@ import { Badge } from './ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
-import { Calendar as CalendarIcon, Users, Clock, TrendingUp, Trash2, ArrowUpDown, ArrowUp, ArrowDown, GripVertical, TestTube } from 'lucide-react';
-import { Phone, Mail, Calendar, Plus, Pencil } from 'lucide-react';
+// 最適化されたアイコンインポート
+import CalendarIcon from 'lucide-react/dist/esm/icons/calendar';
+import Users from 'lucide-react/dist/esm/icons/users';
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import ArrowUpDown from 'lucide-react/dist/esm/icons/arrow-up-down';
+import ArrowUp from 'lucide-react/dist/esm/icons/arrow-up';
+import ArrowDown from 'lucide-react/dist/esm/icons/arrow-down';
+import GripVertical from 'lucide-react/dist/esm/icons/grip-vertical';
+import TestTube from 'lucide-react/dist/esm/icons/test-tube';
+import Phone from 'lucide-react/dist/esm/icons/phone';
+import Mail from 'lucide-react/dist/esm/icons/mail';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Pencil from 'lucide-react/dist/esm/icons/pencil';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { ScrollArea } from './ui/scroll-area';
 
@@ -17,7 +31,6 @@ import { StaffDialog } from './StaffDialog';
 import { StaffScheduleDialog } from './StaffScheduleDialog';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import React from 'react';
 import { Avatar, AvatarFallback } from './ui/avatar';
 
 // Staff interfaceはStaffContextから import
