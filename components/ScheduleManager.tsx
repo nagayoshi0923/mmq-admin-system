@@ -211,9 +211,20 @@ export function NewScheduleManager() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
+      <div className="flex flex-col items-center justify-center p-8 space-y-4">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         <span className="ml-2">スケジュールを読み込み中...</span>
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md">
+            <p className="text-red-700 text-sm">エラー: {error}</p>
+          </div>
+        )}
+        <button 
+          onClick={() => window.location.reload()} 
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          ページを再読み込み
+        </button>
       </div>
     );
   }

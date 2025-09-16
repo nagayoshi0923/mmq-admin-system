@@ -35,9 +35,16 @@ export function useSupabaseData<T extends { id: string }>(
     setLoading(true);
     setError(null);
 
+    // タイムアウト設定（10秒）
+    const timeoutId = setTimeout(() => {
+      setError('データの読み込みがタイムアウトしました。ネットワーク接続を確認してください。');
+      setLoading(false);
+    }, 10000);
+
     try {
       // Supabaseが設定されていない場合はローカルストレージから取得
       if (!isSupabaseConfigured()) {
+        console.warn(`Supabase未設定: ${options.table}テーブルのデータをローカルストレージから取得します`);
         if (options.fallbackKey) {
           const localData = localStorage.getItem(options.fallbackKey);
           if (localData) {
@@ -45,6 +52,7 @@ export function useSupabaseData<T extends { id: string }>(
             setData(Array.isArray(parsed) ? parsed : []);
           }
         }
+        setError('Supabase未設定 - ローカルデータを使用中');
         setLoading(false);
         return;
       }
@@ -66,11 +74,15 @@ export function useSupabaseData<T extends { id: string }>(
         });
       }
 
+      console.log(`Supabaseからデータを取得中: ${options.table}`);
       const { data: fetchedData, error: fetchError } = await query;
 
       if (fetchError) {
+        console.error(`Supabaseクエリエラー (${options.table}):`, fetchError);
         throw fetchError;
       }
+
+      console.log(`データ取得成功 (${options.table}):`, fetchedData?.length || 0, '件');
 
       setData((fetchedData as unknown as T[]) || []);
       
@@ -97,6 +109,7 @@ export function useSupabaseData<T extends { id: string }>(
         }
       }
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   }, [options.table, options.filter, options.fallbackKey, options.select, options.orderBy]);
