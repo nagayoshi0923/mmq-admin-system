@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { usePersistedState } from '../hooks/usePersistedState';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -136,8 +137,6 @@ export function LicenseManager() {
   // 状態管理
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [calculations, setCalculations] = useState<LicenseCalculation[]>([]);
-  const [authorData, setAuthorData] = useState<ScenarioAuthor[]>(mockScenarioAuthors);
   const [isAuthorDialogOpen, setIsAuthorDialogOpen] = useState(false);
   const [editingAuthor, setEditingAuthor] = useState<ScenarioAuthor | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; calculation: LicenseCalculation | null }>({
@@ -158,40 +157,35 @@ export function LicenseManager() {
   // 計算メモの状態
   const [calculationNotes, setCalculationNotes] = useState('');
 
-  // LocalStorageからライセンス計算データを読み込み
-  useEffect(() => {
-    const savedCalculations = localStorage.getItem('murder-mystery-license-calculations');
-    if (savedCalculations) {
-      try {
-        const parsed = JSON.parse(savedCalculations);
-        setCalculations(parsed.map((calc: any) => ({
+  // usePersistedStateで統一されたLocalStorage操作
+  const [calculations, setCalculations] = usePersistedState<LicenseCalculation[]>(
+    'murder-mystery-license-calculations',
+    [],
+    {
+      // 日付オブジェクトのシリアライズ/デシリアライズ
+      deserialize: (value) => {
+        const parsed = JSON.parse(value);
+        return parsed.map((calc: any) => ({
           ...calc,
           calculatedAt: calc.calculatedAt ? new Date(calc.calculatedAt) : undefined,
           sentAt: calc.sentAt ? new Date(calc.sentAt) : undefined
-        })));
-      } catch (error) {
-        console.error('ライセンス計算データの読み込みに失敗しました:', error);
+        }));
+      },
+      onError: (error, operation) => {
+        console.error(`ライセンス計算データの${operation === 'read' ? '読み込み' : '保存'}に失敗:`, error);
       }
     }
+  );
 
-    const savedAuthors = localStorage.getItem('murder-mystery-scenario-authors');
-    if (savedAuthors) {
-      try {
-        setAuthorData(JSON.parse(savedAuthors));
-      } catch (error) {
-        console.error('シナリオ作者データの読み込みに失敗しました:', error);
+  const [authorData, setAuthorData] = usePersistedState<ScenarioAuthor[]>(
+    'murder-mystery-scenario-authors',
+    mockScenarioAuthors,
+    {
+      onError: (error, operation) => {
+        console.error(`シナリオ作者データの${operation === 'read' ? '読み込み' : '保存'}に失敗:`, error);
       }
     }
-  }, []);
-
-  // データをLocalStorageに保存
-  useEffect(() => {
-    localStorage.setItem('murder-mystery-license-calculations', JSON.stringify(calculations));
-  }, [calculations]);
-
-  useEffect(() => {
-    localStorage.setItem('murder-mystery-scenario-authors', JSON.stringify(authorData));
-  }, [authorData]);
+  );
 
   // スケジュールデータを取得
   const getScheduleData = (): { [key: string]: DaySchedule[] } => {

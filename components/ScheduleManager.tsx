@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { usePersistedState } from '../hooks/usePersistedState';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -355,51 +356,45 @@ export function ScheduleManager() {
     event: null 
   });
   
-  // イベントデータの状態管理（LocalStorage対応）
-  const [scheduleEvents, setScheduleEvents] = useState<{ [key: string]: DaySchedule[] }>(() => {
-    const savedScheduleEvents = localStorage.getItem('murder-mystery-schedule-events');
-    if (savedScheduleEvents) {
-      try {
-        const parsed = JSON.parse(savedScheduleEvents);
-        // 保存されたデータと新しいカレンダーデータをマージ
-        const merged = { ...calendarData };
-        
-        // 保存されたイベントデータを統合
-        Object.keys(parsed).forEach(monthKey => {
-          if (parsed[monthKey] && Array.isArray(parsed[monthKey])) {
-            // 保存されたイベントがある月のデータを復元
-            merged[monthKey] = parsed[monthKey];
+  // イベントデータの状態管理（usePersistedStateで統一）
+  const [scheduleEvents, setScheduleEvents] = usePersistedState<{ [key: string]: DaySchedule[] }>(
+    'murder-mystery-schedule-events',
+    calendarData,
+    {
+      // カスタムシリアライザー：イベントがある月のみ保存
+      serialize: (value) => {
+        const eventsToSave: { [key: string]: DaySchedule[] } = {};
+        Object.keys(value).forEach(monthKey => {
+          const monthData = value[monthKey];
+          if (monthData && monthData.some(day => day.events && day.events.length > 0)) {
+            eventsToSave[monthKey] = monthData;
           }
         });
-        
-        // console.log('スケジュールデータを復元しました:', Object.keys(parsed).length, '月分');
-        return merged;
-      } catch (error) {
-        console.error('スケジュールデータの読み込みに失敗しました:', error);
-        return calendarData;
+        return JSON.stringify(eventsToSave);
+      },
+      // カスタムデシリアライザー：保存データとベースデータをマージ
+      deserialize: (value) => {
+        try {
+          const parsed = JSON.parse(value);
+          const merged = { ...calendarData };
+          
+          Object.keys(parsed).forEach(monthKey => {
+            if (parsed[monthKey] && Array.isArray(parsed[monthKey])) {
+              merged[monthKey] = parsed[monthKey];
+            }
+          });
+          
+          return merged;
+        } catch (error) {
+          console.error('スケジュールデータのパースに失敗:', error);
+          return calendarData;
+        }
+      },
+      onError: (error, operation) => {
+        console.error(`スケジュールデータの${operation === 'read' ? '読み込み' : '保存'}に失敗:`, error);
       }
     }
-    // console.log('新しいスケジュールデータで初期化します');
-    return calendarData;
-  });
-
-  // スケジュールデータが変更されるたびにLocalStorageに保存
-  useEffect(() => {
-    // イベントデータがある月のみを保存してデータサイズを削減
-    const eventsToSave: { [key: string]: DaySchedule[] } = {};
-    
-    Object.keys(scheduleEvents).forEach(monthKey => {
-      const monthData = scheduleEvents[monthKey];
-      if (monthData && monthData.some(day => day.events && day.events.length > 0)) {
-        eventsToSave[monthKey] = monthData;
-      }
-    });
-    
-    if (Object.keys(eventsToSave).length > 0) {
-      localStorage.setItem('murder-mystery-schedule-events', JSON.stringify(eventsToSave));
-      // console.log('スケジュールデータを保存しました:', Object.keys(eventsToSave).length, '月分');
-    }
-  }, [scheduleEvents]);
+  );
   
 
 

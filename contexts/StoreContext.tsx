@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext } from 'react';
+import { usePersistedState } from '../hooks/usePersistedState';
 
 export interface PerformanceKit {
   id: string;
@@ -154,45 +155,26 @@ const initialStores: Store[] = [
 ];
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [stores, setStores] = useState<Store[]>([]);
-  const [kitTransferHistory, setKitTransferHistory] = useState<KitTransferHistory[]>([]);
-
-  // LocalStorageからデータを読み込み、または初期データを設定
-  useEffect(() => {
-    const savedStores = localStorage.getItem('murderMystery_stores');
-    const savedTransferHistory = localStorage.getItem('murderMystery_kitTransferHistory');
-    
-    if (savedStores) {
-      try {
-        const parsed = JSON.parse(savedStores);
-        // 既存データがあればそれを使用、なければ初期データを使用
-        setStores(parsed.length > 0 ? parsed : initialStores);
-      } catch (error) {
-        console.error('店舗データの読み込みに失敗しました:', error);
-        setStores(initialStores);
-      }
-    } else {
-      // 保存されたデータがない場合は初期データを設定
-      setStores(initialStores);
-    }
-
-    if (savedTransferHistory) {
-      try {
-        setKitTransferHistory(JSON.parse(savedTransferHistory));
-      } catch (error) {
-        console.error('キット移動履歴の読み込みに失敗しました:', error);
+  // usePersistedStateで統一されたLocalStorage操作
+  const [stores, setStores] = usePersistedState<Store[]>(
+    'murderMystery_stores', 
+    initialStores,
+    {
+      onError: (error, operation) => {
+        console.error(`店舗データの${operation === 'read' ? '読み込み' : '保存'}に失敗:`, error);
       }
     }
-  }, []);
-
-  // データが変更されたときにLocalStorageに保存
-  useEffect(() => {
-    localStorage.setItem('murderMystery_stores', JSON.stringify(stores));
-  }, [stores]);
-
-  useEffect(() => {
-    localStorage.setItem('murderMystery_kitTransferHistory', JSON.stringify(kitTransferHistory));
-  }, [kitTransferHistory]);
+  );
+  
+  const [kitTransferHistory, setKitTransferHistory] = usePersistedState<KitTransferHistory[]>(
+    'murderMystery_kitTransferHistory',
+    [],
+    {
+      onError: (error, operation) => {
+        console.error(`キット移動履歴の${operation === 'read' ? '読み込み' : '保存'}に失敗:`, error);
+      }
+    }
+  );
 
   const addStore = (store: Store) => {
     setStores(prev => [...prev, store]);
