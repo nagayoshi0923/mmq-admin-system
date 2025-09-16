@@ -358,6 +358,9 @@ export function ScheduleManager() {
     deleteEvent: deleteSupabaseEvent 
   } = useSchedule();
   
+  // Supabaseデータの安全な処理
+  const safeSupabaseEvents = Array.isArray(supabaseEvents) ? supabaseEvents : [];
+  
   // カレンダーデータの初期化
   const [calendarData] = useState(() => {
     const generated = generateCalendarData();
@@ -408,7 +411,17 @@ export function ScheduleManager() {
           
           Object.keys(parsed).forEach(monthKey => {
             if (parsed[monthKey] && Array.isArray(parsed[monthKey])) {
-              merged[monthKey] = parsed[monthKey];
+              // 各日のデータが正しい形式かチェック
+              const monthData = parsed[monthKey].map((day: any) => {
+                if (day && typeof day === 'object') {
+                  return {
+                    ...day,
+                    events: Array.isArray(day.events) ? day.events : []
+                  };
+                }
+                return { date: '', dayOfWeek: '', isHoliday: false, events: [] };
+              });
+              merged[monthKey] = monthData;
             }
           });
           

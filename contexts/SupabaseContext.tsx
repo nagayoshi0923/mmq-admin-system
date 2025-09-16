@@ -66,12 +66,13 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
         setError(null);
         // console.log('✅ Supabase接続成功');
         
-        // 自動移行チェック
-        const status = SupabaseMigration.getMigrationStatus();
-        if (!status.staff || !status.scenarios || !status.stores || !status.editHistory) {
-          console.log('未移行データが検出されました。自動移行を実行します...');
-          await migrateToSupabase();
-        }
+        // 自動移行チェック（無効化）
+        // const status = SupabaseMigration.getMigrationStatus();
+        // if (!status.staff || !status.scenarios || !status.stores || !status.editHistory) {
+        //   console.log('未移行データが検出されました。自動移行を実行します...');
+        //   await migrateToSupabase();
+        // }
+        console.log('データ移行機能は無効化されています。新規データのみSupabaseに保存されます。');
       } else {
         setIsConnected(false);
         setError(result.error || 'Supabase接続に失敗しました');
