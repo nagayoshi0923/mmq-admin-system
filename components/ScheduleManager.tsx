@@ -372,14 +372,14 @@ export function ScheduleManager() {
           }
         });
         
-        console.log('スケジュールデータを復元しました:', Object.keys(parsed).length, '月分');
+        // console.log('スケジュールデータを復元しました:', Object.keys(parsed).length, '月分');
         return merged;
       } catch (error) {
         console.error('スケジュールデータの読み込みに失敗しました:', error);
         return calendarData;
       }
     }
-    console.log('新しいスケジュールデータで初期化します');
+    // console.log('新しいスケジュールデータで初期化します');
     return calendarData;
   });
 
@@ -397,7 +397,7 @@ export function ScheduleManager() {
     
     if (Object.keys(eventsToSave).length > 0) {
       localStorage.setItem('murder-mystery-schedule-events', JSON.stringify(eventsToSave));
-      console.log('スケジュールデータを保存しました:', Object.keys(eventsToSave).length, '月分');
+      // console.log('スケジュールデータを保存しました:', Object.keys(eventsToSave).length, '月分');
     }
   }, [scheduleEvents]);
   

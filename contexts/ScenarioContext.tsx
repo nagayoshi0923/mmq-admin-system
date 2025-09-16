@@ -2,9 +2,14 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 
 // StaffContextとの循環参照を避けるため、ここで簡単な関数を作成
 let staffUpdateFunction: ((staffName: string, scenarioTitle: string, action: 'add' | 'remove') => void) | null = null;
+let staffBatchSyncFunction: ((scenarioGMMap: { [scenarioTitle: string]: string[] }) => void) | null = null;
 
 export const setStaffUpdateFunction = (fn: (staffName: string, scenarioTitle: string, action: 'add' | 'remove') => void) => {
   staffUpdateFunction = fn;
+};
+
+export const setStaffBatchSyncFunction = (fn: (scenarioGMMap: { [scenarioTitle: string]: string[] }) => void) => {
+  staffBatchSyncFunction = fn;
 };
 
 export interface Scenario {
@@ -760,28 +765,41 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // 初期化後にスタッフとの同期を行う（一度だけ）
+  // 初期化後にスタッフとの同期を行う（バッチ処理・重複実行防止）
   useEffect(() => {
-    if (isInitialized && !hasInitialSync && staffUpdateFunction && scenarios.length > 0) {
-      console.log('初期化時のシナリオ-スタッフ同期を実行中...', scenarios.length, 'シナリオを処理');
+    let isMounted = true;
+    
+    if (isInitialized && !hasInitialSync && staffBatchSyncFunction && scenarios.length > 0 && isMounted) {
+      // console.log('初期化時のシナリオ-スタッフ同期を実行中...', scenarios.length, 'シナリオを処理');
       
       // 少し遅延を入れてStaffContextの初期化を待つ
       const timer = setTimeout(() => {
-        scenarios.forEach(scenario => {
-          // Null チェックを追加
-          const availableGMs = scenario.availableGMs || [];
-          if (availableGMs.length > 0) {
-            console.log(`シナリオ「${scenario.title}」のGM同期:`, availableGMs);
-            availableGMs.forEach(gmName => {
-              staffUpdateFunction!(gmName, scenario.title, 'add');
-            });
-          }
-        });
-        setHasInitialSync(true);
+        if (isMounted) {
+          // バッチ処理用のマップを作成
+          const scenarioGMMap: { [scenarioTitle: string]: string[] } = {};
+          
+          scenarios.forEach(scenario => {
+            const availableGMs = scenario.availableGMs || [];
+            if (availableGMs.length > 0) {
+              scenarioGMMap[scenario.title] = availableGMs;
+            }
+          });
+          
+          // バッチで一括同期
+          staffBatchSyncFunction(scenarioGMMap);
+          setHasInitialSync(true);
+        }
       }, 100);
       
-      return () => clearTimeout(timer);
+      return () => {
+        isMounted = false;
+        clearTimeout(timer);
+      };
     }
+    
+    return () => {
+      isMounted = false;
+    };
   }, [isInitialized, hasInitialSync, scenarios]);
 
   // データ永続化 - scenarios が変更されるたびに localStorage に保存

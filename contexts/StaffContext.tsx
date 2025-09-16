@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { setStaffUpdateFunction } from './ScenarioContext';
+import { setStaffUpdateFunction, setStaffBatchSyncFunction } from './ScenarioContext';
 
 export interface Staff {
   id: string;
@@ -30,6 +30,7 @@ interface StaffContextType {
   updateStaffList: (staffList: Staff[]) => void;
   addScenarioToStaff: (staffName: string, scenarioTitle: string) => void;
   removeScenarioFromStaff: (staffName: string, scenarioTitle: string) => void;
+  batchSyncScenarios: (scenarioGMMap: { [scenarioTitle: string]: string[] }) => void;
 }
 
 const StaffContext = createContext<StaffContextType | undefined>(undefined);
@@ -424,21 +425,56 @@ export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
     }
   }, []);
 
-  // ScenarioContextとの連携機能を初期化
-  useEffect(() => {
-    console.log('StaffContextの連携機能を初期化中...');
-    setStaffUpdateFunction((staffName: string, scenarioTitle: string, action: 'add' | 'remove') => {
-      console.log(`スタッフ更新呼び出し: ${staffName} - ${scenarioTitle} - ${action}`);
-      if (action === 'add') {
-        addScenarioToStaff(staffName, scenarioTitle);
-      } else {
-        removeScenarioFromStaff(staffName, scenarioTitle);
-      }
+  // バッチ同期関数 - 複数のシナリオを一度に処理
+  const batchSyncScenarios = useCallback((scenarioGMMap: { [scenarioTitle: string]: string[] }) => {
+    // console.log('🚀 バッチ同期開始:', Object.keys(scenarioGMMap).length, 'シナリオを処理');
+    
+    setStaff(prevStaff => {
+      return prevStaff.map(staffMember => {
+        const updatedScenarios = new Set(staffMember.availableScenarios);
+        
+        // 各シナリオをチェックして、このスタッフがGMかどうか確認
+        Object.entries(scenarioGMMap).forEach(([scenarioTitle, gmNames]) => {
+          if (gmNames.includes(staffMember.name)) {
+            updatedScenarios.add(scenarioTitle);
+          }
+        });
+        
+        return {
+          ...staffMember,
+          availableScenarios: Array.from(updatedScenarios)
+        };
+      });
     });
+    
+    // console.log('✅ バッチ同期完了');
+  }, []);
+
+  // ScenarioContextとの連携機能を初期化（重複実行防止）
+  useEffect(() => {
+    let isMounted = true;
+    
+    if (isMounted) {
+      // console.log('StaffContextの連携機能を初期化中...');
+      setStaffUpdateFunction((staffName: string, scenarioTitle: string, action: 'add' | 'remove') => {
+        // console.log(`スタッフ更新呼び出し: ${staffName} - ${scenarioTitle} - ${action}`);
+        if (action === 'add') {
+          addScenarioToStaff(staffName, scenarioTitle);
+        } else {
+          removeScenarioFromStaff(staffName, scenarioTitle);
+        }
+      });
+      
+      // バッチ同期関数も登録
+      setStaffBatchSyncFunction(batchSyncScenarios);
+    }
+    
     return () => {
+      isMounted = false;
       setStaffUpdateFunction(() => null);
+      setStaffBatchSyncFunction(() => null);
     };
-  }, [addScenarioToStaff, removeScenarioFromStaff]);
+  }, [addScenarioToStaff, removeScenarioFromStaff, batchSyncScenarios]);
 
   // LocalStorageへデータを保存
   useEffect(() => {
@@ -471,7 +507,8 @@ export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
       removeStaff,
       updateStaffList,
       addScenarioToStaff,
-      removeScenarioFromStaff
+      removeScenarioFromStaff,
+      batchSyncScenarios
     }}>
       {children}
     </StaffContext.Provider>

@@ -28,9 +28,21 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   const [migrationStatus, setMigrationStatus] = useState(SupabaseMigration.getMigrationStatus());
   const [enableRealtime, setEnableRealtime] = useState(true);
 
-  // 初期接続テスト
+  // 初期接続テスト（重複実行防止）
   useEffect(() => {
-    testConnection();
+    let isMounted = true;
+    
+    const initConnection = async () => {
+      if (isMounted) {
+        await testConnection();
+      }
+    };
+    
+    initConnection();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const testConnection = async () => {
@@ -52,7 +64,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       if (result.success) {
         setIsConnected(true);
         setError(null);
-        console.log('✅ Supabase接続成功');
+        // console.log('✅ Supabase接続成功');
         
         // 自動移行チェック
         const status = SupabaseMigration.getMigrationStatus();
