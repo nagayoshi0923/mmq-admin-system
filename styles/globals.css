@@ -8,8 +8,13 @@
   --foreground: oklch(0.145 0 0);
   --card: #ffffff;
   --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
+  --popover: #ffffff;
   --popover-foreground: oklch(0.145 0 0);
+  
+  /* ダイアログ・オーバーレイ専用変数を追加 */
+  --dialog-background: #ffffff;
+  --dialog-foreground: oklch(0.145 0 0);
+  --overlay-background: rgba(0, 0, 0, 0.8);
   --primary: #030213;
   --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.95 0.0058 264.53);
@@ -50,6 +55,11 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.145 0 0);
   --popover-foreground: oklch(0.985 0 0);
+  
+  /* ダークモード用ダイアログ・オーバーレイ変数 */
+  --dialog-background: oklch(0.145 0 0);
+  --dialog-foreground: oklch(0.985 0 0);
+  --overlay-background: rgba(0, 0, 0, 0.9);
   --primary: oklch(0.985 0 0);
   --primary-foreground: oklch(0.205 0 0);
   --secondary: oklch(0.269 0 0);

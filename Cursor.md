@@ -290,12 +290,127 @@ npm run dev                # 開発サーバー起動確認
 
 ---
 
+---
+
+## 🚨 **緊急バグ修正: 本番環境でダイアログ背景透明化問題**
+
+### **🔍 問題の詳細**
+- **症状**: 本番環境でダイアログ・プルダウンメニューの背景が透明になる
+- **影響範囲**: ShadCN UIのDialog, Popover, Select, DropdownMenu等
+- **原因**: Tailwind v4のCSS変数が本番ビルドで正しく適用されていない
+
+### **🛠️ 修正手順**
+
+#### **Step 1: globals.cssの背景色変数を強化**
+```css
+/* styles/globals.css の :root セクションに追加 */
+:root {
+  /* 既存の変数を維持しつつ、以下を追加・強化 */
+  --popover: #ffffff;
+  --popover-foreground: #0f0f0f;
+  --card: #ffffff;
+  --card-foreground: #0f0f0f;
+  
+  /* ダイアログ・オーバーレイ専用変数を追加 */
+  --dialog-background: #ffffff;
+  --dialog-foreground: #0f0f0f;
+  --overlay-background: rgba(0, 0, 0, 0.8);
+}
+
+.dark {
+  --popover: #1a1a1a;
+  --popover-foreground: #fafafa;
+  --card: #1a1a1a;
+  --card-foreground: #fafafa;
+  
+  --dialog-background: #1a1a1a;
+  --dialog-foreground: #fafafa;
+  --overlay-background: rgba(0, 0, 0, 0.9);
+}
+```
+
+#### **Step 2: ShadCN UIコンポーネントの背景を明示的に設定**
+以下のコンポーネントファイルで背景色を明示的に設定：
+
+**`components/ui/dialog.tsx`**
+```tsx
+// DialogContent に bg-popover を追加
+<DialogPrimitive.Content
+  className={cn(
+    "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-popover p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+    className
+  )}
+/>
+```
+
+**`components/ui/popover.tsx`**
+```tsx
+// PopoverContent に bg-popover を追加
+<PopoverPrimitive.Content
+  className={cn(
+    "z-50 w-72 rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+    className
+  )}
+/>
+```
+
+**`components/ui/select.tsx`**
+```tsx
+// SelectContent に bg-popover を追加
+<SelectPrimitive.Content
+  className={cn(
+    "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+    position === "popper" &&
+      "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
+    className
+  )}
+/>
+```
+
+#### **Step 3: ビルド設定でCSS変数を保持**
+**`postcss.config.js`を更新**
+```js
+export default {
+  plugins: {
+    'tailwindcss': {},
+    'autoprefixer': {},
+    'cssnano': {
+      preset: ['default', {
+        discardComments: {
+          removeAll: true,
+        },
+        // CSS変数を保持
+        reduceIdents: false,
+        zindex: false
+      }]
+    }
+  }
+}
+```
+
+#### **Step 4: 修正後の動作確認**
+```bash
+# 開発環境で確認
+npm run dev
+
+# 本番ビルドで確認
+npm run build
+npm run preview
+
+# 各UIコンポーネントの背景色を確認
+# - ダイアログ
+# - セレクトボックス
+# - ポップオーバー
+# - ドロップダウンメニュー
+```
+
+---
+
 ## 📝 **進捗報告・問題発生時**
 
 **このCursor.mdファイルを更新して進捗・問題を報告してください：**
 
-```markdown
-## 🔄 削除進捗レポート
+### **🔄 クリーンアップ進捗**
 - [ ] Phase 1: 重複App.tsx削除
 - [ ] Phase 2: Markdown削除  
 - [ ] Phase 3: スクリプト削除
@@ -304,9 +419,14 @@ npm run dev                # 開発サーバー起動確認
 - [ ] Phase 6: 一時ファイル削除
 - [ ] Phase 7: 検証完了
 
-## ⚠️ 問題・エラー報告
+### **🐛 バグ修正進捗**
+- [ ] Step 1: globals.css背景色変数強化
+- [ ] Step 2: UIコンポーネント背景明示化
+- [ ] Step 3: ビルド設定更新
+- [ ] Step 4: 本番環境動作確認
+
+### **⚠️ 問題・エラー報告**
 （何か問題があればここに記載）
 
-## ✅ 完了報告
-（クリーンアップ完了時にここで報告）
-```
+### **✅ 完了報告**
+（修正完了時にここで報告）
