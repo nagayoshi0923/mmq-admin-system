@@ -72,7 +72,7 @@ export function useSupabaseData<T extends { id: string }>(
         throw fetchError;
       }
 
-      setData(fetchedData || []);
+      setData((fetchedData as unknown as T[]) || []);
       
       // ローカルストレージにもバックアップ保存
       if (options.fallbackKey && fetchedData) {
@@ -119,7 +119,7 @@ export function useSupabaseData<T extends { id: string }>(
       }
 
       // ローカル状態を更新
-      setData(prev => [...prev, insertedData]);
+      setData(prev => [...prev, insertedData as unknown as T]);
       
       // ローカルストレージも更新
       if (options.fallbackKey) {
@@ -153,7 +153,7 @@ export function useSupabaseData<T extends { id: string }>(
       }
 
       // ローカル状態を更新
-      setData(prev => prev.map(item => item.id === id ? updatedData : item));
+      setData(prev => prev.map(item => item.id === id ? updatedData as unknown as T : item));
       
       // ローカルストレージも更新
       if (options.fallbackKey) {
@@ -223,11 +223,11 @@ export function useSupabaseData<T extends { id: string }>(
         if (existingIndex >= 0) {
           // 更新
           const updated = [...prev];
-          updated[existingIndex] = upsertedData;
+          updated[existingIndex] = upsertedData as unknown as T;
           return updated;
         } else {
           // 挿入
-          return [...prev, upsertedData];
+          return [...prev, upsertedData as unknown as T];
         }
       });
       
