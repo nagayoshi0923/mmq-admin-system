@@ -376,10 +376,8 @@ export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
 
   // シナリオとスタッフの連携機能 - useEffectより前に定義
   const addScenarioToStaff = useCallback((staffName: string, scenarioTitle: string) => {
-    console.log(`addScenarioToStaff呼び出し: ${staffName} に ${scenarioTitle} を追加`);
     setStaff(prev => prev.map(s => {
       if (s.name === staffName && !s.availableScenarios.includes(scenarioTitle)) {
-        console.log(`実際に追加: ${staffName} に ${scenarioTitle}`);
         return {
           ...s,
           availableScenarios: [...s.availableScenarios, scenarioTitle]
@@ -390,7 +388,6 @@ export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
   }, []);
 
   const removeScenarioFromStaff = useCallback((staffName: string, scenarioTitle: string) => {
-    console.log(`removeScenarioFromStaff呼び出し: ${staffName} から ${scenarioTitle} を削除`);
     setStaff(prev => prev.map(s => {
       if (s.name === staffName) {
         return {

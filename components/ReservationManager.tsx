@@ -776,117 +776,15 @@ export function ReservationManager() {
     return matchesSearch && matchesStatus;
   });
 
-  // ストアーズ予約APIから予約情報を取得する関数
-  const fetchReservations = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      // モックデータでシミュレート（実際のAPI接続はCORSの制限により現在無効）
-      await new Promise(resolve => setTimeout(resolve, 1500)); // API呼び出しのシミュレート
-      
-      // 実際のAPI呼び出しはCORSの制限によりコメントアウト
-      // const apiUrl = new URL('https://stores.jp/api/reservations');
-      // if (targetDate) {
-      //   apiUrl.searchParams.append('date', targetDate);
-      //   apiUrl.searchParams.append('start_date', targetDate);
-      //   apiUrl.searchParams.append('end_date', targetDate);
-      // }
-      // 
-      // const response = await fetch(apiUrl.toString(), {
-      //   method: 'GET',
-      //   headers: {
-      //     'Authorization': `Bearer ${apiKey}`,
-      //     'Content-Type': 'application/json',
-      //   }
-      // });
-      // 
-      // if (!response.ok) {
-      //   throw new Error(`API Error: ${response.status} - ${response.statusText}`);
-      // }
-      // 
-      // const data = await response.json();
-      // const transformedData = Array.isArray(data) ? data : (data.data || data.reservations || []);
-      
-      // 現在はモックデータを使用
-      const transformedData = mockReservations;
-      
-      setReservations(transformedData);
-      setApiStatus(prev => ({
-        ...prev,
-        connected: false, // モックデータ使用のため false
-        lastSync: new Date().toISOString(),
-        nextSync: new Date(Date.now() + 5 * 60 * 1000).toISOString(), // 5分後
-        errorCount: 0
-      }));
-
-      // 編集履歴に追加
-      const historyEntry: EditHistoryEntry = {
-        id: `history-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        user: 'システム',
-        action: 'update',
-        target: 'ストアーズ予約データ',
-        summary: `予約情報を更新しました（${transformedData.length}件取得）`,
-        category: 'reservation',
-        changes: [
-          { field: '取得件数', newValue: `${transformedData.length}件` },
-          { field: '最終更新', newValue: new Date().toLocaleString('ja-JP') },
-          { field: 'データソース', newValue: 'モック（デモ用）' },
-          { field: '対象日', newValue: targetDate }
-        ]
-      };
-
-      setEditHistory(prev => [historyEntry, ...prev]);
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '予約情報の取得に失敗しました';
-      console.error('API接続エラー:', err);
-      
-      // フォールバック: モックデータを使用
-      setReservations(mockReservations);
-      setError(`API接続に失敗しました（CORS制限）。デモ用のモックデータを表示しています。`);
-      setApiStatus(prev => ({
-        ...prev,
-        connected: false,
-        errorCount: prev.errorCount + 1
-      }));
-      
-      // モックデータ使用の履歴を追加
-      const historyEntry: EditHistoryEntry = {
-        id: `history-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        user: 'システム',
-        action: 'update',
-        target: 'ストアーズ予約データ（フォールバック）',
-        summary: `API接続失敗によりモックデータを表示（${mockReservations.length}件）`,
-        category: 'reservation',
-        changes: [
-          { field: 'エラー', newValue: 'CORS制限によりAPI接続不可' },
-          { field: 'データソース', newValue: 'モック（デモ用）' }
-        ]
-      };
-
-      setEditHistory(prev => [historyEntry, ...prev]);
-    } finally {
-      setLoading(false);
-    }
+  // 予約データを初期化（モックデータ使用）
+  const initializeReservations = () => {
+    setReservations(mockReservations);
+    setLoading(false);
   };
 
-  // 自動同期の設定
+  // コンポーネント初期化時に予約データを設定
   useEffect(() => {
-    if (autoSync && apiKey) {
-      fetchReservations();
-      const interval = setInterval(fetchReservations, 5 * 60 * 1000); // 5分ごと
-      return () => clearInterval(interval);
-    }
-  }, [autoSync, apiKey]);
-
-  // コンポーネント初期化時に予約情報を取得
-  useEffect(() => {
-    if (apiKey) {
-      fetchReservations();
-    }
+    initializeReservations();
   }, []);
 
   return (
@@ -894,141 +792,11 @@ export function ReservationManager() {
       <div className="flex items-center justify-between">
         <h2>ストアーズ予約管理</h2>
         <div className="flex gap-4 items-center">
-          <Button 
-            onClick={fetchReservations} 
-            disabled={loading}
-            variant="outline"
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            {loading ? '取得中...' : 'デモデータ更新'}
-          </Button>
+          <Badge variant="outline">デモデータ表示中</Badge>
         </div>
       </div>
 
-      {/* API接続ステータス */}
-      <Card className={`border-l-4 ${apiStatus.connected ? 'border-l-green-500' : 'border-l-orange-500'}`}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            {apiStatus.connected ? (
-              <><Wifi className="w-5 h-5 text-green-500" />API接続状況: 正常</>
-            ) : (
-              <><WifiOff className="w-5 h-5 text-orange-500" />デモモード（モックデータ使用中）</>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-            <p className="text-sm text-orange-800">
-              <strong>💡 開発者向け情報:</strong> 
-              実際のストアーズ予約APIとの接続はCORS（Cross-Origin Resource Sharing）制限により、
-              ブラウザから直接アクセスできません。本番環境では以下の対応が必要です：
-            </p>
-            <ul className="text-xs text-orange-700 mt-2 ml-4 space-y-1">
-              <li>• バックエンドサーバーでAPIプロキシを実装</li>
-              <li>• ストアーズ予約側でCORS設定を許可</li>
-              <li>• Next.js等のサーバーサイド機能を使用</li>
-            </ul>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm">最終同期</span>
-              </div>
-              <p className="text-sm font-medium">
-                {apiStatus.lastSync ? new Date(apiStatus.lastSync).toLocaleString('ja-JP') : '未同期'}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <RefreshCw className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm">データソース</span>
-              </div>
-              <p className="text-sm font-medium text-orange-600">
-                モックデータ（デモ用）
-              </p>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm">API試行回数</span>
-              </div>
-              <p className="text-sm font-medium">
-                {apiStatus.errorCount}回
-                {apiStatus.errorCount > 0 && (
-                  <span className="text-orange-500 ml-2">
-                    <AlertTriangle className="w-3 h-3 inline" />
-                  </span>
-                )}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* API設定 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>API設定</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="apiKey">ストアーズ予約 APIキー</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="apiKey"
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="APIキーを入力してください"
-                  className="flex-1"
-                />
-                <Button 
-                  onClick={() => setAutoSync(!autoSync)} 
-                  variant={autoSync ? "default" : "outline"}
-                  size="sm"
-                >
-                  {autoSync ? '自動同期: ON' : '自動同期: OFF'}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                APIキーはストアーズ予約の管理画面から取得できます。現在はデモモードで動作中です。
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="targetDate">取得対象日（デモ用）</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="targetDate"
-                  type="date"
-                  value={targetDate}
-                  onChange={(e) => setTargetDate(e.target.value)}
-                  className="flex-1"
-                />
-                <Button 
-                  onClick={fetchReservations}
-                  disabled={loading}
-                  size="sm"
-                >
-                  デモデータ取得
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                デモ用のモックデータを表示します（設定した日付は履歴に記録されます）
-              </p>
-            </div>
-            
-            {error && (
-              <div className="flex items-center gap-2 p-3 border border-red-200 rounded-lg bg-red-50">
-                <AlertCircle className="w-4 h-4 text-red-500" />
-                <span className="text-sm text-red-700">{error}</span>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
 
 
 

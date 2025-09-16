@@ -148,6 +148,16 @@ export function StaffManager() {
   const [sortField, setSortField] = useState<keyof Staff | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   
+  // スケジュールダイアログの状態
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [selectedStaffForSchedule, setSelectedStaffForSchedule] = useState<Staff | null>(null);
+  
+  // スケジュールダイアログを開く
+  const openScheduleDialog = (staff: Staff) => {
+    setSelectedStaffForSchedule(staff);
+    setScheduleDialogOpen(true);
+  };
+  
   // スタッフスケジュールのモックデータ
   const [schedules] = useState<StaffSchedule[]>([
     {
@@ -663,6 +673,14 @@ export function StaffManager() {
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                title="スケジュール管理"
+                                onClick={() => openScheduleDialog(member)}
+                              >
+                                <Calendar className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 title="連絡先を表示"
                                 onClick={() => {
                                   const password = prompt('連絡先を表示するにはパスワードを入力してください:');
@@ -816,6 +834,19 @@ export function StaffManager() {
           </Tabs>
         </div>
       </TooltipProvider>
+      
+      {/* スケジュールダイアログ */}
+      {selectedStaffForSchedule && (
+        <StaffScheduleDialog
+          isOpen={scheduleDialogOpen}
+          onClose={() => {
+            setScheduleDialogOpen(false);
+            setSelectedStaffForSchedule(null);
+          }}
+          staffId={selectedStaffForSchedule.id}
+          staffName={selectedStaffForSchedule.name}
+        />
+      )}
     </DndProvider>
   );
 }
