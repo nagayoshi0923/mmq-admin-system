@@ -302,12 +302,12 @@ export function useSupabaseData<T extends { id: string }>(
         setRealtimeChannel(null);
       };
     }
-  }, [options.realtime, options.table]);
+  }, [options.realtime, options.table, isSupabaseConfigured()]);
 
   // 初期データ取得
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, [options.table]); // fetchDataではなくtableのみに依存
 
   return {
     data,
