@@ -109,8 +109,6 @@ export function EditHistoryProvider({ children }: { children: ReactNode }) {
 
   const addEditEntry = async (entry: Omit<EditHistoryEntry, 'id' | 'timestamp'>) => {
     try {
-      console.log('📋 EditHistoryContext: 履歴エントリを追加中...', entry);
-      
       const dbEntryData = {
         user: entry.user,
         user_name: entry.user, // user_nameカラムにも対応
@@ -122,10 +120,8 @@ export function EditHistoryProvider({ children }: { children: ReactNode }) {
         timestamp: new Date().toISOString()
       };
       
-      console.log('💾 Supabaseに挿入するデータ:', dbEntryData);
       await insert(dbEntryData);
-      
-      console.log('✅ EditHistoryContext: 履歴エントリを正常に追加しました');
+      console.log('✅ 編集履歴を記録しました:', entry.summary);
     } catch (error) {
       console.error('❌ 編集履歴追加エラー:', error);
     }

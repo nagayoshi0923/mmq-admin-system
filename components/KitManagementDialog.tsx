@@ -123,18 +123,12 @@ export function KitManagementDialog({ store, open, onOpenChange, onKitChange }: 
       await removePerformanceKit(currentStore.id, kit.id);
       
       // 編集履歴に記録
-      console.log('📝 キット移動履歴を記録中...', {
-        kit: `${kit.scenarioTitle} キット#${kit.kitNumber}`,
-        from: currentStore.name,
-        to: targetStore.name
-      });
-      
       await addEditEntry({
         user: 'システム',
         action: 'update',
         target: `${kit.scenarioTitle} キット#${kit.kitNumber}`,
         summary: `キットを${currentStore.name}から${targetStore.name}に移動`,
-        category: 'store',
+        category: 'inventory', // 'store'カテゴリがCHECK制約で許可されていないため'inventory'を使用
         changes: [
           {
             field: '所在店舗',
@@ -143,8 +137,6 @@ export function KitManagementDialog({ store, open, onOpenChange, onKitChange }: 
           }
         ]
       });
-      
-      console.log('✅ キット移動履歴を記録しました');
       
       // キット変更を通知
       onKitChange?.();
@@ -490,7 +482,7 @@ export function KitManagementDialog({ store, open, onOpenChange, onKitChange }: 
           <ItemEditHistory
             itemId={historyKit.id}
             itemName={`${historyKit.scenarioTitle} キット#${historyKit.kitNumber}`}
-            category="store"
+            category="inventory"
           />
         </DialogContent>
       </Dialog>

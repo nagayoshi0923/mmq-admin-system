@@ -42,7 +42,7 @@ const categoryLabels = {
   'reservation': '予約',
   'sales': '売上',
   'customer': '顧客',
-  'inventory': '在庫',
+  'inventory': '在庫・キット',
   'store': '店舗'
 };
 

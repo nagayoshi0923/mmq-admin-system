@@ -14,11 +14,36 @@ interface ItemEditHistoryProps {
 export function ItemEditHistory({ itemId, itemName, category }: ItemEditHistoryProps) {
   const { editHistory } = useEditHistory();
 
+  console.log('🔍 ItemEditHistory デバッグ情報:', {
+    itemId,
+    itemName,
+    category,
+    totalHistory: editHistory.length,
+    allCategories: [...new Set(editHistory.map(e => e.category))],
+    storeEntries: editHistory.filter(e => e.category === 'store')
+  });
+
   // 特定の項目に関連する編集履歴をフィルタリング
-  const itemHistory = editHistory.filter(entry => 
-    entry.category === category && 
-    (entry.target.includes(itemName) || entry.target.includes(itemId))
-  );
+  const itemHistory = editHistory.filter(entry => {
+    const categoryMatch = entry.category === category;
+    const nameMatch = entry.target.includes(itemName);
+    const idMatch = entry.target.includes(itemId);
+    
+    console.log('📋 履歴エントリチェック:', {
+      entry: entry.target,
+      categoryMatch,
+      nameMatch,
+      idMatch,
+      result: categoryMatch && (nameMatch || idMatch)
+    });
+    
+    return categoryMatch && (nameMatch || idMatch);
+  });
+
+  console.log('✅ フィルタリング結果:', {
+    matchedEntries: itemHistory.length,
+    entries: itemHistory.map(e => ({ target: e.target, summary: e.summary }))
+  });
 
   const getActionIcon = (action: string) => {
     switch (action) {
