@@ -12,7 +12,6 @@ import { Package, Plus, Pencil, Trash2, History } from 'lucide-react';
 import { Store as StoreType, PerformanceKit } from '../contexts/StoreContext';
 import { useStores } from '../contexts/StoreContext';
 import { useScenarios } from '../contexts/ScenarioContext';
-import { useEditHistory } from '../contexts/EditHistoryContext';
 import { ItemEditHistory } from './ItemEditHistory';
 
 interface KitManagementDialogProps {
@@ -41,7 +40,6 @@ const conditionColors = {
 export function KitManagementDialog({ store, open, onOpenChange, onKitChange }: KitManagementDialogProps) {
   const { stores, addPerformanceKit, updatePerformanceKit, removePerformanceKit } = useStores();
   const { scenarios } = useScenarios();
-  const { addEditEntry } = useEditHistory();
   
   // 最新の店舗データを取得（リアルタイム反映のため）
   const currentStore = stores.find(s => s.id === store.id) || store;
@@ -100,52 +98,6 @@ export function KitManagementDialog({ store, open, onOpenChange, onKitChange }: 
     onKitChange?.();
   };
 
-  const handleKitMove = async (kit: PerformanceKit, newStoreId: string) => {
-    if (newStoreId === currentStore.id) return; // 同じ店舗の場合は何もしない
-
-    try {
-      const targetStore = stores.find(s => s.id === newStoreId);
-      if (!targetStore) return;
-
-      // 新しい店舗にキットを追加
-      const kitData: Omit<PerformanceKit, 'id'> = {
-        scenarioId: kit.scenarioId,
-        scenarioTitle: kit.scenarioTitle,
-        kitNumber: kit.kitNumber,
-        condition: kit.condition,
-        lastUsed: kit.lastUsed,
-        notes: kit.notes
-      };
-      
-      await addPerformanceKit(newStoreId, kitData);
-      
-      // 元の店舗からキットを削除
-      await removePerformanceKit(currentStore.id, kit.id);
-      
-      // 編集履歴に記録
-      await addEditEntry({
-        user: 'システム',
-        action: 'update',
-        target: `${kit.scenarioTitle} キット#${kit.kitNumber}`,
-        summary: `キットを${currentStore.name}から${targetStore.name}に移動`,
-        category: 'inventory', // 'store'カテゴリがCHECK制約で許可されていないため'inventory'を使用
-        changes: [
-          {
-            field: '所在店舗',
-            oldValue: currentStore.name,
-            newValue: targetStore.name
-          }
-        ]
-      });
-      
-      // キット変更を通知
-      onKitChange?.();
-      
-      console.log(`キット「${kit.scenarioTitle} #${kit.kitNumber}」を移動しました`);
-    } catch (error) {
-      console.error('キット移動エラー:', error);
-    }
-  };
 
   const availableScenarios = scenarios.filter(s => s.status === 'available');
 
@@ -348,21 +300,9 @@ export function KitManagementDialog({ store, open, onOpenChange, onKitChange }: 
                         )}
                       </TableCell>
                       <TableCell>
-                        <Select 
-                          value={currentStore.id} 
-                          onValueChange={(newStoreId) => handleKitMove(kit, newStoreId)}
-                        >
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {stores.map(store => (
-                              <SelectItem key={store.id} value={store.id}>
-                                {store.shortName || store.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <span className="text-sm font-medium">
+                          {currentStore.shortName || currentStore.name}
+                        </span>
                       </TableCell>
                       <TableCell>
                         {kit.lastUsed ? new Date(kit.lastUsed).toLocaleDateString('ja-JP') : '未使用'}
