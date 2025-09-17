@@ -79,7 +79,10 @@ const formatDuration = (minutes: number): string => {
 };
 
 // プレイ人数表示ヘルパー関数
-const formatPlayerCount = (playerCount: { min: number; max: number }): string => {
+const formatPlayerCount = (playerCount: { min: number; max: number } | undefined): string => {
+  if (!playerCount) {
+    return '1名'; // デフォルト値
+  }
   if (playerCount.min === playerCount.max) {
     return `${playerCount.max}名`;
   }
@@ -217,61 +220,81 @@ export const ScenarioManager = React.memo(() => {
   const [maxSelectOpen, setMaxSelectOpen] = useState(false);
 
   // シナリオ保存関数
-  const handleSaveScenario = (scenarioData: Scenario) => {
+  const handleSaveScenario = async (scenarioData: Scenario) => {
     const existingScenario = scenarios.find(s => s.id === scenarioData.id);
     
-    if (existingScenario) {
-      // 更新
-      updateScenario(scenarioData);
-      
-      // 編集履歴に追加
-      addEditEntry({
-        user: 'ユーザー',
-        action: 'update',
-        target: `${scenarioData.title}`,
-        summary: `${scenarioData.title}の情報を更新しました`,
-        category: 'scenario',
-        changes: [
-          { field: '全般', newValue: '情報が更新されました' }
-        ]
-      });
-    } else {
-      // 新規追加
-      addScenario(scenarioData);
-      
-      // 編集履歴に追加
-      addEditEntry({
-        user: 'ユーザー',
-        action: 'create',
-        target: scenarioData.title,
-        summary: `新規シナリオを追加：${scenarioData.title}（${scenarioData.duration}分・${difficultyLabels[scenarioData.difficulty]}）`,
-        category: 'scenario',
-        changes: [
-          { field: 'タイトル', newValue: scenarioData.title },
-          { field: '所要時間', newValue: `${scenarioData.duration}分` },
-          { field: '難易度', newValue: difficultyLabels[scenarioData.difficulty] },
-          { field: 'ジャンル', newValue: scenarioData.genre.join(', ') }
-        ]
-      });
+    try {
+      if (existingScenario) {
+        // 更新
+        const result = await updateScenario(scenarioData);
+        if (result.error) {
+          console.error('シナリオ更新エラー:', result.error);
+          return;
+        }
+        
+        // 編集履歴に追加
+        addEditEntry({
+          user: 'ユーザー',
+          action: 'update',
+          target: `${scenarioData.title}`,
+          summary: `${scenarioData.title}の情報を更新しました`,
+          category: 'scenario',
+          changes: [
+            { field: '全般', newValue: '情報が更新されました' }
+          ]
+        });
+      } else {
+        // 新規追加
+        const result = await addScenario(scenarioData);
+        if (result.error) {
+          console.error('シナリオ追加エラー:', result.error);
+          return;
+        }
+        
+        // 編集履歴に追加
+        addEditEntry({
+          user: 'ユーザー',
+          action: 'create',
+          target: scenarioData.title,
+          summary: `新規シナリオを追加：${scenarioData.title}（${scenarioData.duration}分・${difficultyLabels[scenarioData.difficulty]}）`,
+          category: 'scenario',
+          changes: [
+            { field: 'タイトル', newValue: scenarioData.title },
+            { field: '所要時間', newValue: `${scenarioData.duration}分` },
+            { field: '難易度', newValue: difficultyLabels[scenarioData.difficulty] },
+            { field: 'ジャンル', newValue: Array.isArray(scenarioData.genre) ? scenarioData.genre.join(', ') : '' }
+          ]
+        });
+      }
+    } catch (error) {
+      console.error('シナリオ保存エラー:', error);
     }
   };
 
   // 削除処理関数
-  const handleDeleteScenario = (scenario: Scenario) => {
-    removeScenario(scenario.id);
-    
-    // 編集履歴に追加
-    addEditEntry({
-      user: 'ユーザー',
-      action: 'delete',
-      target: `${scenario.title} - シナリオ削除`,
-      summary: `シナリオを削除：${scenario.title}`,
-      category: 'scenario',
-      changes: [
-        { field: 'タイトル', oldValue: scenario.title, newValue: '削除済み' },
-        { field: 'ステータス', oldValue: scenario.status, newValue: '削除済み' }
-      ]
-    });
+  const handleDeleteScenario = async (scenario: Scenario) => {
+    try {
+      const result = await removeScenario(scenario.id);
+      if (result.error) {
+        console.error('シナリオ削除エラー:', result.error);
+        return;
+      }
+      
+      // 編集履歴に追加
+      addEditEntry({
+        user: 'ユーザー',
+        action: 'delete',
+        target: `${scenario.title} - シナリオ削除`,
+        summary: `シナリオを削除：${scenario.title}`,
+        category: 'scenario',
+        changes: [
+          { field: 'タイトル', oldValue: scenario.title, newValue: '削除済み' },
+          { field: 'ステータス', oldValue: scenario.status, newValue: '削除済み' }
+        ]
+      });
+    } catch (error) {
+      console.error('シナリオ削除エラー:', error);
+    }
   };
 
   // ソート処理関数
@@ -284,8 +307,8 @@ export const ScenarioManager = React.memo(() => {
     }
   };
 
-  // ソートされたシナリオリスト
-  const sortedScenarios = [...scenarios].sort((a, b) => {
+  // ソートされたシナリオリスト（安全な配列処理）
+  const sortedScenarios = Array.isArray(scenarios) ? [...scenarios].sort((a, b) => {
     if (!sortField) return 0;
     
     let aValue = a[sortField];
@@ -312,7 +335,7 @@ export const ScenarioManager = React.memo(() => {
       return sortDirection === 'asc' ? 1 : -1;
     }
     return 0;
-  });
+  }) : [];
 
   // ソートアイコンの表示
   const getSortIcon = (field: keyof Scenario) => {
@@ -786,7 +809,7 @@ export const ScenarioManager = React.memo(() => {
                     >
                       {staffMember.name}
                       <span className="text-xs text-muted-foreground ml-1">
-                        ({staffMember.role.join(', ')})
+                        ({Array.isArray(staffMember.role) ? staffMember.role.join(', ') : ''})
                       </span>
                     </label>
                   </div>

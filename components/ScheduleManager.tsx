@@ -452,55 +452,8 @@ export function ScheduleManager() {
     event: null 
   });
   
-  // イベントデータの状態管理（usePersistedStateで統一）
-  const [scheduleEvents, setScheduleEvents] = usePersistedState<{ [key: string]: DaySchedule[] }>(
-    'murder-mystery-schedule-events',
-    calendarData,
-    {
-      // カスタムシリアライザー：イベントがある月のみ保存
-      serialize: (value) => {
-        const eventsToSave: { [key: string]: DaySchedule[] } = {};
-        Object.keys(value).forEach(monthKey => {
-          const monthData = value[monthKey];
-          if (monthData && monthData.some(day => day.events && day.events.length > 0)) {
-            eventsToSave[monthKey] = monthData;
-          }
-        });
-        return JSON.stringify(eventsToSave);
-      },
-      // カスタムデシリアライザー：保存データとベースデータをマージ
-      deserialize: (value) => {
-        try {
-          const parsed = JSON.parse(value);
-          const merged = { ...calendarData };
-          
-          Object.keys(parsed).forEach(monthKey => {
-            if (parsed[monthKey] && Array.isArray(parsed[monthKey])) {
-              // 各日のデータが正しい形式かチェック
-              const monthData = parsed[monthKey].map((day: any) => {
-                if (day && typeof day === 'object') {
-                  return {
-                    ...day,
-                    events: Array.isArray(day.events) ? day.events : []
-                  };
-                }
-                return { date: '', dayOfWeek: '', isHoliday: false, events: [] };
-              });
-              merged[monthKey] = monthData;
-            }
-          });
-          
-          return merged;
-        } catch (error) {
-          console.error('スケジュールデータのパースに失敗:', error);
-          return calendarData;
-        }
-      },
-      onError: (error, operation) => {
-        console.error(`スケジュールデータの${operation === 'read' ? '読み込み' : '保存'}に失敗:`, error);
-      }
-    }
-  );
+  // イベントデータの状態管理（ローカルストレージ無効化）
+  const [scheduleEvents, setScheduleEvents] = useState<{ [key: string]: DaySchedule[] }>(calendarData);
   
 
 
@@ -750,27 +703,8 @@ export function ScheduleManager() {
     // 新規イベントかどうかをチェック
     const isNewEvent = updatedEvent.id.startsWith('new-');
     
-    // 新規イベントの場合はSupabaseのみに保存（重複を避けるため）
-    // 既存イベントの場合はローカルストレージも更新
-    if (!isNewEvent) {
-      setScheduleEvents(prev => {
-        const updated = { ...prev };
-        const monthData = [...(updated[selectedMonth] || [])];
-        
-        const dayIndex = monthData.findIndex(day => day.date === updatedEvent.date);
-        if (dayIndex !== -1) {
-          const existingEventIndex = monthData[dayIndex].events.findIndex(e => e.id === updatedEvent.id);
-          
-          if (existingEventIndex >= 0) {
-            // 既存イベントを更新
-            monthData[dayIndex].events[existingEventIndex] = updatedEvent;
-            updated[selectedMonth] = monthData;
-          }
-        }
-        
-        return updated;
-      });
-    }
+    // Supabaseのみに保存（ローカルストレージは使用しない）
+    // リアルタイム同期により自動的に表示が更新される
 
     // 編集履歴に追加
     addEditEntry({
@@ -864,22 +798,8 @@ export function ScheduleManager() {
     // 新規イベントかどうかをチェック
     const isNewEvent = eventToDelete.id.startsWith('new-');
     
-    // 新規イベントの場合はSupabaseのみから削除（ローカルストレージは更新しない）
-    // 既存イベントの場合はローカルストレージからも削除
-    if (!isNewEvent) {
-      setScheduleEvents(prev => {
-        const updated = { ...prev };
-        const monthData = [...(updated[selectedMonth] || [])];
-        
-        const dayIndex = monthData.findIndex(day => day.date === eventToDelete.date);
-        if (dayIndex !== -1) {
-          monthData[dayIndex].events = monthData[dayIndex].events.filter(e => e.id !== eventToDelete.id);
-          updated[selectedMonth] = monthData;
-        }
-        
-        return updated;
-      });
-    }
+    // Supabaseのみから削除（ローカルストレージは使用しない）
+    // リアルタイム同期により自動的に表示が更新される
 
     // 編集履歴に削除を追加
     addEditEntry({
@@ -929,24 +849,7 @@ export function ScheduleManager() {
 
     const eventToCancel = cancelDialog.event;
     
-    setScheduleEvents(prev => {
-      const updated = { ...prev };
-      const monthData = [...(updated[selectedMonth] || [])];
-      
-      const dayIndex = monthData.findIndex(day => day.date === eventToCancel.date);
-      if (dayIndex !== -1) {
-        const eventIndex = monthData[dayIndex].events.findIndex(e => e.id === eventToCancel.id);
-        if (eventIndex !== -1) {
-          monthData[dayIndex].events[eventIndex] = {
-            ...monthData[dayIndex].events[eventIndex],
-            isCancelled: true
-          };
-          updated[selectedMonth] = monthData;
-        }
-      }
-      
-      return updated;
-    });
+    // ローカルストレージは使用しない（Supabaseのリアルタイム同期のみ）
 
     // 編集履歴に中止を追加
     addEditEntry({
@@ -965,24 +868,7 @@ export function ScheduleManager() {
 
   // 公演の中止を解除
   const uncancelEvent = (event: ScheduleEvent) => {
-    setScheduleEvents(prev => {
-      const updated = { ...prev };
-      const monthData = [...(updated[selectedMonth] || [])];
-      
-      const dayIndex = monthData.findIndex(day => day.date === event.date);
-      if (dayIndex !== -1) {
-        const eventIndex = monthData[dayIndex].events.findIndex(e => e.id === event.id);
-        if (eventIndex !== -1) {
-          monthData[dayIndex].events[eventIndex] = {
-            ...monthData[dayIndex].events[eventIndex],
-            isCancelled: false
-          };
-          updated[selectedMonth] = monthData;
-        }
-      }
-      
-      return updated;
-    });
+    // ローカルストレージは使用しない（Supabaseのリアルタイム同期のみ）
 
     // 編集履歴に中止解除を追加
     addEditEntry({

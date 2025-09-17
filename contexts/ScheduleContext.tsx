@@ -46,7 +46,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
   } = useSupabaseData<ScheduleEvent>({
     table: 'schedule_events',
     realtime: true,
-    fallbackKey: 'murder-mystery-schedule',
+    // fallbackKey: 'murder-mystery-schedule', // ローカルストレージを無効化
     orderBy: { column: 'date', ascending: true }
   });
 

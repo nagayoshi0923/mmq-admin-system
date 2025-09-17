@@ -161,13 +161,15 @@ CREATE POLICY "Allow anonymous update access" ON staff FOR UPDATE USING (true);
 CREATE POLICY "Allow anonymous update access" ON scenarios FOR UPDATE USING (true);
 CREATE POLICY "Allow anonymous update access" ON stores FOR UPDATE USING (true);
 CREATE POLICY "Allow anonymous update access" ON performance_kits FOR UPDATE USING (true);
-CREATE POLICY "Allow anonymous update access" ON edit_history FOR UPDATE USING (true);
 
+-- 匿名ユーザーにも削除権限を付与（API統合のため）
 CREATE POLICY "Allow anonymous delete access" ON staff FOR DELETE USING (true);
 CREATE POLICY "Allow anonymous delete access" ON scenarios FOR DELETE USING (true);
 CREATE POLICY "Allow anonymous delete access" ON stores FOR DELETE USING (true);
 CREATE POLICY "Allow anonymous delete access" ON performance_kits FOR DELETE USING (true);
 CREATE POLICY "Allow anonymous delete access" ON edit_history FOR DELETE USING (true);
+CREATE POLICY "Allow anonymous delete access" ON schedule_events FOR DELETE USING (true);
+CREATE POLICY "Allow anonymous update access" ON edit_history FOR UPDATE USING (true);
 
 -- 更新時刻の自動更新トリガー
 CREATE OR REPLACE FUNCTION update_updated_at_column()

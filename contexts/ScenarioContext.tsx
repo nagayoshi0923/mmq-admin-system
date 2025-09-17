@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { useSupabaseData } from '../hooks/useSupabaseData';
 
 // StaffContextとの循環参照を避けるため、ここで簡単な関数を作成
 let staffUpdateFunction: ((staffName: string, scenarioTitle: string, action: 'add' | 'remove') => void) | null = null;
@@ -35,9 +36,11 @@ export interface Scenario {
   releaseDate?: string; // リリース日（YYYY-MM-DD形式）
 }
 
-// モックデータ
+// モックデータは削除済み - Supabaseからのデータを使用
 const mockScenarios: Scenario[] = [
-  {
+  // 大量のモックデータを削除しました
+  // Supabaseからのデータを使用します
+  /*{
     id: '1',
     title: 'グロリアメモリーズ',
     description: 'オープンの場合は事前読込なし。馬場・大塚限定での公演。',
@@ -719,50 +722,79 @@ const mockScenarios: Scenario[] = [
     genre: ['ミステリー'],
     hasPreReading: false,
     licenseAmount: 2500
-  }
+  }*/
 ];
 
 interface ScenarioContextType {
   scenarios: Scenario[];
-  addScenario: (scenario: Scenario) => void;
-  updateScenario: (scenario: Scenario) => void;
+  loading: boolean;
+  error: string | null;
+  addScenario: (scenario: Scenario) => Promise<{ data: Scenario | null; error: string | null }>;
+  updateScenario: (scenario: Scenario) => Promise<{ data: Scenario | null; error: string | null }>;
   updateScenarios: (scenarios: Scenario[]) => void;
-  removeScenario: (id: string) => void;
+  removeScenario: (id: string) => Promise<{ error: string | null }>;
   getAvailableScenarios: () => Scenario[];
+  refetch: () => Promise<void>;
 }
 
 const ScenarioContext = createContext<ScenarioContextType | undefined>(undefined);
 
 export function ScenarioProvider({ children }: { children: ReactNode }) {
-  const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  // Supabase連携
+  const {
+    data: supabaseScenarios,
+    loading,
+    error,
+    insert,
+    update,
+    delete: deleteScenario,
+    refetch
+  } = useSupabaseData<Scenario>({
+    table: 'scenarios',
+    realtime: true,
+    // fallbackKey: 'murder-mystery-scenarios', // ローカルストレージを無効化
+    orderBy: { column: 'title', ascending: true }
+  });
+
+  // 安全なSupabaseデータ処理とデータ変換
+  const scenarios = Array.isArray(supabaseScenarios) 
+    ? supabaseScenarios.map((scenario: any) => {
+        // 安全なデータ変換
+        const safeScenario = {
+          id: scenario.id || '',
+          title: scenario.title || '',
+          description: scenario.description || '',
+          author: scenario.author || '',
+          duration: scenario.duration || 180,
+          difficulty: scenario.difficulty || 1,
+          rating: scenario.rating || 0,
+          status: scenario.status || 'available',
+          notes: scenario.notes || '',
+          // Supabaseの構造をローカル構造に変換
+          playerCount: {
+            min: scenario.player_count_min || 1,
+            max: scenario.player_count_max || 1
+          },
+          // 配列フィールドの安全な変換
+          availableGMs: Array.isArray(scenario.available_gms) ? scenario.available_gms : [],
+          requiredProps: Array.isArray(scenario.required_props) ? scenario.required_props : [],
+          genre: Array.isArray(scenario.genre) ? scenario.genre : [],
+          // その他のフィールドマッピング
+          hasPreReading: scenario.has_pre_reading || false,
+          licenseAmount: scenario.license_amount || 2500,
+          playCount: scenario.play_count || 0,
+          releaseDate: scenario.release_date || undefined
+        };
+        return safeScenario;
+      })
+    : [];
+  
   const [isInitialized, setIsInitialized] = useState(false);
   const [hasInitialSync, setHasInitialSync] = useState(false);
 
-  // データ永続化 - localStorage から初期データを読み込み
+  // 初期化処理
   useEffect(() => {
-    const savedScenarios = localStorage.getItem('murder-mystery-scenarios');
-    if (savedScenarios) {
-      try {
-        const parsed = JSON.parse(savedScenarios);
-        // データマイグレーション: availableGMs プロパティがない場合は空配列で初期化
-        const migratedScenarios = parsed.map((scenario: any) => ({
-          ...scenario,
-          availableGMs: scenario.availableGMs || [],
-          hasPreReading: scenario.hasPreReading !== undefined ? scenario.hasPreReading : false,
-          licenseAmount: scenario.licenseAmount !== undefined ? scenario.licenseAmount : 2500, // デフォルトライセンス料
-          releaseDate: scenario.releaseDate || undefined // リリース日
-        }));
-        setScenarios(migratedScenarios);
-        setIsInitialized(true);
-      } catch (error) {
-        console.error('Failed to load scenarios data:', error);
-        setScenarios(mockScenarios);
-        setIsInitialized(true);
-      }
-    } else {
-      setScenarios(mockScenarios);
-      setIsInitialized(true);
-    }
+    setIsInitialized(true);
   }, []);
 
   // 初期化後にスタッフとの同期を行う（バッチ処理・重複実行防止）
@@ -827,26 +859,77 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
     return scenarios.filter(scenario => scenario.status === 'available');
   }, [scenarios]);
 
-  const addScenario = useCallback((scenario: Scenario) => {
-    setScenarios(prev => [...prev, scenario]);
-    
-    // スタッフとの連携: 新規シナリオの対応GMにシナリオを追加
-    if (staffUpdateFunction) {
-      const availableGMs = scenario.availableGMs || [];
-      if (availableGMs.length > 0) {
-        availableGMs.forEach(gmName => {
-          staffUpdateFunction!(gmName, scenario.title, 'add');
-        });
+  const addScenario = useCallback(async (scenario: Scenario) => {
+    try {
+      // ローカル構造をSupabase構造に変換（不要なフィールドを除外）
+      const supabaseScenario = {
+        title: scenario.title,
+        description: scenario.description,
+        author: scenario.author,
+        license_amount: scenario.licenseAmount,
+        duration: scenario.duration,
+        player_count_min: scenario.playerCount.min,
+        player_count_max: scenario.playerCount.max,
+        difficulty: scenario.difficulty,
+        available_gms: scenario.availableGMs || [],
+        rating: scenario.rating,
+        play_count: scenario.playCount,
+        status: scenario.status,
+        required_props: scenario.requiredProps || [],
+        genre: scenario.genre || [],
+        notes: scenario.notes,
+        has_pre_reading: scenario.hasPreReading,
+        release_date: scenario.releaseDate
+      };
+      
+      const result = await insert(supabaseScenario as any);
+      console.log('シナリオをSupabaseに追加しました:', scenario.title);
+      
+      // スタッフとの連携: 新規シナリオの対応GMにシナリオを追加
+      if (staffUpdateFunction) {
+        const availableGMs = scenario.availableGMs || [];
+        if (availableGMs.length > 0) {
+          availableGMs.forEach(gmName => {
+            staffUpdateFunction!(gmName, scenario.title, 'add');
+          });
+        }
       }
+      
+      return result;
+    } catch (error) {
+      console.error('シナリオ追加エラー:', error);
+      return { data: null, error: error instanceof Error ? error.message : 'シナリオ追加に失敗しました' };
     }
-  }, []);
+  }, [insert]);
 
-  const updateScenario = useCallback((scenario: Scenario) => {
-    setScenarios(prev => {
-      const oldScenario = prev.find(s => s.id === scenario.id);
-      const newScenarios = prev.map(s => s.id === scenario.id ? scenario : s);
+  const updateScenario = useCallback(async (scenario: Scenario) => {
+    try {
+      // ローカル構造をSupabase構造に変換（不要なフィールドを除外）
+      const supabaseScenario = {
+        title: scenario.title,
+        description: scenario.description,
+        author: scenario.author,
+        license_amount: scenario.licenseAmount,
+        duration: scenario.duration,
+        player_count_min: scenario.playerCount.min,
+        player_count_max: scenario.playerCount.max,
+        difficulty: scenario.difficulty,
+        available_gms: scenario.availableGMs || [],
+        rating: scenario.rating,
+        play_count: scenario.playCount,
+        status: scenario.status,
+        required_props: scenario.requiredProps || [],
+        genre: scenario.genre || [],
+        notes: scenario.notes,
+        has_pre_reading: scenario.hasPreReading,
+        release_date: scenario.releaseDate
+      };
+      
+      const result = await update(scenario.id, supabaseScenario as any);
+      console.log('シナリオをSupabaseで更新しました:', scenario.title);
       
       // スタッフとの連携: 対応GMが変更された場合
+      const oldScenario = scenarios.find(s => s.id === scenario.id);
       if (oldScenario && staffUpdateFunction) {
         // Null チェックとデフォルト値を追加
         const oldAvailableGMs = oldScenario.availableGMs || [];
@@ -868,20 +951,41 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
         });
       }
       
-      return newScenarios;
-    });
-  }, []);
+      return result;
+    } catch (error) {
+      console.error('シナリオ更新エラー:', error);
+      return { data: null, error: error instanceof Error ? error.message : 'シナリオ更新に失敗しました' };
+    }
+  }, [update, scenarios]);
 
   const updateScenarios = useCallback((scenarios: Scenario[]) => {
-    setScenarios(scenarios);
+    // この関数は後方互換性のために残しますが、通常は使用しません
+    console.warn('updateScenarios is deprecated. Use individual operations instead.');
   }, []);
 
-  const removeScenario = useCallback((id: string) => {
-    setScenarios(prev => prev.filter(s => s.id !== id));
-  }, []);
+  const removeScenario = useCallback(async (id: string) => {
+    try {
+      const result = await deleteScenario(id);
+      console.log('シナリオをSupabaseから削除しました:', id);
+      return result;
+    } catch (error) {
+      console.error('シナリオ削除エラー:', error);
+      return { error: error instanceof Error ? error.message : 'シナリオ削除に失敗しました' };
+    }
+  }, [deleteScenario]);
 
   return (
-    <ScenarioContext.Provider value={{ scenarios, addScenario, updateScenario, updateScenarios, removeScenario, getAvailableScenarios }}>
+    <ScenarioContext.Provider value={{ 
+      scenarios, 
+      loading, 
+      error, 
+      addScenario, 
+      updateScenario, 
+      updateScenarios, 
+      removeScenario, 
+      getAvailableScenarios,
+      refetch
+    }}>
       {children}
     </ScenarioContext.Provider>
   );
