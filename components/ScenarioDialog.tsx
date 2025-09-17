@@ -11,6 +11,7 @@ import { X, Plus } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { ItemEditHistory } from './ItemEditHistory';
 import { useEditHistory } from '../contexts/EditHistoryContext';
+import { useStaff } from '../contexts/StaffContext';
 
 interface Scenario {
   id: string;
@@ -38,11 +39,7 @@ interface ScenarioDialogProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-const gmOptions = [
-  'きゅう', 'ソラ', '八継じの', 'つばめ', '松井（まつい）', 'れいにー', 
-  'Remia（れみあ）', 'みずき', 'りえぞー', 'えりん', 'ぽんちゃん', 
-  'ほがらか', 'しらやま'
-];
+// GMリストはスタッフコンテキストから取得
 
 const statusOptions = [
   { value: 'available', label: '公演中' },
@@ -52,6 +49,7 @@ const statusOptions = [
 
 const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, trigger, open: externalOpen, onOpenChange }: ScenarioDialogProps) {
   const { addEditEntry } = useEditHistory();
+  const { staff } = useStaff();
   const [internalOpen, setInternalOpen] = useState(false);
   
   const open = externalOpen !== undefined ? externalOpen : internalOpen;
@@ -76,6 +74,12 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, trigger,
 
   const [newProp, setNewProp] = useState('');
   const [newGenre, setNewGenre] = useState('');
+
+  // GM可能なスタッフを取得（GMまたはマネージャーの役割を持つアクティブなスタッフ）
+  const availableGMStaff = staff.filter(s => 
+    s.status === 'active' && 
+    (s.role.includes('GM') || s.role.includes('マネージャー'))
+  );
 
   // フォームデータ更新のハンドラーをメモ化
   const updateFormData = useCallback((field: keyof Scenario, value: any) => {
@@ -369,13 +373,13 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, trigger,
           <div className="space-y-4">
             <h3>対応可能GM</h3>
             <div className="grid grid-cols-3 gap-2">
-              {gmOptions.map(gm => (
-                <label key={gm} className="flex items-center space-x-2 cursor-pointer">
+              {availableGMStaff.map(staffMember => (
+                <label key={staffMember.id} className="flex items-center space-x-2 cursor-pointer">
                   <Checkbox
-                    checked={formData.availableGMs.includes(gm)}
-                    onCheckedChange={() => toggleGM(gm)}
+                    checked={formData.availableGMs.includes(staffMember.name)}
+                    onCheckedChange={() => toggleGM(staffMember.name)}
                   />
-                  <span className="text-sm">{gm}</span>
+                  <span className="text-sm">{staffMember.name}</span>
                 </label>
               ))}
             </div>
