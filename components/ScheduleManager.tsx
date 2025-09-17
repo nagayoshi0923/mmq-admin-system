@@ -207,15 +207,33 @@ const convertDateFromISO = (isoDateStr: string): string => {
 
 // Supabaseイベントを表示用ScheduleEventに変換
 const convertSupabaseEventToScheduleEvent = (supabaseEvent: any): ScheduleEvent => {
+  // 必須フィールドの安全チェック
+  if (!supabaseEvent || !supabaseEvent.id || !supabaseEvent.date) {
+    console.warn('Invalid supabase event data:', supabaseEvent);
+    return {
+      id: 'invalid-' + Date.now(),
+      date: '1/1',
+      venue: '',
+      scenario: '',
+      gms: [],
+      startTime: '00:00',
+      endTime: '00:00',
+      category: 'オープン公演',
+      reservationInfo: '',
+      notes: '',
+      isCancelled: false
+    };
+  }
+
   return {
     id: supabaseEvent.id,
     date: convertDateFromISO(supabaseEvent.date),
-    venue: supabaseEvent.venue,
-    scenario: supabaseEvent.scenario,
-    gms: supabaseEvent.gms || [],
-    startTime: supabaseEvent.start_time,
-    endTime: supabaseEvent.end_time,
-    category: supabaseEvent.category,
+    venue: supabaseEvent.venue || '',
+    scenario: supabaseEvent.scenario || '',
+    gms: Array.isArray(supabaseEvent.gms) ? supabaseEvent.gms : [],
+    startTime: supabaseEvent.start_time || '00:00',
+    endTime: supabaseEvent.end_time || '00:00',
+    category: supabaseEvent.category || 'オープン公演',
     reservationInfo: supabaseEvent.reservation_info || '',
     notes: supabaseEvent.notes || '',
     isCancelled: supabaseEvent.is_cancelled || false
@@ -403,7 +421,9 @@ export function ScheduleManager() {
   
   // Supabaseデータの安全な処理と変換
   const safeSupabaseEvents = Array.isArray(supabaseEvents) 
-    ? supabaseEvents.map(convertSupabaseEventToScheduleEvent)
+    ? supabaseEvents
+        .filter(event => event && typeof event === 'object') // null/undefinedをフィルタ
+        .map(convertSupabaseEventToScheduleEvent)
     : [];
   
   // カレンダーデータの初期化
@@ -586,13 +606,16 @@ export function ScheduleManager() {
     const mergedSchedule = localSchedule.map(day => {
       const supabaseEventsForDay = supabaseEventsByDate[day.date] || [];
       
+      // day.eventsが存在しない場合の安全チェック
+      const dayEvents = Array.isArray(day.events) ? day.events : [];
+      
       // 重複を避けるため、IDで既存チェック
-      const existingIds = new Set(day.events.map(e => e.id));
+      const existingIds = new Set(dayEvents.map(e => e.id));
       const newSupabaseEvents = supabaseEventsForDay.filter(e => !existingIds.has(e.id));
       
       return {
         ...day,
-        events: [...day.events, ...newSupabaseEvents]
+        events: [...dayEvents, ...newSupabaseEvents]
       };
     });
     
