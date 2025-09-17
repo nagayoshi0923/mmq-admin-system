@@ -676,6 +676,54 @@ export function ScheduleManager() {
         { field: '担当GM', newValue: updatedEvent.gms.join(', ') }
       ]
     });
+
+    // Supabaseにも保存
+    try {
+      const isNewEvent = updatedEvent.id.startsWith('new-');
+      
+      if (isNewEvent) {
+        // 新規イベントの場合
+        const supabaseEventData = {
+          date: updatedEvent.date,
+          venue: updatedEvent.venue,
+          scenario: updatedEvent.scenario,
+          gms: updatedEvent.gms,
+          start_time: updatedEvent.startTime,
+          end_time: updatedEvent.endTime,
+          category: updatedEvent.category,
+          reservation_info: updatedEvent.reservationInfo || null,
+          notes: updatedEvent.notes || null,
+          is_cancelled: updatedEvent.isCancelled || false
+        };
+        
+        addSupabaseEvent(supabaseEventData).then(() => {
+          console.log('新規イベントをSupabaseに保存しました:', supabaseEventData);
+        }).catch(error => {
+          console.error('Supabase保存エラー:', error);
+        });
+      } else {
+        // 既存イベントの更新
+        const supabaseUpdates = {
+          scenario: updatedEvent.scenario,
+          gms: updatedEvent.gms,
+          start_time: updatedEvent.startTime,
+          end_time: updatedEvent.endTime,
+          category: updatedEvent.category,
+          reservation_info: updatedEvent.reservationInfo || null,
+          notes: updatedEvent.notes || null,
+          is_cancelled: updatedEvent.isCancelled || false
+        };
+        
+        updateSupabaseEvent(updatedEvent.id, supabaseUpdates).then(() => {
+          console.log('イベントをSupabaseで更新しました:', updatedEvent.id);
+        }).catch(error => {
+          console.error('Supabase更新エラー:', error);
+        });
+      }
+    } catch (error) {
+      console.error('Supabase処理エラー:', error);
+    }
+
     closeDialog();
   };
 
@@ -716,6 +764,17 @@ export function ScheduleManager() {
         { field: '担当GM', oldValue: eventToDelete.gms.join(', '), newValue: '' }
       ]
     });
+
+    // Supabaseからも削除
+    try {
+      deleteSupabaseEvent(eventToDelete.id).then(() => {
+        console.log('イベントをSupabaseから削除しました:', eventToDelete.id);
+      }).catch(error => {
+        console.error('Supabase削除エラー:', error);
+      });
+    } catch (error) {
+      console.error('Supabase削除処理エラー:', error);
+    }
 
     setDeleteDialog({ open: false, event: null });
   };
