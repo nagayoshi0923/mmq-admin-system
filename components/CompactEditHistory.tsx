@@ -31,7 +31,8 @@ const categoryColors = {
   'reservation': 'bg-green-100 text-green-800',
   'sales': 'bg-yellow-100 text-yellow-800',
   'customer': 'bg-pink-100 text-pink-800',
-  'inventory': 'bg-indigo-100 text-indigo-800'
+  'inventory': 'bg-indigo-100 text-indigo-800',
+  'store': 'bg-teal-100 text-teal-800'
 };
 
 const categoryLabels = {
@@ -41,7 +42,8 @@ const categoryLabels = {
   'reservation': '予約',
   'sales': '売上',
   'customer': '顧客',
-  'inventory': '在庫'
+  'inventory': '在庫',
+  'store': '店舗'
 };
 
 interface CompactEditHistoryProps {

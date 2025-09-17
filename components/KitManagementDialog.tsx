@@ -468,13 +468,24 @@ export function KitManagementDialog({ store, open, onOpenChange, onKitChange }: 
 
     {/* 編集履歴ダイアログ */}
     {historyKit && (
-      <ItemEditHistory
-        open={!!historyKit}
-        onOpenChange={(open) => !open && setHistoryKit(null)}
-        itemId={historyKit.id}
-        itemName={`${historyKit.scenarioTitle} キット#${historyKit.kitNumber}`}
-        category="store"
-      />
+      <Dialog open={!!historyKit} onOpenChange={(open) => !open && setHistoryKit(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="w-5 h-5" />
+              {historyKit.scenarioTitle} キット#{historyKit.kitNumber} - 編集履歴
+            </DialogTitle>
+            <DialogDescription>
+              このキットの移動履歴と編集履歴を表示します
+            </DialogDescription>
+          </DialogHeader>
+          <ItemEditHistory
+            itemId={historyKit.id}
+            itemName={`${historyKit.scenarioTitle} キット#${historyKit.kitNumber}`}
+            category="store"
+          />
+        </DialogContent>
+      </Dialog>
     )}
   </>
   );

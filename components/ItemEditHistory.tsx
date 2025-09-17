@@ -8,7 +8,7 @@ import { useEditHistory } from '../contexts/EditHistoryContext';
 interface ItemEditHistoryProps {
   itemId: string;
   itemName: string;
-  category: 'staff' | 'scenario' | 'schedule' | 'reservation' | 'sales' | 'customer' | 'inventory';
+  category: 'staff' | 'scenario' | 'schedule' | 'reservation' | 'sales' | 'customer' | 'inventory' | 'store';
 }
 
 export function ItemEditHistory({ itemId, itemName, category }: ItemEditHistoryProps) {
