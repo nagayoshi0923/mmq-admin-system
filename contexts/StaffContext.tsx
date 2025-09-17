@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { setStaffUpdateFunction, setStaffBatchSyncFunction } from './ScenarioContext';
 import { useSupabaseData } from '../hooks/useSupabaseData';
 import { isValidStaff, isValidArray, parseLocalStorageData, safeGetArray } from '../utils/typeGuards';
@@ -58,7 +58,7 @@ interface StaffProviderProps {
 export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
   // useSupabaseDataフックを使用
   const {
-    data: staff,
+    data: rawStaff,
     loading,
     error,
     refetch,
@@ -66,12 +66,36 @@ export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
     update,
     delete: deleteStaff,
     upsert
-  } = useSupabaseData<Staff>({
+  } = useSupabaseData<any>({
     table: 'staff',
     realtime: true,
     // fallbackKey: 'murder-mystery-staff', // ローカルストレージを無効化
     orderBy: { column: 'name', ascending: true }
   });
+
+  // データベースのフィールド名をアプリケーションのフィールド名に変換
+  const staff: Staff[] = useMemo(() => {
+    return Array.isArray(rawStaff) ? rawStaff.map((dbStaff: any) => ({
+      id: dbStaff.id || '',
+      name: dbStaff.name || '',
+      lineName: dbStaff.line_name || '',
+      xAccount: dbStaff.x_account || '',
+      role: dbStaff.role || [],
+      stores: dbStaff.stores || [],
+      ngDays: dbStaff.ng_days || [],
+      wantToLearn: dbStaff.want_to_learn || [],
+      availableScenarios: dbStaff.available_scenarios || [],
+      notes: dbStaff.notes || '',
+      contact: {
+        phone: dbStaff.phone || '',
+        email: dbStaff.email || ''
+      },
+      availability: dbStaff.availability || [],
+      experience: dbStaff.experience || 0,
+      specialScenarios: dbStaff.special_scenarios || [],
+      status: dbStaff.status || 'active'
+    })) : [];
+  }, [rawStaff]);
 
   // シナリオとスタッフの連携機能
   const addScenarioToStaff = useCallback(async (staffName: string, scenarioTitle: string) => {
@@ -99,7 +123,26 @@ export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
   // CRUD操作
   const addStaff = useCallback(async (newStaff: Staff) => {
     try {
-      const { data, error: insertError } = await insert(newStaff);
+      // アプリケーションのフィールド名をデータベースのフィールド名に変換
+      const dbStaffData = {
+        name: newStaff.name,
+        line_name: newStaff.lineName,
+        x_account: newStaff.xAccount,
+        role: newStaff.role,
+        stores: newStaff.stores,
+        ng_days: newStaff.ngDays,
+        want_to_learn: newStaff.wantToLearn,
+        available_scenarios: newStaff.availableScenarios,
+        notes: newStaff.notes,
+        phone: newStaff.contact.phone,
+        email: newStaff.contact.email,
+        availability: newStaff.availability,
+        experience: newStaff.experience,
+        special_scenarios: newStaff.specialScenarios,
+        status: newStaff.status
+      };
+      
+      const { data, error: insertError } = await insert(dbStaffData);
       if (insertError) {
         return { success: false, error: insertError };
       }
@@ -111,7 +154,26 @@ export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
 
   const updateStaff = useCallback(async (updatedStaff: Staff) => {
     try {
-      const { data, error: updateError } = await update(updatedStaff.id, updatedStaff);
+      // アプリケーションのフィールド名をデータベースのフィールド名に変換
+      const dbStaffData = {
+        name: updatedStaff.name,
+        line_name: updatedStaff.lineName,
+        x_account: updatedStaff.xAccount,
+        role: updatedStaff.role,
+        stores: updatedStaff.stores,
+        ng_days: updatedStaff.ngDays,
+        want_to_learn: updatedStaff.wantToLearn,
+        available_scenarios: updatedStaff.availableScenarios,
+        notes: updatedStaff.notes,
+        phone: updatedStaff.contact.phone,
+        email: updatedStaff.contact.email,
+        availability: updatedStaff.availability,
+        experience: updatedStaff.experience,
+        special_scenarios: updatedStaff.specialScenarios,
+        status: updatedStaff.status
+      };
+      
+      const { data, error: updateError } = await update(updatedStaff.id, dbStaffData);
       if (updateError) {
         return { success: false, error: updateError };
       }
