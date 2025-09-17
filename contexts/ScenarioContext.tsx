@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { useSupabaseData } from '../hooks/useSupabaseData';
 
 // StaffContextとの循環参照を避けるため、ここで簡単な関数を作成
@@ -756,38 +756,40 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
     orderBy: { column: 'title', ascending: true }
   });
 
-  // 安全なSupabaseデータ処理とデータ変換
-  const scenarios = Array.isArray(supabaseScenarios) 
-    ? supabaseScenarios.map((scenario: any) => {
-        // 安全なデータ変換
-        const safeScenario = {
-          id: scenario.id || '',
-          title: scenario.title || '',
-          description: scenario.description || '',
-          author: scenario.author || '',
-          duration: scenario.duration || 180,
-          difficulty: scenario.difficulty || 1,
-          rating: scenario.rating || 0,
-          status: scenario.status || 'available',
-          notes: scenario.notes || '',
-          // Supabaseの構造をローカル構造に変換
-          playerCount: {
-            min: scenario.player_count_min || 1,
-            max: scenario.player_count_max || 1
-          },
-          // 配列フィールドの安全な変換
-          availableGMs: Array.isArray(scenario.available_gms) ? scenario.available_gms : [],
-          requiredProps: Array.isArray(scenario.required_props) ? scenario.required_props : [],
-          genre: Array.isArray(scenario.genre) ? scenario.genre : [],
-          // その他のフィールドマッピング
-          hasPreReading: scenario.has_pre_reading || false,
-          licenseAmount: scenario.license_amount || 2500,
-          playCount: scenario.play_count || 0,
-          releaseDate: scenario.release_date || undefined
-        };
-        return safeScenario;
-      })
-    : [];
+  // 安全なSupabaseデータ処理とデータ変換（useMemoで最適化）
+  const scenarios = useMemo(() => {
+    return Array.isArray(supabaseScenarios) 
+      ? supabaseScenarios.map((scenario: any) => {
+          // 安全なデータ変換
+          const safeScenario = {
+            id: scenario.id || '',
+            title: scenario.title || '',
+            description: scenario.description || '',
+            author: scenario.author || '',
+            duration: scenario.duration || 180,
+            difficulty: scenario.difficulty || 1,
+            rating: scenario.rating || 0,
+            status: scenario.status || 'available',
+            notes: scenario.notes || '',
+            // Supabaseの構造をローカル構造に変換
+            playerCount: {
+              min: scenario.player_count_min || 1,
+              max: scenario.player_count_max || 1
+            },
+            // 配列フィールドの安全な変換
+            availableGMs: Array.isArray(scenario.available_gms) ? scenario.available_gms : [],
+            requiredProps: Array.isArray(scenario.required_props) ? scenario.required_props : [],
+            genre: Array.isArray(scenario.genre) ? scenario.genre : [],
+            // その他のフィールドマッピング
+            hasPreReading: scenario.has_pre_reading || false,
+            licenseAmount: scenario.license_amount || 2500,
+            playCount: scenario.play_count || 0,
+            releaseDate: scenario.release_date || undefined
+          };
+          return safeScenario;
+        })
+      : [];
+  }, [supabaseScenarios]);
   
   const [isInitialized, setIsInitialized] = useState(false);
   const [hasInitialSync, setHasInitialSync] = useState(false);

@@ -395,8 +395,19 @@ export const ScenarioManager = React.memo(() => {
     
     const scenario = scenarios.find(s => s.id === editingCell.scenarioId);
     if (scenario) {
+      console.log('🔄 Saving scenario edit:', {
+        scenarioId: editingCell.scenarioId,
+        field: editingCell.field,
+        oldValue: scenario[editingCell.field as keyof Scenario],
+        newValue: editingValue
+      });
+      
       const updatedScenario = { ...scenario, [editingCell.field]: editingValue };
-      updateScenario(updatedScenario);
+      updateScenario(updatedScenario).then((result) => {
+        console.log('✅ Scenario update result:', result);
+      }).catch((error) => {
+        console.error('❌ Scenario update error:', error);
+      });
       
       // 編集履歴に追加
       const fieldLabels: Record<string, string> = {
@@ -438,8 +449,19 @@ export const ScenarioManager = React.memo(() => {
   const autoSave = (scenarioId: string, field: string, newValue: any) => {
     const scenario = scenarios.find(s => s.id === scenarioId);
     if (scenario) {
+      console.log('🔄 Auto-saving scenario edit:', {
+        scenarioId,
+        field,
+        oldValue: scenario[field as keyof Scenario],
+        newValue
+      });
+      
       const updatedScenario = { ...scenario, [field]: newValue };
-      updateScenario(updatedScenario);
+      updateScenario(updatedScenario).then((result) => {
+        console.log('✅ Auto-save result:', result);
+      }).catch((error) => {
+        console.error('❌ Auto-save error:', error);
+      });
       
       // 編集履歴に追加
       const fieldLabels: Record<string, string> = {
