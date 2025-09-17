@@ -179,6 +179,49 @@ const minutesToTime = (minutes: number): string => {
   return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
 };
 
+// 日付を"9/1"形式から"2025-09-01"形式に変換
+const convertDateToISO = (dateStr: string, year: number = 2025): string => {
+  // 既にISO形式の場合はそのまま返す
+  if (dateStr.includes('-')) {
+    return dateStr;
+  }
+  
+  // "9/1"形式を"2025-09-01"形式に変換
+  const [month, day] = dateStr.split('/');
+  const paddedMonth = month.padStart(2, '0');
+  const paddedDay = day.padStart(2, '0');
+  return `${year}-${paddedMonth}-${paddedDay}`;
+};
+
+// 日付を"2025-09-01"形式から"9/1"形式に変換（表示用）
+const convertDateFromISO = (isoDateStr: string): string => {
+  // 既に"9/1"形式の場合はそのまま返す
+  if (!isoDateStr.includes('-')) {
+    return isoDateStr;
+  }
+  
+  // "2025-09-01"形式を"9/1"形式に変換
+  const [year, month, day] = isoDateStr.split('-');
+  return `${parseInt(month)}/${parseInt(day)}`;
+};
+
+// Supabaseイベントを表示用ScheduleEventに変換
+const convertSupabaseEventToScheduleEvent = (supabaseEvent: any): ScheduleEvent => {
+  return {
+    id: supabaseEvent.id,
+    date: convertDateFromISO(supabaseEvent.date),
+    venue: supabaseEvent.venue,
+    scenario: supabaseEvent.scenario,
+    gms: supabaseEvent.gms || [],
+    startTime: supabaseEvent.start_time,
+    endTime: supabaseEvent.end_time,
+    category: supabaseEvent.category,
+    reservationInfo: supabaseEvent.reservation_info || '',
+    notes: supabaseEvent.notes || '',
+    isCancelled: supabaseEvent.is_cancelled || false
+  };
+};
+
 // 開始時間にシナリオの時間を足した終了時間を計算
 const calculateEndTime = (startTime: string, scenarioId: string, scenarios: any[]): string => {
   const scenario = scenarios.find(s => s.id === scenarioId);
@@ -358,8 +401,10 @@ export function ScheduleManager() {
     deleteEvent: deleteSupabaseEvent 
   } = useSchedule();
   
-  // Supabaseデータの安全な処理
-  const safeSupabaseEvents = Array.isArray(supabaseEvents) ? supabaseEvents : [];
+  // Supabaseデータの安全な処理と変換
+  const safeSupabaseEvents = Array.isArray(supabaseEvents) 
+    ? supabaseEvents.map(convertSupabaseEventToScheduleEvent)
+    : [];
   
   // カレンダーデータの初期化
   const [calendarData] = useState(() => {
@@ -524,10 +569,52 @@ export function ScheduleManager() {
     setSelectedMonth(newMonthKey);
   };
 
-  // 選択された月のスケジュールを取得
+  // 選択された月のスケジュールを取得（ローカル + Supabase統合）
   const currentMonthSchedule = useMemo(() => {
-    return scheduleEvents[selectedMonth] || [];
-  }, [scheduleEvents, selectedMonth]);
+    const localSchedule = scheduleEvents[selectedMonth] || [];
+    
+    // Supabaseイベントを日付ごとにグループ化
+    const supabaseEventsByDate: { [date: string]: ScheduleEvent[] } = {};
+    safeSupabaseEvents.forEach(event => {
+      if (!supabaseEventsByDate[event.date]) {
+        supabaseEventsByDate[event.date] = [];
+      }
+      supabaseEventsByDate[event.date].push(event);
+    });
+    
+    // ローカルスケジュールにSupabaseイベントを統合
+    const mergedSchedule = localSchedule.map(day => {
+      const supabaseEventsForDay = supabaseEventsByDate[day.date] || [];
+      
+      // 重複を避けるため、IDで既存チェック
+      const existingIds = new Set(day.events.map(e => e.id));
+      const newSupabaseEvents = supabaseEventsForDay.filter(e => !existingIds.has(e.id));
+      
+      return {
+        ...day,
+        events: [...day.events, ...newSupabaseEvents]
+      };
+    });
+    
+    // Supabaseにのみ存在する日付のイベントを追加
+    Object.keys(supabaseEventsByDate).forEach(date => {
+      const existingDay = mergedSchedule.find(day => day.date === date);
+      if (!existingDay) {
+        // 新しい日を作成
+        const dateObj = new Date(convertDateToISO(date));
+        const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][dateObj.getDay()];
+        
+        mergedSchedule.push({
+          date,
+          dayOfWeek,
+          isHoliday: false, // 簡易版
+          events: supabaseEventsByDate[date]
+        });
+      }
+    });
+    
+    return mergedSchedule;
+  }, [scheduleEvents, selectedMonth, safeSupabaseEvents]);
 
   // 日付でスケジュールを取得
   const getEventsForDate = (date: string): ScheduleEvent[] => {
@@ -684,7 +771,7 @@ export function ScheduleManager() {
       if (isNewEvent) {
         // 新規イベントの場合
         const supabaseEventData = {
-          date: updatedEvent.date,
+          date: convertDateToISO(updatedEvent.date),
           venue: updatedEvent.venue,
           scenario: updatedEvent.scenario,
           gms: updatedEvent.gms,
