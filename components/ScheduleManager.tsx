@@ -817,6 +817,8 @@ export function ScheduleManager() {
   // 削除確認ダイアログを開く
   const openDeleteDialog = (event: ScheduleEvent) => {
     setDeleteDialog({ open: true, event });
+    // 編集ダイアログを閉じる
+    closeDialog();
   };
 
   // イベントを削除
@@ -1420,13 +1422,28 @@ export function ScheduleManager() {
                   </Button>
                 )}
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={closeDialog}>
-                  キャンセル
-                </Button>
-                <Button onClick={saveEvent}>
-                  保存
-                </Button>
+              <div className="flex justify-between">
+                <div>
+                  {/* 既存イベントの場合のみ削除ボタンを表示 */}
+                  {editingEvent && !editingEvent.id.startsWith('new-') && (
+                    <Button 
+                      variant="destructive" 
+                      onClick={() => openDeleteDialog(editingEvent)}
+                      className="flex items-center gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      削除
+                    </Button>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={closeDialog}>
+                    キャンセル
+                  </Button>
+                  <Button onClick={saveEvent}>
+                    保存
+                  </Button>
+                </div>
               </div>
             </div>
             </TabsContent>
