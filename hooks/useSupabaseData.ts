@@ -131,8 +131,10 @@ export function useSupabaseData<T extends { id: string }>(
         throw insertError;
       }
 
-      // ローカル状態を更新
-      setData(prev => [...prev, insertedData as unknown as T]);
+      // リアルタイム同期が有効な場合は手動更新しない（重複を防ぐため）
+      if (!options.realtime) {
+        setData(prev => [...prev, insertedData as unknown as T]);
+      }
       
       // ローカルストレージも更新
       if (options.fallbackKey) {
@@ -165,8 +167,10 @@ export function useSupabaseData<T extends { id: string }>(
         throw updateError;
       }
 
-      // ローカル状態を更新
-      setData(prev => prev.map(item => item.id === id ? updatedData as unknown as T : item));
+      // リアルタイム同期が有効な場合は手動更新しない（重複を防ぐため）
+      if (!options.realtime) {
+        setData(prev => prev.map(item => item.id === id ? updatedData as unknown as T : item));
+      }
       
       // ローカルストレージも更新
       if (options.fallbackKey) {
@@ -208,12 +212,14 @@ export function useSupabaseData<T extends { id: string }>(
         console.warn(`⚠️ No rows were deleted. ID ${id} may not exist in ${options.table}`);
       }
 
-      // ローカル状態を更新
-      setData(prev => {
-        const filtered = prev.filter(item => item.id !== id);
-        console.log(`🔄 Local state updated: ${prev.length} -> ${filtered.length} items`);
-        return filtered;
-      });
+      // リアルタイム同期が有効な場合は手動更新しない（重複を防ぐため）
+      if (!options.realtime) {
+        setData(prev => {
+          const filtered = prev.filter(item => item.id !== id);
+          console.log(`🔄 Local state updated: ${prev.length} -> ${filtered.length} items`);
+          return filtered;
+        });
+      }
       
       // ローカルストレージも更新
       if (options.fallbackKey) {
