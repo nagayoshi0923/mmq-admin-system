@@ -59,15 +59,22 @@ export function isValidDate(value: unknown): value is Date {
 export interface StaffTypeGuard {
   id: string;
   name: string;
-  role: string[];
+  lineName: string;
+  xAccount: string;
+  role: Array<'GM' | 'サポート' | 'マネージャー' | '社長' | '企画' | '事務'>;
   stores: string[];
+  ngDays: string[];
+  wantToLearn: string[];
+  availableScenarios: string[];
+  notes: string;
   contact: {
     phone: string;
     email: string;
   };
-  availableScenarios: string[];
-  joinDate: string;
-  status: 'active' | 'inactive' | 'on_leave';
+  availability: string[];
+  experience: number;
+  specialScenarios: string[];
+  status: 'active' | 'inactive' | 'on-leave';
 }
 
 export function isValidStaff(value: unknown): value is StaffTypeGuard {
@@ -75,20 +82,33 @@ export function isValidStaff(value: unknown): value is StaffTypeGuard {
   
   const staff = value as Record<string, unknown>;
   
+  const validRoles = ['GM', 'サポート', 'マネージャー', '社長', '企画', '事務'];
+  
   return (
     isNonEmptyString(staff.id) &&
     isNonEmptyString(staff.name) &&
+    typeof staff.lineName === 'string' &&
+    typeof staff.xAccount === 'string' &&
     isArray(staff.role) &&
-    staff.role.every(r => isNonEmptyString(r)) &&
+    staff.role.every(r => typeof r === 'string' && validRoles.includes(r)) &&
     isArray(staff.stores) &&
-    staff.stores.every(s => isNonEmptyString(s)) &&
-    isObject(staff.contact) &&
-    isNonEmptyString((staff.contact as any).phone) &&
-    isNonEmptyString((staff.contact as any).email) &&
+    staff.stores.every(s => typeof s === 'string') &&
+    isArray(staff.ngDays) &&
+    staff.ngDays.every(d => typeof d === 'string') &&
+    isArray(staff.wantToLearn) &&
+    staff.wantToLearn.every(w => typeof w === 'string') &&
     isArray(staff.availableScenarios) &&
-    staff.availableScenarios.every(s => isNonEmptyString(s)) &&
-    isNonEmptyString(staff.joinDate) &&
-    (staff.status === 'active' || staff.status === 'inactive' || staff.status === 'on_leave')
+    staff.availableScenarios.every(s => typeof s === 'string') &&
+    typeof staff.notes === 'string' &&
+    isObject(staff.contact) &&
+    typeof (staff.contact as any).phone === 'string' &&
+    typeof (staff.contact as any).email === 'string' &&
+    isArray(staff.availability) &&
+    staff.availability.every(a => typeof a === 'string') &&
+    isValidNumber(staff.experience) &&
+    isArray(staff.specialScenarios) &&
+    staff.specialScenarios.every(s => typeof s === 'string') &&
+    (staff.status === 'active' || staff.status === 'inactive' || staff.status === 'on-leave')
   );
 }
 
