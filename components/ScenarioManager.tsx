@@ -1113,72 +1113,72 @@ export const ScenarioManager = React.memo(() => {
                         moveRow={moveRow}
                       >
                         {/* タイトル */}
-                        <EditableCell scenario={scenario} field="title">
+                        <TableCell>
                           <div className="max-w-xs">
                             <p className="text-xs truncate">{scenario.title}</p>
                           </div>
-                        </EditableCell>
+                        </TableCell>
 
                         {/* 作者名 */}
-                        <EditableCell scenario={scenario} field="author">
+                        <TableCell>
                           <div className="w-[80px]">
                             <span className="text-xs truncate block">{scenario.author}</span>
                           </div>
-                        </EditableCell>
+                        </TableCell>
 
                         {/* ライセンス料 */}
-                        <EditableCell scenario={scenario} field="licenseAmount">
+                        <TableCell>
                           <div className="w-[80px]">
                             <span className="text-xs text-green-600">
                               {formatLicenseAmount(scenario.licenseAmount || 0)}
                             </span>
                           </div>
-                        </EditableCell>
+                        </TableCell>
 
                         {/* 公演回数 */}
-                        <EditableCell scenario={scenario} field="playCount">
+                        <TableCell>
                           <span className="text-xs">{scenario.playCount}回</span>
-                        </EditableCell>
+                        </TableCell>
 
                         {/* リリース日 */}
-                        <EditableCell scenario={scenario} field="releaseDate">
+                        <TableCell>
                           <span className="text-xs">
                             {scenario.releaseDate ? new Date(scenario.releaseDate).toLocaleDateString('ja-JP') : '未設定'}
                           </span>
-                        </EditableCell>
+                        </TableCell>
 
                         {/* GM難易度 */}
-                        <EditableCell scenario={scenario} field="difficulty">
+                        <TableCell>
                           <Badge className={`${difficultyColors[scenario.difficulty]} text-xs`}>
                             {difficultyLabels[scenario.difficulty]}
                           </Badge>
-                        </EditableCell>
+                        </TableCell>
 
                         {/* プレイ人数 */}
-                        <EditableCell scenario={scenario} field="playerCount">
+                        <TableCell>
                           <div className="flex items-center gap-1">
                             <Users className="w-3 h-3" />
                             <span className="text-xs">{formatPlayerCount(scenario.playerCount)}</span>
                           </div>
-                        </EditableCell>
+                        </TableCell>
 
                         {/* 所要時間 */}
-                        <EditableCell scenario={scenario} field="duration">
+                        <TableCell>
                           <div className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             <span className="text-xs">{formatDuration(scenario.duration)}</span>
                           </div>
-                        </EditableCell>
+                        </TableCell>
 
                         {/* ステータス */}
-                        <EditableCell scenario={scenario} field="status">
+                        <TableCell>
                           <Badge className={`${statusColors[scenario.status]} text-xs`}>
                             {statusLabels[scenario.status]}
                           </Badge>
-                        </EditableCell>
+                        </TableCell>
 
                         {/* 対応GM */}
-                        <EditableCell scenario={scenario} field="availableGMs" className="max-w-xs">
+                        <TableCell className="max-w-xs">
                           <div className="flex flex-wrap gap-1">
                             {scenario.availableGMs && scenario.availableGMs.length > 0 ? (
                               scenario.availableGMs.map((gm) => (
@@ -1190,7 +1190,7 @@ export const ScenarioManager = React.memo(() => {
                               <span className="text-muted-foreground text-xs">未設定</span>
                             )}
                           </div>
-                        </EditableCell>
+                        </TableCell>
 
                         {/* キット */}
                         <TableCell>
