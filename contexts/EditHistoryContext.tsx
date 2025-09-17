@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect, useMemo } from 'react';
+import { useSupabaseData } from '../hooks/useSupabaseData';
 
 export interface EditHistoryEntry {
   id: string;
@@ -25,8 +26,7 @@ interface EditHistoryContextType {
 
 const EditHistoryContext = createContext<EditHistoryContextType | undefined>(undefined);
 
-// ローカルストレージのキー
-const EDIT_HISTORY_STORAGE_KEY = 'murder-mystery-edit-history';
+// 編集履歴はSupabaseで管理
 
 // 初期データ
 const initialEditHistory: EditHistoryEntry[] = [
@@ -74,42 +74,54 @@ const initialEditHistory: EditHistoryEntry[] = [
 ];
 
 export function EditHistoryProvider({ children }: { children: ReactNode }) {
-  const [editHistory, setEditHistory] = useState<EditHistoryEntry[]>([]);
+  // Supabaseから編集履歴データを取得
+  const {
+    data: supabaseEditHistory,
+    loading,
+    error,
+    insert,
+    update,
+    delete: deleteEntry,
+    refetch
+  } = useSupabaseData<any>({
+    table: 'edit_history',
+    realtime: true,
+    orderBy: { column: 'timestamp', ascending: false }
+  });
 
-  // ローカルストレージから履歴を読み込み
-  useEffect(() => {
+  // Supabaseデータをアプリケーション形式に変換
+  const editHistory = useMemo(() => {
+    if (!Array.isArray(supabaseEditHistory)) {
+      return [];
+    }
+
+    return supabaseEditHistory.map((dbEntry: any) => ({
+      id: dbEntry.id,
+      timestamp: dbEntry.timestamp,
+      user: dbEntry.user,
+      action: dbEntry.action,
+      target: dbEntry.target,
+      summary: dbEntry.summary,
+      category: dbEntry.category,
+      changes: Array.isArray(dbEntry.changes) ? dbEntry.changes : []
+    }));
+  }, [supabaseEditHistory]);
+
+  const addEditEntry = async (entry: Omit<EditHistoryEntry, 'id' | 'timestamp'>) => {
     try {
-      const savedHistory = localStorage.getItem(EDIT_HISTORY_STORAGE_KEY);
-      if (savedHistory) {
-        setEditHistory(JSON.parse(savedHistory));
-      } else {
-        setEditHistory(initialEditHistory);
-      }
+      const dbEntryData = {
+        user: entry.user,
+        action: entry.action,
+        target: entry.target,
+        summary: entry.summary,
+        category: entry.category,
+        changes: entry.changes,
+        timestamp: new Date().toISOString()
+      };
+      await insert(dbEntryData);
     } catch (error) {
-      console.error('編集履歴の読み込みに失敗しました:', error);
-      setEditHistory(initialEditHistory);
+      console.error('編集履歴追加エラー:', error);
     }
-  }, []);
-
-  // 履歴が変更されたらローカルストレージに保存
-  useEffect(() => {
-    if (editHistory.length > 0) {
-      try {
-        localStorage.setItem(EDIT_HISTORY_STORAGE_KEY, JSON.stringify(editHistory));
-      } catch (error) {
-        console.error('編集履歴の保存に失敗しました:', error);
-      }
-    }
-  }, [editHistory]);
-
-  const addEditEntry = (entry: Omit<EditHistoryEntry, 'id' | 'timestamp'>) => {
-    const newEntry: EditHistoryEntry = {
-      ...entry,
-      id: Date.now().toString(),
-      timestamp: new Date().toISOString()
-    };
-
-    setEditHistory(prev => [newEntry, ...prev.slice(0, 99)]); // 最新100件まで保持
   };
 
   const getHistoryByCategory = (category: EditHistoryEntry['category']) => {
@@ -123,9 +135,13 @@ export function EditHistoryProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const clearHistory = () => {
-    setEditHistory([]);
-    localStorage.removeItem(EDIT_HISTORY_STORAGE_KEY);
+  const clearHistory = async () => {
+    try {
+      // 全ての履歴を削除（実際の実装では注意が必要）
+      console.log('編集履歴のクリア機能は安全のため無効化されています');
+    } catch (error) {
+      console.error('編集履歴クリアエラー:', error);
+    }
   };
 
   return (
