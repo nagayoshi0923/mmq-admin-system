@@ -285,7 +285,7 @@ export interface Database {
           action: 'create' | 'update' | 'delete';
           target: string;
           summary: string;
-          category: 'staff' | 'scenario' | 'schedule' | 'reservation' | 'sales' | 'customer' | 'inventory';
+          category: 'staff' | 'scenario' | 'schedule' | 'reservation' | 'sales' | 'customer' | 'inventory' | 'store';
           changes: {
             field: string;
             oldValue?: string;
@@ -300,7 +300,7 @@ export interface Database {
           action: 'create' | 'update' | 'delete';
           target: string;
           summary: string;
-          category: 'staff' | 'scenario' | 'schedule' | 'reservation' | 'sales' | 'customer' | 'inventory';
+          category: 'staff' | 'scenario' | 'schedule' | 'reservation' | 'sales' | 'customer' | 'inventory' | 'store';
           changes: {
             field: string;
             oldValue?: string;

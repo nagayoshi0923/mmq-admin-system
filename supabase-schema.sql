@@ -87,11 +87,11 @@ CREATE TABLE IF NOT EXISTS performance_kits (
 CREATE TABLE IF NOT EXISTS edit_history (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
-    user_name TEXT NOT NULL,
+    user TEXT NOT NULL,
     action TEXT NOT NULL CHECK (action IN ('create', 'update', 'delete')),
     target TEXT NOT NULL,
     summary TEXT NOT NULL,
-    category TEXT NOT NULL CHECK (category IN ('staff', 'scenario', 'schedule', 'reservation', 'sales', 'customer', 'inventory')),
+    category TEXT NOT NULL CHECK (category IN ('staff', 'scenario', 'schedule', 'reservation', 'sales', 'customer', 'inventory', 'store')),
     changes JSONB NOT NULL DEFAULT '[]',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -135,6 +135,7 @@ ALTER TABLE scenarios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE performance_kits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE edit_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE schedule_events ENABLE ROW LEVEL SECURITY;
 
 -- 基本的なRLSポリシー（全ユーザーがアクセス可能）
 CREATE POLICY "Allow all operations for authenticated users" ON staff FOR ALL USING (true);
@@ -142,6 +143,7 @@ CREATE POLICY "Allow all operations for authenticated users" ON scenarios FOR AL
 CREATE POLICY "Allow all operations for authenticated users" ON stores FOR ALL USING (true);
 CREATE POLICY "Allow all operations for authenticated users" ON performance_kits FOR ALL USING (true);
 CREATE POLICY "Allow all operations for authenticated users" ON edit_history FOR ALL USING (true);
+CREATE POLICY "Allow all operations for authenticated users" ON schedule_events FOR ALL USING (true);
 
 -- 匿名ユーザーにも読み取り権限を付与（API統合のため）
 CREATE POLICY "Allow anonymous read access" ON staff FOR SELECT USING (true);
@@ -149,6 +151,7 @@ CREATE POLICY "Allow anonymous read access" ON scenarios FOR SELECT USING (true)
 CREATE POLICY "Allow anonymous read access" ON stores FOR SELECT USING (true);
 CREATE POLICY "Allow anonymous read access" ON performance_kits FOR SELECT USING (true);
 CREATE POLICY "Allow anonymous read access" ON edit_history FOR SELECT USING (true);
+CREATE POLICY "Allow anonymous read access" ON schedule_events FOR SELECT USING (true);
 
 -- 匿名ユーザーにも書き込み権限を付与（API統合のため）
 CREATE POLICY "Allow anonymous write access" ON staff FOR INSERT USING (true);
@@ -156,11 +159,13 @@ CREATE POLICY "Allow anonymous write access" ON scenarios FOR INSERT USING (true
 CREATE POLICY "Allow anonymous write access" ON stores FOR INSERT USING (true);
 CREATE POLICY "Allow anonymous write access" ON performance_kits FOR INSERT USING (true);
 CREATE POLICY "Allow anonymous write access" ON edit_history FOR INSERT USING (true);
+CREATE POLICY "Allow anonymous write access" ON schedule_events FOR INSERT USING (true);
 
 CREATE POLICY "Allow anonymous update access" ON staff FOR UPDATE USING (true);
 CREATE POLICY "Allow anonymous update access" ON scenarios FOR UPDATE USING (true);
 CREATE POLICY "Allow anonymous update access" ON stores FOR UPDATE USING (true);
 CREATE POLICY "Allow anonymous update access" ON performance_kits FOR UPDATE USING (true);
+CREATE POLICY "Allow anonymous update access" ON schedule_events FOR UPDATE USING (true);
 
 -- 匿名ユーザーにも削除権限を付与（API統合のため）
 CREATE POLICY "Allow anonymous delete access" ON staff FOR DELETE USING (true);
@@ -184,3 +189,4 @@ CREATE TRIGGER update_staff_updated_at BEFORE UPDATE ON staff FOR EACH ROW EXECU
 CREATE TRIGGER update_scenarios_updated_at BEFORE UPDATE ON scenarios FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_stores_updated_at BEFORE UPDATE ON stores FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_performance_kits_updated_at BEFORE UPDATE ON performance_kits FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_schedule_events_updated_at BEFORE UPDATE ON schedule_events FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

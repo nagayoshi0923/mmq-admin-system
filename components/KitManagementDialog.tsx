@@ -123,7 +123,13 @@ export function KitManagementDialog({ store, open, onOpenChange, onKitChange }: 
       await removePerformanceKit(currentStore.id, kit.id);
       
       // 編集履歴に記録
-      addEditEntry({
+      console.log('📝 キット移動履歴を記録中...', {
+        kit: `${kit.scenarioTitle} キット#${kit.kitNumber}`,
+        from: currentStore.name,
+        to: targetStore.name
+      });
+      
+      await addEditEntry({
         user: 'システム',
         action: 'update',
         target: `${kit.scenarioTitle} キット#${kit.kitNumber}`,
@@ -137,6 +143,8 @@ export function KitManagementDialog({ store, open, onOpenChange, onKitChange }: 
           }
         ]
       });
+      
+      console.log('✅ キット移動履歴を記録しました');
       
       // キット変更を通知
       onKitChange?.();

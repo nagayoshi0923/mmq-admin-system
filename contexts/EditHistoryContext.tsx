@@ -98,7 +98,7 @@ export function EditHistoryProvider({ children }: { children: ReactNode }) {
     return supabaseEditHistory.map((dbEntry: any) => ({
       id: dbEntry.id,
       timestamp: dbEntry.timestamp,
-      user: dbEntry.user,
+      user: dbEntry.user || dbEntry.user_name || 'システム', // user_nameカラムにも対応
       action: dbEntry.action,
       target: dbEntry.target,
       summary: dbEntry.summary,
@@ -109,8 +109,11 @@ export function EditHistoryProvider({ children }: { children: ReactNode }) {
 
   const addEditEntry = async (entry: Omit<EditHistoryEntry, 'id' | 'timestamp'>) => {
     try {
+      console.log('📋 EditHistoryContext: 履歴エントリを追加中...', entry);
+      
       const dbEntryData = {
         user: entry.user,
+        user_name: entry.user, // user_nameカラムにも対応
         action: entry.action,
         target: entry.target,
         summary: entry.summary,
@@ -118,9 +121,13 @@ export function EditHistoryProvider({ children }: { children: ReactNode }) {
         changes: entry.changes,
         timestamp: new Date().toISOString()
       };
+      
+      console.log('💾 Supabaseに挿入するデータ:', dbEntryData);
       await insert(dbEntryData);
+      
+      console.log('✅ EditHistoryContext: 履歴エントリを正常に追加しました');
     } catch (error) {
-      console.error('編集履歴追加エラー:', error);
+      console.error('❌ 編集履歴追加エラー:', error);
     }
   };
 
