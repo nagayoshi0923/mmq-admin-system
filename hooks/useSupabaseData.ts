@@ -276,26 +276,38 @@ export function useSupabaseData<T extends { id: string }>(
             table: options.table 
           }, 
           (payload) => {
-            console.log(`Realtime change in ${options.table}:`, payload);
+            console.log(`🔄 Realtime change in ${options.table}:`, payload.eventType, payload);
             
             switch (payload.eventType) {
               case 'INSERT':
+                console.log(`➕ INSERT: Adding new item with id ${payload.new.id}`);
                 setData(prev => [...prev, payload.new as T]);
                 break;
               case 'UPDATE':
+                console.log(`✏️ UPDATE: Updating item with id ${payload.new.id}`);
                 setData(prev => prev.map(item => 
                   item.id === payload.new.id ? payload.new as T : item
                 ));
                 break;
               case 'DELETE':
-                setData(prev => prev.filter(item => item.id !== payload.old.id));
+                console.log(`🗑️ DELETE: Removing item with id ${payload.old.id}`);
+                setData(prev => {
+                  const filtered = prev.filter(item => item.id !== payload.old.id);
+                  console.log(`🗑️ DELETE: Filtered ${prev.length} -> ${filtered.length} items`);
+                  return filtered;
+                });
                 break;
+              default:
+                console.log(`❓ Unknown event type: ${(payload as any).eventType}`);
             }
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log(`📡 Realtime subscription status for ${options.table}:`, status);
+        });
 
       setRealtimeChannel(channel);
+      console.log(`🚀 Started realtime subscription for ${options.table}`);
 
       return () => {
         channel.unsubscribe();
