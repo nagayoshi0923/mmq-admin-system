@@ -183,32 +183,44 @@ export function useSupabaseData<T extends { id: string }>(
 
   // データ削除
   const deleteItem = useCallback(async (id: string) => {
+    console.log(`🗑️ Attempting to delete from ${options.table} with id:`, id);
+    
     if (!isSupabaseConfigured()) {
+      console.error('❌ Supabase未設定');
       return { error: 'Supabase未設定' };
     }
 
     try {
-      const { error: deleteError } = await supabase
+      console.log(`🔄 Executing DELETE query for ${options.table}...`);
+      const { error: deleteError, count } = await supabase
         .from(options.table)
         .delete()
         .eq('id', id);
 
       if (deleteError) {
+        console.error(`❌ Supabase DELETE error for ${options.table}:`, deleteError);
         throw deleteError;
       }
 
+      console.log(`✅ Supabase DELETE successful for ${options.table}, affected rows:`, count);
+
       // ローカル状態を更新
-      setData(prev => prev.filter(item => item.id !== id));
+      setData(prev => {
+        const filtered = prev.filter(item => item.id !== id);
+        console.log(`🔄 Local state updated: ${prev.length} -> ${filtered.length} items`);
+        return filtered;
+      });
       
       // ローカルストレージも更新
       if (options.fallbackKey) {
         const updatedData = data.filter(item => item.id !== id);
         localStorage.setItem(options.fallbackKey, JSON.stringify(updatedData));
+        console.log(`💾 Local storage updated for ${options.fallbackKey}`);
       }
 
       return { error: null };
     } catch (err: any) {
-      console.error(`Error deleting data from ${options.table}:`, err.message);
+      console.error(`❌ Error deleting data from ${options.table}:`, err.message);
       return { error: err.message };
     }
   }, [options.table, options.fallbackKey, data]);
