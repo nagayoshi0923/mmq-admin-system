@@ -131,10 +131,15 @@ export function useSupabaseData<T extends { id: string }>(
         throw insertError;
       }
 
-      // リアルタイム同期が有効な場合は手動更新しない（重複を防ぐため）
-      if (!options.realtime) {
-        setData(prev => [...prev, insertedData as unknown as T]);
-      }
+      // 手動でローカル状態を更新（リアルタイム同期の遅延対策）
+      setData(prev => {
+        // 既に存在する場合は重複を防ぐ
+        const exists = prev.some(item => item.id === insertedData.id);
+        if (exists) {
+          return prev;
+        }
+        return [...prev, insertedData as unknown as T];
+      });
       
       // ローカルストレージも更新
       if (options.fallbackKey) {
@@ -167,10 +172,8 @@ export function useSupabaseData<T extends { id: string }>(
         throw updateError;
       }
 
-      // リアルタイム同期が有効な場合は手動更新しない（重複を防ぐため）
-      if (!options.realtime) {
-        setData(prev => prev.map(item => item.id === id ? updatedData as unknown as T : item));
-      }
+      // 手動でローカル状態を更新（リアルタイム同期の遅延対策）
+      setData(prev => prev.map(item => item.id === id ? updatedData as unknown as T : item));
       
       // ローカルストレージも更新
       if (options.fallbackKey) {
@@ -212,14 +215,12 @@ export function useSupabaseData<T extends { id: string }>(
         console.warn(`⚠️ No rows were deleted. ID ${id} may not exist in ${options.table}`);
       }
 
-      // リアルタイム同期が有効な場合は手動更新しない（重複を防ぐため）
-      if (!options.realtime) {
-        setData(prev => {
-          const filtered = prev.filter(item => item.id !== id);
-          console.log(`🔄 Local state updated: ${prev.length} -> ${filtered.length} items`);
-          return filtered;
-        });
-      }
+      // 手動でローカル状態を更新（リアルタイム同期の遅延対策）
+      setData(prev => {
+        const filtered = prev.filter(item => item.id !== id);
+        console.log(`🔄 Local state updated: ${prev.length} -> ${filtered.length} items`);
+        return filtered;
+      });
       
       // ローカルストレージも更新
       if (options.fallbackKey) {
@@ -303,7 +304,15 @@ export function useSupabaseData<T extends { id: string }>(
             switch (payload.eventType) {
               case 'INSERT':
                 console.log(`➕ INSERT: Adding new item with id ${payload.new.id}`);
-                setData(prev => [...prev, payload.new as T]);
+                setData(prev => {
+                  // 重複チェック
+                  const exists = prev.some(item => item.id === payload.new.id);
+                  if (exists) {
+                    console.log(`⚠️ Item ${payload.new.id} already exists, skipping INSERT`);
+                    return prev;
+                  }
+                  return [...prev, payload.new as T];
+                });
                 break;
               case 'UPDATE':
                 console.log(`✏️ UPDATE: Updating item with id ${payload.new.id}`);
