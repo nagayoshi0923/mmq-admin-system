@@ -224,21 +224,21 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, trigger,
             <h3>基本情報</h3>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="author">作者名</Label>
-                <Input
-                  id="author"
-                  value={formData.author}
-                  onChange={handleAuthorChange}
-                  required
-                />
-              </div>
-              <div>
                 <Label htmlFor="title">作品名</Label>
                 <Input
                   id="title"
                   value={formData.title}
                   onChange={handleTitleChange}
                   placeholder="タイトルを入力"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="author">作者名</Label>
+                <Input
+                  id="author"
+                  value={formData.author}
+                  onChange={handleAuthorChange}
                   required
                 />
               </div>
