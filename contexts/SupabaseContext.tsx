@@ -64,14 +64,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       if (result.success) {
         setIsConnected(true);
         setError(null);
-        // console.log('✅ Supabase接続成功');
-        
-        // 自動移行チェック（無効化）
-        // const status = SupabaseMigration.getMigrationStatus();
-        // if (!status.staff || !status.scenarios || !status.stores || !status.editHistory) {
-        //   console.log('未移行データが検出されました。自動移行を実行します...');
-        //   await migrateToSupabase();
-        // }
+        console.log('✅ Supabase接続成功');
         console.log('データ移行機能は無効化されています。新規データのみSupabaseに保存されます。');
       } else {
         setIsConnected(false);
