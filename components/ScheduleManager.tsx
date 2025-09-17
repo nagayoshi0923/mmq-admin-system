@@ -1,5 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
-import { usePersistedState } from '../hooks/usePersistedState';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -452,8 +451,8 @@ export function ScheduleManager() {
     event: null 
   });
   
-  // イベントデータの状態管理（ローカルストレージ無効化）
-  const [scheduleEvents, setScheduleEvents] = useState<{ [key: string]: DaySchedule[] }>(calendarData);
+  // ローカルストレージは完全に無効化（Supabaseのみ使用）
+  // const [scheduleEvents, setScheduleEvents] = useState<{ [key: string]: DaySchedule[] }>(calendarData);
   
 
 
@@ -514,39 +513,17 @@ export function ScheduleManager() {
     
     const newMonthKey = `${newYear}-${newMonth.toString().padStart(2, '0')}`;
     
-    // 必要に応じて新しい年を動的に追加
-    if (!scheduleEvents[newMonthKey] && newYear > 2030) {
-      const newYearData: { [key: string]: DaySchedule[] } = {};
-      for (let m = 1; m <= 12; m++) {
-        const monthKey = `${newYear}-${m.toString().padStart(2, '0')}`;
-        const daysInMonth = new Date(newYear, m, 0).getDate();
-        
-        newYearData[monthKey] = [];
-        
-        for (let day = 1; day <= daysInMonth; day++) {
-          const date = new Date(newYear, m - 1, day);
-          const days = ['日', '月', '火', '水', '木', '金', '土'];
-          
-          newYearData[monthKey].push({
-            date: `${m}/${day}`,
-            dayOfWeek: days[date.getDay()],
-            isHoliday: false, // 簡易版
-            events: []
-          });
-        }
-      }
-      
-      setScheduleEvents(prev => ({ ...prev, ...newYearData }));
-    }
+    // 動的な年追加機能は削除（Supabaseのみ使用のため不要）
+    // 必要に応じて calendarData に新しい年を追加してください
     
     setSelectedMonth(newMonthKey);
   };
 
   // 選択された月のスケジュールを取得（ローカル + Supabase統合）
   const currentMonthSchedule = useMemo(() => {
-    const localSchedule = scheduleEvents[selectedMonth] || [];
+    console.log('🔄 Calculating currentMonthSchedule with safeSupabaseEvents:', safeSupabaseEvents.length);
     
-    // Supabaseイベントを日付ごとにグループ化
+    // Supabaseイベントのみを使用（ローカルストレージは完全に無視）
     const supabaseEventsByDate: { [date: string]: ScheduleEvent[] } = {};
     safeSupabaseEvents.forEach(event => {
       if (!supabaseEventsByDate[event.date]) {
@@ -555,32 +532,28 @@ export function ScheduleManager() {
       supabaseEventsByDate[event.date].push(event);
     });
     
-    // ローカルスケジュールにSupabaseイベントを統合
-    const mergedSchedule = localSchedule.map(day => {
+    // 基本のカレンダー構造を作成（calendarDataから）
+    const baseSchedule = calendarData[selectedMonth] || [];
+    
+    // 基本構造にSupabaseイベントを統合
+    const schedule = baseSchedule.map(day => {
       const supabaseEventsForDay = supabaseEventsByDate[day.date] || [];
-      
-      // day.eventsが存在しない場合の安全チェック
-      const dayEvents = Array.isArray(day.events) ? day.events : [];
-      
-      // 重複を避けるため、IDで既存チェック
-      const existingIds = new Set(dayEvents.map(e => e.id));
-      const newSupabaseEvents = supabaseEventsForDay.filter(e => !existingIds.has(e.id));
       
       return {
         ...day,
-        events: [...dayEvents, ...newSupabaseEvents]
+        events: supabaseEventsForDay // ローカルイベントは無視し、Supabaseイベントのみ使用
       };
     });
     
     // Supabaseにのみ存在する日付のイベントを追加
     Object.keys(supabaseEventsByDate).forEach(date => {
-      const existingDay = mergedSchedule.find(day => day.date === date);
+      const existingDay = schedule.find(day => day.date === date);
       if (!existingDay) {
         // 新しい日を作成
         const dateObj = new Date(convertDateToISO(date));
         const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][dateObj.getDay()];
         
-        mergedSchedule.push({
+        schedule.push({
           date,
           dayOfWeek,
           isHoliday: false, // 簡易版
@@ -589,8 +562,9 @@ export function ScheduleManager() {
       }
     });
     
-    return mergedSchedule;
-  }, [scheduleEvents, selectedMonth, safeSupabaseEvents]);
+    console.log('✅ Final schedule calculated:', schedule.length, 'days');
+    return schedule;
+  }, [selectedMonth, safeSupabaseEvents]); // scheduleEventsを依存配列から削除
 
   // 日付でスケジュールを取得
   const getEventsForDate = (date: string): ScheduleEvent[] => {
@@ -673,19 +647,19 @@ export function ScheduleManager() {
     return minutesToTime(endMinutes);
   };
 
-  // シナリオ変更時の処理
+  // シナリオ変更時の処理（自動保存はしない）
   const handleScenarioChange = (scenarioTitle: string) => {
     const actualScenarioTitle = scenarioTitle === 'unspecified' ? '' : scenarioTitle;
     setFormData(prev => ({ ...prev, scenario: actualScenarioTitle }));
     
-    // シナリオが選択され、開始時間が設定されている場合は終了時間を自動計算
+    // シナリオが選択され、開始時間が設定されている場合は終了時間を自動計算（保存はしない）
     if (actualScenarioTitle && formData.startTime) {
       const endTime = calculateEndTimeLocal(formData.startTime, actualScenarioTitle);
       setFormData(prev => ({ ...prev, endTime }));
     }
   };
 
-  // イベントを保存
+  // イベントを保存（保存ボタンクリック時のみ実行）
   const saveEvent = () => {
     if (!editingEvent) return;
 
