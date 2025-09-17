@@ -96,6 +96,34 @@ export function KitManagementDialog({ store, open, onOpenChange, onKitChange }: 
     onKitChange?.();
   };
 
+  const handleKitMove = async (kit: PerformanceKit, newStoreId: string) => {
+    if (newStoreId === currentStore.id) return; // 同じ店舗の場合は何もしない
+
+    try {
+      // 新しい店舗にキットを追加
+      const kitData: Omit<PerformanceKit, 'id'> = {
+        scenarioId: kit.scenarioId,
+        scenarioTitle: kit.scenarioTitle,
+        kitNumber: kit.kitNumber,
+        condition: kit.condition,
+        lastUsed: kit.lastUsed,
+        notes: kit.notes
+      };
+      
+      await addPerformanceKit(newStoreId, kitData);
+      
+      // 元の店舗からキットを削除
+      await removePerformanceKit(currentStore.id, kit.id);
+      
+      // キット変更を通知
+      onKitChange?.();
+      
+      console.log(`キット「${kit.scenarioTitle} #${kit.kitNumber}」を移動しました`);
+    } catch (error) {
+      console.error('キット移動エラー:', error);
+    }
+  };
+
   const availableScenarios = scenarios.filter(s => s.status === 'available');
 
   // 次のキット番号を自動計算
@@ -219,6 +247,7 @@ export function KitManagementDialog({ store, open, onOpenChange, onKitChange }: 
                     <TableHead>シナリオ</TableHead>
                     <TableHead>キット番号</TableHead>
                     <TableHead>状態</TableHead>
+                    <TableHead>所在店舗</TableHead>
                     <TableHead>最終使用日</TableHead>
                     <TableHead>備考</TableHead>
                     <TableHead>操作</TableHead>
@@ -293,6 +322,23 @@ export function KitManagementDialog({ store, open, onOpenChange, onKitChange }: 
                             {conditionLabels[kit.condition]}
                           </Badge>
                         )}
+                      </TableCell>
+                      <TableCell>
+                        <Select 
+                          value={currentStore.id} 
+                          onValueChange={(newStoreId) => handleKitMove(kit, newStoreId)}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {stores.map(store => (
+                              <SelectItem key={store.id} value={store.id}>
+                                {store.shortName || store.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell>
                         {kit.lastUsed ? new Date(kit.lastUsed).toLocaleDateString('ja-JP') : '未使用'}
