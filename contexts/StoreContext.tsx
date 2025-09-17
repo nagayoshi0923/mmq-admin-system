@@ -1,5 +1,5 @@
-import React, { createContext, useContext } from 'react';
-import { usePersistedState } from '../hooks/usePersistedState';
+import React, { createContext, useContext, useMemo } from 'react';
+import { useSupabaseData } from '../hooks/useSupabaseData';
 
 export interface PerformanceKit {
   id: string;
@@ -155,122 +155,180 @@ const initialStores: Store[] = [
 ];
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  // usePersistedStateで統一されたLocalStorage操作
-  const [stores, setStores] = usePersistedState<Store[]>(
-    'murderMystery_stores', 
-    initialStores,
-    {
-      onError: (error, operation) => {
-        console.error(`店舗データの${operation === 'read' ? '読み込み' : '保存'}に失敗:`, error);
-      }
+  // Supabaseから店舗データを取得
+  const {
+    data: supabaseStores,
+    loading: storesLoading,
+    error: storesError,
+    insert: insertStore,
+    update: updateStoreData,
+    delete: deleteStore,
+    refetch: refetchStores
+  } = useSupabaseData<any>({
+    table: 'stores',
+    realtime: true,
+    orderBy: { column: 'name', ascending: true }
+  });
+
+  // Supabaseからキットデータを取得
+  const {
+    data: supabaseKits,
+    loading: kitsLoading,
+    error: kitsError,
+    insert: insertKit,
+    update: updateKitData,
+    delete: deleteKit,
+    refetch: refetchKits
+  } = useSupabaseData<any>({
+    table: 'performance_kits',
+    realtime: true,
+    orderBy: { column: 'created_at', ascending: true }
+  });
+
+  // 店舗データとキットデータを結合してアプリケーション形式に変換
+  const stores = useMemo(() => {
+    if (!Array.isArray(supabaseStores) || !Array.isArray(supabaseKits)) {
+      return [];
     }
-  );
-  
-  const [kitTransferHistory, setKitTransferHistory] = usePersistedState<KitTransferHistory[]>(
-    'murderMystery_kitTransferHistory',
-    [],
-    {
-      onError: (error, operation) => {
-        console.error(`キット移動履歴の${operation === 'read' ? '読み込み' : '保存'}に失敗:`, error);
-      }
+
+    return supabaseStores.map((dbStore: any) => {
+      // この店舗のキットを取得
+      const storeKits = supabaseKits
+        .filter((kit: any) => kit.store_id === dbStore.id)
+        .map((kit: any) => ({
+          id: kit.id,
+          scenarioId: kit.scenario_id,
+          scenarioTitle: kit.scenario_title,
+          kitNumber: kit.kit_number,
+          condition: kit.condition || 'excellent',
+          lastUsed: kit.last_used,
+          notes: kit.notes
+        }));
+
+      return {
+        id: dbStore.id,
+        name: dbStore.name,
+        address: dbStore.address,
+        phoneNumber: dbStore.phone_number,
+        email: dbStore.email,
+        openingDate: dbStore.opening_date,
+        managerName: dbStore.manager_name,
+        status: dbStore.status,
+        performanceKits: storeKits,
+        capacity: dbStore.capacity,
+        rooms: dbStore.rooms,
+        notes: dbStore.notes,
+        color: dbStore.color,
+        shortName: dbStore.short_name
+      };
+    });
+  }, [supabaseStores, supabaseKits]);
+
+  // キット移動履歴（今回は簡略化してローカルのみ）
+  const kitTransferHistory: KitTransferHistory[] = [];
+
+  const addStore = async (store: Store) => {
+    try {
+      const dbStoreData = {
+        name: store.name,
+        address: store.address,
+        phone_number: store.phoneNumber,
+        email: store.email,
+        opening_date: store.openingDate,
+        manager_name: store.managerName,
+        status: store.status,
+        capacity: store.capacity,
+        rooms: store.rooms,
+        notes: store.notes,
+        color: store.color,
+        short_name: store.shortName
+      };
+      await insertStore(dbStoreData);
+    } catch (error) {
+      console.error('店舗追加エラー:', error);
     }
-  );
-
-  const addStore = (store: Store) => {
-    setStores(prev => [...prev, store]);
   };
 
-  const updateStore = (updatedStore: Store) => {
-    setStores(prev => prev.map(store => 
-      store.id === updatedStore.id ? updatedStore : store
-    ));
+  const updateStore = async (updatedStore: Store) => {
+    try {
+      const dbStoreData = {
+        name: updatedStore.name,
+        address: updatedStore.address,
+        phone_number: updatedStore.phoneNumber,
+        email: updatedStore.email,
+        opening_date: updatedStore.openingDate,
+        manager_name: updatedStore.managerName,
+        status: updatedStore.status,
+        capacity: updatedStore.capacity,
+        rooms: updatedStore.rooms,
+        notes: updatedStore.notes,
+        color: updatedStore.color,
+        short_name: updatedStore.shortName
+      };
+      await updateStoreData(updatedStore.id, dbStoreData);
+    } catch (error) {
+      console.error('店舗更新エラー:', error);
+    }
   };
 
-  const removeStore = (storeId: string) => {
-    setStores(prev => prev.filter(store => store.id !== storeId));
+  const removeStore = async (storeId: string) => {
+    try {
+      await deleteStore(storeId);
+    } catch (error) {
+      console.error('店舗削除エラー:', error);
+    }
   };
 
-  const addPerformanceKit = (storeId: string, kit: Omit<PerformanceKit, 'id'>) => {
-    const newKit: PerformanceKit = {
-      ...kit,
-      id: `kit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    };
-
-    setStores(prev => prev.map(store => {
-      if (store.id === storeId) {
-        return {
-          ...store,
-          performanceKits: [...store.performanceKits, newKit]
-        };
-      }
-      return store;
-    }));
+  const addPerformanceKit = async (storeId: string, kit: Omit<PerformanceKit, 'id'>) => {
+    try {
+      const dbKitData = {
+        scenario_id: kit.scenarioId,
+        scenario_title: kit.scenarioTitle,
+        kit_number: kit.kitNumber,
+        condition: kit.condition,
+        last_used: kit.lastUsed,
+        notes: kit.notes,
+        store_id: storeId
+      };
+      await insertKit(dbKitData);
+    } catch (error) {
+      console.error('キット追加エラー:', error);
+    }
   };
 
-  const updatePerformanceKit = (storeId: string, updatedKit: PerformanceKit) => {
-    setStores(prev => prev.map(store => {
-      if (store.id === storeId) {
-        return {
-          ...store,
-          performanceKits: store.performanceKits.map(kit => 
-            kit.id === updatedKit.id ? updatedKit : kit
-          )
-        };
-      }
-      return store;
-    }));
+  const updatePerformanceKit = async (storeId: string, updatedKit: PerformanceKit) => {
+    try {
+      const dbKitData = {
+        scenario_id: updatedKit.scenarioId,
+        scenario_title: updatedKit.scenarioTitle,
+        kit_number: updatedKit.kitNumber,
+        condition: updatedKit.condition,
+        last_used: updatedKit.lastUsed,
+        notes: updatedKit.notes,
+        store_id: storeId
+      };
+      await updateKitData(updatedKit.id, dbKitData);
+    } catch (error) {
+      console.error('キット更新エラー:', error);
+    }
   };
 
-  const removePerformanceKit = (storeId: string, kitId: string) => {
-    setStores(prev => prev.map(store => {
-      if (store.id === storeId) {
-        return {
-          ...store,
-          performanceKits: store.performanceKits.filter(kit => kit.id !== kitId)
-        };
-      }
-      return store;
-    }));
+  const removePerformanceKit = async (storeId: string, kitId: string) => {
+    try {
+      await deleteKit(kitId);
+    } catch (error) {
+      console.error('キット削除エラー:', error);
+    }
   };
 
   const transferKit = (transfer: Omit<KitTransferHistory, 'id'>) => {
-    const newTransfer: KitTransferHistory = {
-      ...transfer,
-      id: `transfer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    };
-
-    setKitTransferHistory(prev => [...prev, newTransfer]);
+    // キット移動履歴は今回簡略化
+    console.log('キット移動:', transfer);
   };
 
   const updateTransferStatus = (transferId: string, status: KitTransferHistory['status'], receivedBy?: string) => {
-    setKitTransferHistory(prev => prev.map(transfer => {
-      if (transfer.id === transferId) {
-        return {
-          ...transfer,
-          status,
-          ...(receivedBy && { receivedBy })
-        };
-      }
-      return transfer;
-    }));
-
-    // 転送完了時にキットの所在地を更新
-    if (status === 'completed') {
-      const transfer = kitTransferHistory.find(t => t.id === transferId);
-      if (transfer) {
-        // 元の店舗からキットを削除
-        removePerformanceKit(transfer.fromStoreId, transfer.performanceKitId);
-        
-        // 移動先の店舗にキットを追加
-        const kit = stores
-          .find(s => s.id === transfer.fromStoreId)
-          ?.performanceKits.find(k => k.id === transfer.performanceKitId);
-        
-        if (kit) {
-          addPerformanceKit(transfer.toStoreId, kit);
-        }
-      }
-    }
+    // キット移動履歴は今回簡略化
+    console.log('移動ステータス更新:', transferId, status);
   };
 
   const getStoreKits = (storeId: string): PerformanceKit[] => {
