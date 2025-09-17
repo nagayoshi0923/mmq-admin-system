@@ -127,12 +127,8 @@ export function StaffScheduleDialog({ isOpen, onClose, staffId, staffName }: Sta
     }, 0);
   };
 
-  const groupSchedulesByWeek = () => {
-    const weeks: DaySchedule[][] = [];
-    for (let i = 0; i < schedules.length; i += 7) {
-      weeks.push(schedules.slice(i, i + 7));
-    }
-    return weeks;
+  const isWeekend = (dayOfWeek: string) => {
+    return dayOfWeek === '土' || dayOfWeek === '日';
   };
 
   return (
@@ -191,56 +187,51 @@ export function StaffScheduleDialog({ isOpen, onClose, staffId, staffName }: Sta
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
-                {groupSchedulesByWeek().map((week, weekIndex) => (
-                  <div key={weekIndex} className="space-y-3">
-                    <h4 className="font-medium text-sm text-muted-foreground">
-                      第{weekIndex + 1}週 ({week[0]?.date} ～ {week[6]?.date})
-                    </h4>
-                    <div className="grid grid-cols-7 gap-2">
-                      {week.map((schedule, dayIndex) => {
-                        const actualIndex = weekIndex * 7 + dayIndex;
-                        const isToday = schedule.date === new Date().toISOString().split('T')[0];
-                        
-                        return (
-                          <div 
-                            key={schedule.date} 
-                            className={`border rounded-lg p-3 space-y-2 ${isToday ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
-                          >
-                            <div className="text-center">
-                              <div className="text-xs font-medium text-muted-foreground">
-                                {schedule.dayOfWeek}
-                              </div>
-                              <div className="text-sm font-medium">
-                                {schedule.date.split('-')[2]}
-                              </div>
-                            </div>
-                            
-                            <div className="space-y-1">
-                              {TIME_SLOTS.map(timeSlot => (
-                                <div key={timeSlot.id} className="flex items-center space-x-1">
-                                  <Checkbox
-                                    id={`${schedule.date}-${timeSlot.id}`}
-                                    checked={schedule.timeSlots[timeSlot.id as keyof typeof schedule.timeSlots]}
-                                    onCheckedChange={(checked) => 
-                                      handleTimeSlotChange(actualIndex, timeSlot.id as keyof DaySchedule['timeSlots'], checked as boolean)
-                                    }
-                                  />
-                                  <label 
-                                    htmlFor={`${schedule.date}-${timeSlot.id}`}
-                                    className="text-xs cursor-pointer"
-                                  >
-                                    {timeSlot.label}
-                                  </label>
-                                </div>
-                              ))}
-                            </div>
+              <div className="space-y-2">
+                {schedules.map((schedule, index) => {
+                  const isToday = schedule.date === new Date().toISOString().split('T')[0];
+                  const isWeekendDay = isWeekend(schedule.dayOfWeek);
+                  
+                  return (
+                    <div 
+                      key={schedule.date} 
+                      className={`border rounded-lg p-4 flex items-center gap-4 ${
+                        isToday ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                      }`}
+                    >
+                      {/* 日付表示 */}
+                      <div className="min-w-[120px]">
+                        <div className={`text-sm font-medium ${
+                          isWeekendDay ? 'text-red-600' : 'text-gray-900'
+                        }`}>
+                          {schedule.date} ({schedule.dayOfWeek})
+                        </div>
+                      </div>
+                      
+                      {/* 時間帯選択 */}
+                      <div className="flex gap-6 flex-1">
+                        {TIME_SLOTS.map(timeSlot => (
+                          <div key={timeSlot.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`${schedule.date}-${timeSlot.id}`}
+                              checked={schedule.timeSlots[timeSlot.id as keyof typeof schedule.timeSlots]}
+                              onCheckedChange={(checked) => 
+                                handleTimeSlotChange(index, timeSlot.id as keyof DaySchedule['timeSlots'], checked as boolean)
+                              }
+                            />
+                            <label 
+                              htmlFor={`${schedule.date}-${timeSlot.id}`}
+                              className="text-sm cursor-pointer flex flex-col"
+                            >
+                              <span className="font-medium">{timeSlot.label}</span>
+                              <span className="text-xs text-muted-foreground">{timeSlot.time}</span>
+                            </label>
                           </div>
-                        );
-                      })}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
