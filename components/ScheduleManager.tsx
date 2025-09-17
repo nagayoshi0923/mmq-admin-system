@@ -1427,9 +1427,8 @@ export function ScheduleManager() {
                   {/* 既存イベントの場合のみ削除ボタンを表示 */}
                   {editingEvent && !editingEvent.id.startsWith('new-') && (
                     <Button 
-                      variant="destructive" 
                       onClick={() => openDeleteDialog(editingEvent)}
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white border-red-600 hover:border-red-700"
                     >
                       <Trash2 className="w-4 h-4" />
                       削除
