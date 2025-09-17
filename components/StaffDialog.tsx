@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -23,7 +23,7 @@ const storeOptions = ['全店舗', '馬場', '別館①', '別館②', '大久�
 const roleOptions = ['GM', 'サポート', 'マネージャー', '社長', '企画', '事務'] as const;
 const statusOptions = ['active', 'inactive', 'on-leave'] as const;
 
-export function StaffDialog({ staff, onSave, trigger }: StaffDialogProps) {
+const StaffDialog = memo(function StaffDialog({ staff, onSave, trigger }: StaffDialogProps) {
   const { scenarios } = useScenarios();
   
   const [open, setOpen] = useState(false);
@@ -51,6 +51,20 @@ export function StaffDialog({ staff, onSave, trigger }: StaffDialogProps) {
   const [isContactVisible, setIsContactVisible] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [showPasswordInput, setShowPasswordInput] = useState(false);
+
+  // フォームデータ更新のハンドラーをメモ化
+  const updateFormData = useCallback((field: keyof Staff, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  // 入力ハンドラーをメモ化
+  const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    updateFormData('name', e.target.value);
+  }, [updateFormData]);
+
+  const handleXAccountChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    updateFormData('xAccount', e.target.value);
+  }, [updateFormData]);
 
   useEffect(() => {
     if (open) {
@@ -141,7 +155,7 @@ export function StaffDialog({ staff, onSave, trigger }: StaffDialogProps) {
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={handleNameChange}
                   required
                 />
               </div>
@@ -150,7 +164,7 @@ export function StaffDialog({ staff, onSave, trigger }: StaffDialogProps) {
                 <Input
                   id="xAccount"
                   value={formData.xAccount}
-                  onChange={(e) => setFormData(prev => ({ ...prev, xAccount: e.target.value }))}
+                  onChange={handleXAccountChange}
                 />
               </div>
             </div>
@@ -363,4 +377,6 @@ export function StaffDialog({ staff, onSave, trigger }: StaffDialogProps) {
       </DialogContent>
     </Dialog>
   );
-}
+});
+
+export { StaffDialog };

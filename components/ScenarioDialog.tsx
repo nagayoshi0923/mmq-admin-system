@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -50,7 +50,7 @@ const statusOptions = [
   { value: 'retired', label: '公演終了' }
 ];
 
-export function ScenarioDialog({ scenario, onSave, trigger, open: externalOpen, onOpenChange }: ScenarioDialogProps) {
+const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, trigger, open: externalOpen, onOpenChange }: ScenarioDialogProps) {
   const { addEditEntry } = useEditHistory();
   const [internalOpen, setInternalOpen] = useState(false);
   
@@ -76,6 +76,28 @@ export function ScenarioDialog({ scenario, onSave, trigger, open: externalOpen, 
 
   const [newProp, setNewProp] = useState('');
   const [newGenre, setNewGenre] = useState('');
+
+  // フォームデータ更新のハンドラーをメモ化
+  const updateFormData = useCallback((field: keyof Scenario, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  // 入力ハンドラーをメモ化
+  const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    updateFormData('title', e.target.value);
+  }, [updateFormData]);
+
+  const handleAuthorChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    updateFormData('author', e.target.value);
+  }, [updateFormData]);
+
+  const handleDescriptionChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    updateFormData('description', e.target.value);
+  }, [updateFormData]);
+
+  const handleLicenseAmountChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    updateFormData('licenseAmount', parseInt(e.target.value) || 0);
+  }, [updateFormData]);
 
   useEffect(() => {
     if (scenario) {
@@ -206,7 +228,7 @@ export function ScenarioDialog({ scenario, onSave, trigger, open: externalOpen, 
                 <Input
                   id="author"
                   value={formData.author}
-                  onChange={(e) => setFormData(prev => ({ ...prev, author: e.target.value }))}
+                  onChange={handleAuthorChange}
                   required
                 />
               </div>
@@ -215,7 +237,8 @@ export function ScenarioDialog({ scenario, onSave, trigger, open: externalOpen, 
                 <Input
                   id="title"
                   value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                  onChange={handleTitleChange}
+                  placeholder="タイトルを入力"
                   required
                 />
               </div>
@@ -227,7 +250,7 @@ export function ScenarioDialog({ scenario, onSave, trigger, open: externalOpen, 
                   min="0"
                   step="100"
                   value={formData.licenseAmount}
-                  onChange={(e) => setFormData(prev => ({ ...prev, licenseAmount: parseInt(e.target.value) || 0 }))}
+                  onChange={handleLicenseAmountChange}
                   required
                 />
               </div>
@@ -238,7 +261,7 @@ export function ScenarioDialog({ scenario, onSave, trigger, open: externalOpen, 
               <Textarea
                 id="description"
                 value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                onChange={handleDescriptionChange}
                 placeholder="シナリオの説明、あらすじ、特徴などを入力してください"
                 rows={3}
               />
@@ -474,4 +497,6 @@ export function ScenarioDialog({ scenario, onSave, trigger, open: externalOpen, 
       </DialogContent>
     </Dialog>
   );
-}
+});
+
+export { ScenarioDialog };
