@@ -724,31 +724,32 @@ export function ScheduleManager() {
       notes: formData.notes
     };
 
-    // スケジュールデータを更新
-    setScheduleEvents(prev => {
-      const updated = { ...prev };
-      const monthData = [...(updated[selectedMonth] || [])];
-      
-      const dayIndex = monthData.findIndex(day => day.date === updatedEvent.date);
-      if (dayIndex !== -1) {
-        const existingEventIndex = monthData[dayIndex].events.findIndex(e => e.id === updatedEvent.id);
+    // 新規イベントかどうかをチェック
+    const isNewEvent = updatedEvent.id.startsWith('new-');
+    
+    // 新規イベントの場合はSupabaseのみに保存（重複を避けるため）
+    // 既存イベントの場合はローカルストレージも更新
+    if (!isNewEvent) {
+      setScheduleEvents(prev => {
+        const updated = { ...prev };
+        const monthData = [...(updated[selectedMonth] || [])];
         
-        if (existingEventIndex >= 0) {
-          // 既存イベントを更新
-          monthData[dayIndex].events[existingEventIndex] = updatedEvent;
-        } else {
-          // 新しいイベント��追加
-          monthData[dayIndex].events.push(updatedEvent);
+        const dayIndex = monthData.findIndex(day => day.date === updatedEvent.date);
+        if (dayIndex !== -1) {
+          const existingEventIndex = monthData[dayIndex].events.findIndex(e => e.id === updatedEvent.id);
+          
+          if (existingEventIndex >= 0) {
+            // 既存イベントを更新
+            monthData[dayIndex].events[existingEventIndex] = updatedEvent;
+            updated[selectedMonth] = monthData;
+          }
         }
         
-        updated[selectedMonth] = monthData;
-      }
-      
-      return updated;
-    });
+        return updated;
+      });
+    }
 
     // 編集履歴に追加
-    const isNewEvent = updatedEvent.id.startsWith('new-');
     addEditEntry({
       user: 'ま sui',
       action: isNewEvent ? 'create' : 'update',
@@ -766,7 +767,6 @@ export function ScheduleManager() {
 
     // Supabaseにも保存
     try {
-      const isNewEvent = updatedEvent.id.startsWith('new-');
       
       if (isNewEvent) {
         // 新規イベントの場合
