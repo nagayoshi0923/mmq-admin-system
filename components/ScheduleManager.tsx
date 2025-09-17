@@ -850,18 +850,36 @@ export function ScheduleManager() {
 
     const eventToDelete = deleteDialog.event;
     
-    setScheduleEvents(prev => {
-      const updated = { ...prev };
-      const monthData = [...(updated[selectedMonth] || [])];
-      
-      const dayIndex = monthData.findIndex(day => day.date === eventToDelete.date);
-      if (dayIndex !== -1) {
-        monthData[dayIndex].events = monthData[dayIndex].events.filter(e => e.id !== eventToDelete.id);
-        updated[selectedMonth] = monthData;
-      }
-      
-      return updated;
-    });
+    // まずSupabaseから削除（リアルタイム同期のため）
+    try {
+      deleteSupabaseEvent(eventToDelete.id).then(() => {
+        console.log('イベントをSupabaseから削除しました:', eventToDelete.id);
+      }).catch(error => {
+        console.error('Supabase削除エラー:', error);
+      });
+    } catch (error) {
+      console.error('Supabase削除処理エラー:', error);
+    }
+    
+    // 新規イベントかどうかをチェック
+    const isNewEvent = eventToDelete.id.startsWith('new-');
+    
+    // 新規イベントの場合はSupabaseのみから削除（ローカルストレージは更新しない）
+    // 既存イベントの場合はローカルストレージからも削除
+    if (!isNewEvent) {
+      setScheduleEvents(prev => {
+        const updated = { ...prev };
+        const monthData = [...(updated[selectedMonth] || [])];
+        
+        const dayIndex = monthData.findIndex(day => day.date === eventToDelete.date);
+        if (dayIndex !== -1) {
+          monthData[dayIndex].events = monthData[dayIndex].events.filter(e => e.id !== eventToDelete.id);
+          updated[selectedMonth] = monthData;
+        }
+        
+        return updated;
+      });
+    }
 
     // 編集履歴に削除を追加
     addEditEntry({
@@ -876,17 +894,6 @@ export function ScheduleManager() {
         { field: '担当GM', oldValue: eventToDelete.gms.join(', '), newValue: '' }
       ]
     });
-
-    // Supabaseからも削除
-    try {
-      deleteSupabaseEvent(eventToDelete.id).then(() => {
-        console.log('イベントをSupabaseから削除しました:', eventToDelete.id);
-      }).catch(error => {
-        console.error('Supabase削除エラー:', error);
-      });
-    } catch (error) {
-      console.error('Supabase削除処理エラー:', error);
-    }
 
     setDeleteDialog({ open: false, event: null });
   };
