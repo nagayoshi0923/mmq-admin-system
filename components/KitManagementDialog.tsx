@@ -8,10 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Textarea } from './ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
-import { Package, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Package, Plus, Pencil, Trash2, History } from 'lucide-react';
 import { Store as StoreType, PerformanceKit } from '../contexts/StoreContext';
 import { useStores } from '../contexts/StoreContext';
 import { useScenarios } from '../contexts/ScenarioContext';
+import { useEditHistory } from '../contexts/EditHistoryContext';
+import { ItemEditHistory } from './ItemEditHistory';
 
 interface KitManagementDialogProps {
   store: StoreType;
@@ -39,11 +41,13 @@ const conditionColors = {
 export function KitManagementDialog({ store, open, onOpenChange, onKitChange }: KitManagementDialogProps) {
   const { stores, addPerformanceKit, updatePerformanceKit, removePerformanceKit } = useStores();
   const { scenarios } = useScenarios();
+  const { addEditEntry } = useEditHistory();
   
   // 最新の店舗データを取得（リアルタイム反映のため）
   const currentStore = stores.find(s => s.id === store.id) || store;
   const [isAddingKit, setIsAddingKit] = useState(false);
   const [editingKit, setEditingKit] = useState<PerformanceKit | null>(null);
+  const [historyKit, setHistoryKit] = useState<PerformanceKit | null>(null);
 
   const [newKit, setNewKit] = useState<Partial<PerformanceKit>>({
     scenarioId: '',
@@ -100,6 +104,9 @@ export function KitManagementDialog({ store, open, onOpenChange, onKitChange }: 
     if (newStoreId === currentStore.id) return; // 同じ店舗の場合は何もしない
 
     try {
+      const targetStore = stores.find(s => s.id === newStoreId);
+      if (!targetStore) return;
+
       // 新しい店舗にキットを追加
       const kitData: Omit<PerformanceKit, 'id'> = {
         scenarioId: kit.scenarioId,
@@ -114,6 +121,22 @@ export function KitManagementDialog({ store, open, onOpenChange, onKitChange }: 
       
       // 元の店舗からキットを削除
       await removePerformanceKit(currentStore.id, kit.id);
+      
+      // 編集履歴に記録
+      addEditEntry({
+        user: 'システム',
+        action: 'update',
+        target: `${kit.scenarioTitle} キット#${kit.kitNumber}`,
+        summary: `キットを${currentStore.name}から${targetStore.name}に移動`,
+        category: 'store',
+        changes: [
+          {
+            field: '所在店舗',
+            oldValue: currentStore.name,
+            newValue: targetStore.name
+          }
+        ]
+      });
       
       // キット変更を通知
       onKitChange?.();
@@ -135,6 +158,7 @@ export function KitManagementDialog({ store, open, onOpenChange, onKitChange }: 
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl sm:max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -388,6 +412,14 @@ export function KitManagementDialog({ store, open, onOpenChange, onKitChange }: 
                               >
                                 <Pencil className="w-4 h-4" />
                               </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setHistoryKit(kit)}
+                                title="編集履歴を表示"
+                              >
+                                <History className="w-4 h-4" />
+                              </Button>
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                   <Button
@@ -433,5 +465,17 @@ export function KitManagementDialog({ store, open, onOpenChange, onKitChange }: 
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* 編集履歴ダイアログ */}
+    {historyKit && (
+      <ItemEditHistory
+        open={!!historyKit}
+        onOpenChange={(open) => !open && setHistoryKit(null)}
+        itemId={historyKit.id}
+        itemName={`${historyKit.scenarioTitle} キット#${historyKit.kitNumber}`}
+        category="store"
+      />
+    )}
+  </>
   );
 }
