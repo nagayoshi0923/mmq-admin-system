@@ -194,7 +194,7 @@ export function useSupabaseData<T extends { id: string }>(
       console.log(`🔄 Executing DELETE query for ${options.table}...`);
       const { error: deleteError, count } = await supabase
         .from(options.table)
-        .delete()
+        .delete({ count: 'exact' })
         .eq('id', id);
 
       if (deleteError) {
@@ -203,6 +203,10 @@ export function useSupabaseData<T extends { id: string }>(
       }
 
       console.log(`✅ Supabase DELETE successful for ${options.table}, affected rows:`, count);
+      
+      if (count === 0) {
+        console.warn(`⚠️ No rows were deleted. ID ${id} may not exist in ${options.table}`);
+      }
 
       // ローカル状態を更新
       setData(prev => {
