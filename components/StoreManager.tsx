@@ -4,13 +4,12 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
-import { Store, MapPin, Plus, Eye, Pencil, Trash2, Package, ArrowRightLeft, Building } from 'lucide-react';
+import { Store, MapPin, Plus, Eye, Pencil, Trash2, Package, Building } from 'lucide-react';
 import { useStores, Store as StoreType } from '../contexts/StoreContext';
 import { useEditHistory } from '../contexts/EditHistoryContext';
 import { useScenarios } from '../contexts/ScenarioContext';
 import { StoreDialog } from './StoreDialog';
 import { KitManagementDialog } from './KitManagementDialog';
-import { KitTransferDialog } from './KitTransferDialog';
 
 const statusLabels = {
   'active': '営業中',
@@ -31,7 +30,6 @@ export function StoreManager() {
   const [selectedStore, setSelectedStore] = useState<StoreType | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isKitDialogOpen, setIsKitDialogOpen] = useState(false);
-  const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
 
   const handleDeleteStore = (store: StoreType) => {
     removeStore(store.id);
@@ -60,10 +58,6 @@ export function StoreManager() {
     setIsKitDialogOpen(true);
   };
 
-  const handleTransferKit = (store: StoreType) => {
-    setSelectedStore(store);
-    setIsTransferDialogOpen(true);
-  };
 
   // 総キット数の計算
   const totalKits = stores.reduce((sum, store) => sum + store.performanceKits.length, 0);
@@ -119,13 +113,6 @@ export function StoreManager() {
       <div className="flex items-center justify-between">
         <h2>店舗管理</h2>
         <div className="flex gap-4 items-center">
-          <Button
-            variant="outline"
-            onClick={() => setIsTransferDialogOpen(true)}
-          >
-            <ArrowRightLeft className="w-4 h-4 mr-2" />
-            キット移動
-          </Button>
           <StoreDialog
             onSave={() => {}}
             trigger={
@@ -273,14 +260,6 @@ export function StoreManager() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleTransferKit(store)}
-                        title="キット移動"
-                      >
-                        <ArrowRightLeft className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
                         onClick={() => handleEditStore(store)}
                         title="編集"
                       >
@@ -346,19 +325,9 @@ export function StoreManager() {
             open={isKitDialogOpen}
             onOpenChange={setIsKitDialogOpen}
           />
-          <KitTransferDialog
-            fromStore={selectedStore}
-            open={isTransferDialogOpen}
-            onOpenChange={setIsTransferDialogOpen}
-          />
         </>
       )}
 
-      {/* 全店舗対象のキット移動ダイ���ログ */}
-      <KitTransferDialog
-        open={isTransferDialogOpen && !selectedStore}
-        onOpenChange={setIsTransferDialogOpen}
-      />
     </div>
   );
 }
