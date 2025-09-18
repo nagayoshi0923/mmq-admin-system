@@ -4,7 +4,6 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { ScrollArea } from './ui/scroll-area';
-import { Separator } from './ui/separator';
 import { Alert, AlertDescription } from './ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Dialog } from './ui/dialog';
@@ -1195,7 +1194,6 @@ export function DevelopmentManager() {
             </div>
           </div>
           
-          <Separator />
           
           <div>
             <h4 className="font-medium mb-2">重要な用語説明</h4>

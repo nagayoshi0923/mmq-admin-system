@@ -36,7 +36,6 @@ const ReservationManager = lazy(() => import('./components/ReservationManager').
 const SalesManager = lazy(() => import('./components/SalesManager').then(module => ({ default: module.SalesManager })));
 const CustomerManager = lazy(() => import('./components/CustomerManager').then(module => ({ default: module.CustomerManager })));
 const InventoryManager = lazy(() => import('./components/InventoryManager').then(module => ({ default: module.InventoryManager })));
-const DevelopmentManager = lazy(() => import('./components/DevelopmentManager').then(module => ({ default: module.DevelopmentManager })));
 const LicenseManager = lazy(() => import('./components/LicenseManager').then(module => ({ default: module.LicenseManager })));
 
 // Loading component
@@ -263,9 +262,9 @@ export default function App() {
                 </TabsContent>
 
                 <TabsContent value="development">
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <DevelopmentManager />
-                  </Suspense>
+                  <div className="text-center py-8 text-muted-foreground">
+                    開発管理機能は準備中です
+                  </div>
                 </TabsContent>
               </main>
             </Tabs>
