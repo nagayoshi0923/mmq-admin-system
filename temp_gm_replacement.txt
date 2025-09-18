@@ -1,0 +1,8 @@
+            {/* GM選択 */}
+            <div className="space-y-2">
+              <Label>担当GM</Label>
+              <GMSelector
+                selectedGMs={formData.gms}
+                onGMChange={(gms) => setFormData(prev => ({ ...prev, gms }))}
+              />
+            </div>

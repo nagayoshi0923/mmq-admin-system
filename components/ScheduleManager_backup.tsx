@@ -29,8 +29,6 @@ import { useEditHistory, EditHistoryEntry } from '../contexts/EditHistoryContext
 
 import { useScenarios } from '../contexts/ScenarioContext';
 import { useSchedule } from '../contexts/ScheduleContext';
-import { useStaff } from '../contexts/StaffContext';
-import { GMSelector } from './GMSelector';
 
 type EventCategory = 'オープン公演' | '貸切公演' | 'GMテスト' | 'テストプレイ' | '出張公演';
 
@@ -404,8 +402,10 @@ const initialMockSchedule: DaySchedule[] = [
 // 店舗一覧
 const venues = ['馬場', '別館①', '別館②', '大久保', '大塚', '埼玉大宮'];
 
+// GM一覧
+const availableGMs = ['りんな', 'マツケン', 'れいにー', 'ソラ', 'つばめ', '八継ジノ', 'りえぞー', 'キュウ', 'Remia', 'イワセモリシ', 'えりん', 'しらやま'];
+
 export function ScheduleManager() {
-  const { staff } = useStaff();
   const { getAvailableScenarios } = useScenarios();
   const availableScenarios = getAvailableScenarios();
   const { addEditEntry } = useEditHistory();
@@ -1150,13 +1150,29 @@ export function ScheduleManager() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
             {/* GM選択 */}
             <div className="space-y-2">
               <Label>担当GM</Label>
-              <GMSelector
-                selectedGMs={formData.gms}
-                onGMChange={(gms) => setFormData(prev => ({ ...prev, gms }))}
-              />
+              <div className="grid grid-cols-3 gap-2">
+                {availableGMs.map(gm => (
+                  <div key={gm} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`gm-${gm}`}
+                      checked={formData.gms.includes(gm)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setFormData(prev => ({ ...prev, gms: [...prev.gms, gm] }));
+                        } else {
+                          setFormData(prev => ({ ...prev, gms: prev.gms.filter(g => g !== gm) }));
+                        }
+                      }}
+                    />
+                    <Label htmlFor={`gm-${gm}`} className="text-sm">{gm}</Label>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* 開始時間 */}
@@ -1334,7 +1350,6 @@ export function ScheduleManager() {
                   </Button>
                 </div>
               </div>
-            </div>
             </div>
             </TabsContent>
             
