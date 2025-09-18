@@ -94,6 +94,18 @@ export function StaffDashboard({ staffId, staffName }: StaffDashboardProps) {
     realtime: true,
     orderBy: { column: 'date', ascending: false }
   });
+  
+  // スタッフの出勤可能時間データをSupabaseから取得
+  const {
+    data: availabilityData,
+    insertData: insertAvailability,
+    updateData: updateAvailability,
+    loading: availabilityLoading
+  } = useSupabaseData<any>({
+    table: 'staff_availability',
+    realtime: true,
+    orderBy: { column: 'date', ascending: true }
+  });
   const [staffScenarios, setStaffScenarios] = useState<StaffScenario[]>([]);
   const [isScenarioDialogOpen, setIsScenarioDialogOpen] = useState(false);
   const [editingScenario, setEditingScenario] = useState<StaffScenario | null>(null);
@@ -139,19 +151,6 @@ export function StaffDashboard({ staffId, staffName }: StaffDashboardProps) {
     };
 
     generateMonthlySchedule();
-    
-    // 既存のスケジュールデータを読み込み
-    const savedSchedule = localStorage.getItem(`staff-schedule-${staffId}`);
-    if (savedSchedule) {
-      try {
-        const parsed = JSON.parse(savedSchedule);
-        setSchedules(parsed.schedules || []);
-      } catch (error) {
-        console.error('スケジュールデータの読み込みに失敗:', error);
-      }
-    }
-
-    // 給与記録はSupabaseから自動取得される
 
     // スタッフシナリオを読み込み
     const savedScenarios = localStorage.getItem(`staff-scenarios-${staffId}`);
@@ -163,6 +162,35 @@ export function StaffDashboard({ staffId, staffName }: StaffDashboardProps) {
       }
     }
   }, [staffId]);
+
+  // Supabaseから出勤可能時間データを読み込み
+  useEffect(() => {
+    if (availabilityData && availabilityData.length > 0) {
+      const currentMonth = dayjs().format('YYYY-MM');
+      const monthlyAvailability = availabilityData.filter((item: any) => 
+        dayjs(item.date).format('YYYY-MM') === currentMonth && item.staff_id === staffId
+      );
+      
+      if (monthlyAvailability.length > 0) {
+        setSchedules(prevSchedules => 
+          prevSchedules.map(schedule => {
+            const availability = monthlyAvailability.find((item: any) => item.date === schedule.date);
+            if (availability) {
+              return {
+                ...schedule,
+                timeSlots: {
+                  morning: availability.morning,
+                  afternoon: availability.afternoon,
+                  evening: availability.evening
+                }
+              };
+            }
+            return schedule;
+          })
+        );
+      }
+    }
+  }, [availabilityData, staffId]);
 
   // 今月のスケジュールイベントを取得
   const monthlyEvents = useMemo(() => {
@@ -189,25 +217,46 @@ export function StaffDashboard({ staffId, staffName }: StaffDashboardProps) {
   };
 
 
-  // スケジュール保存
-  const handleSaveSchedule = () => {
-    const scheduleData = {
-      staffId,
-      staffName,
-      schedules,
-      updatedAt: new Date().toISOString()
-    };
-    
-    localStorage.setItem(`staff-schedule-${staffId}`, JSON.stringify(scheduleData));
-    
-    // スタッフ情報も更新
-    if (currentStaff) {
-      updateStaff({
-        ...currentStaff,
-        availability: schedules
-          .filter(s => Object.values(s.timeSlots).some(Boolean))
-          .map(s => s.date)
-      });
+  // スケジュール提出
+  const handleSubmitSchedule = async () => {
+    try {
+      const currentMonth = dayjs().format('YYYY-MM');
+      const submittedAt = new Date().toISOString();
+      
+      // 既存の今月のデータを削除
+      const existingData = availabilityData?.filter((item: any) => 
+        dayjs(item.date).format('YYYY-MM') === currentMonth && item.staff_id === staffId
+      ) || [];
+      
+      // 新しいデータを挿入
+      for (const schedule of schedules) {
+        const availabilityRecord = {
+          staff_id: staffId,
+          staff_name: staffName,
+          date: schedule.date,
+          morning: schedule.timeSlots.morning,
+          afternoon: schedule.timeSlots.afternoon,
+          evening: schedule.timeSlots.evening,
+          submitted_at: submittedAt
+        };
+        
+        await insertAvailability(availabilityRecord);
+      }
+      
+      // スタッフ情報も更新
+      if (currentStaff) {
+        updateStaff({
+          ...currentStaff,
+          availability: schedules
+            .filter(s => Object.values(s.timeSlots).some(Boolean))
+            .map(s => s.date)
+        });
+      }
+      
+      alert('スケジュールを提出しました！');
+    } catch (error) {
+      console.error('スケジュール提出エラー:', error);
+      alert('スケジュールの提出に失敗しました。');
     }
   };
 
@@ -460,8 +509,8 @@ export function StaffDashboard({ staffId, staffName }: StaffDashboardProps) {
                   </div>
                 </div>
 
-                <Button onClick={handleSaveSchedule} className="w-full">
-                  スケジュールを保存
+                <Button onClick={handleSubmitSchedule} className="w-full">
+                  スケジュールを提出
                 </Button>
               </CardContent>
             </Card>

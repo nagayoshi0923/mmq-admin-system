@@ -666,6 +666,42 @@ export interface Database {
           notes?: string | null;
         };
       };
+
+      // スタッフ出勤可能時間テーブル
+      staff_availability: {
+        Row: {
+          id: string;
+          staff_id: string;
+          staff_name: string;
+          date: string;
+          morning: boolean;
+          afternoon: boolean;
+          evening: boolean;
+          submitted_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          staff_id: string;
+          staff_name: string;
+          date: string;
+          morning: boolean;
+          afternoon: boolean;
+          evening: boolean;
+          submitted_at: string;
+        };
+        Update: {
+          id?: string;
+          staff_id?: string;
+          staff_name?: string;
+          date?: string;
+          morning?: boolean;
+          afternoon?: boolean;
+          evening?: boolean;
+          submitted_at?: string;
+        };
+      };
     };
     Views: {
       [_ in never]: never;
