@@ -42,8 +42,8 @@ export class ErrorBoundary extends Component<Props, State> {
       this.props.onError(error, errorInfo);
     }
     
-    // 統一エラーハンドラーに送信
-    handleReactError(error, { componentStack: errorInfo.componentStack || '' });
+    // 統一エラーハンドラーに送信（一時的に無効化）
+    // handleReactError(error, { componentStack: errorInfo.componentStack || '' });
   }
 
   handleReload = () => {
@@ -177,7 +177,7 @@ export class SimpleErrorBoundary extends Component<SimpleErrorBoundaryProps, Sim
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    handleReactError(error, { componentStack: errorInfo.componentStack || '' });
+    // handleReactError(error, { componentStack: errorInfo.componentStack || '' });
   }
 
   render() {
@@ -221,6 +221,6 @@ export function withErrorBoundary<P extends object>(
 // フック版のエラーハンドリング
 export function useErrorHandler() {
   return React.useCallback((error: Error, context?: Record<string, any>) => {
-    handleReactError(error, { componentStack: '' });
+    // handleReactError(error, { componentStack: '' });
   }, []);
 }

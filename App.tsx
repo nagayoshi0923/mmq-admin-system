@@ -87,10 +87,10 @@ export default function App() {
 
   const [staffId, setStaffId] = useState(getStaffIdFromHash);
 
-  // グローバルエラーハンドラーを設定
-  useEffect(() => {
-    setupGlobalErrorHandlers();
-  }, []);
+  // グローバルエラーハンドラーを設定（一時的に無効化）
+  // useEffect(() => {
+  //   setupGlobalErrorHandlers();
+  // }, []);
 
   // ハッシュ変更の監視とタブ切り替え
   useEffect(() => {

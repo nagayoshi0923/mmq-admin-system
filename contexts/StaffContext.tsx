@@ -70,7 +70,6 @@ export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
     table: 'staff',
     realtime: true,
     select: 'id, name, line_name, x_account, role, stores, ng_days, want_to_learn, available_scenarios, notes, phone, email, availability, experience, special_scenarios, status, created_at, updated_at',
-    // fallbackKey: 'murder-mystery-staff', // ローカルストレージを無効化
     orderBy: { column: 'name', ascending: true }
   });
 
@@ -102,22 +101,50 @@ export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
   const addScenarioToStaff = useCallback(async (staffName: string, scenarioTitle: string) => {
     const staffMember = staff.find(s => s.name === staffName);
     if (staffMember && !staffMember.availableScenarios.includes(scenarioTitle)) {
-      const updatedStaff = {
-        ...staffMember,
-        availableScenarios: [...staffMember.availableScenarios, scenarioTitle]
+      // アプリケーションのフィールド名をデータベースのフィールド名に変換
+      const dbStaffData = {
+        name: staffMember.name,
+        line_name: staffMember.lineName,
+        x_account: staffMember.xAccount,
+        role: staffMember.role,
+        stores: staffMember.stores,
+        ng_days: staffMember.ngDays,
+        want_to_learn: staffMember.wantToLearn,
+        available_scenarios: [...staffMember.availableScenarios, scenarioTitle],
+        notes: staffMember.notes,
+        phone: staffMember.contact.phone,
+        email: staffMember.contact.email,
+        availability: staffMember.availability,
+        experience: staffMember.experience,
+        special_scenarios: staffMember.specialScenarios,
+        status: staffMember.status
       };
-      await update(staffMember.id, updatedStaff);
+      await update(staffMember.id, dbStaffData);
     }
   }, [staff, update]);
 
   const removeScenarioFromStaff = useCallback(async (staffName: string, scenarioTitle: string) => {
     const staffMember = staff.find(s => s.name === staffName);
     if (staffMember) {
-      const updatedStaff = {
-        ...staffMember,
-        availableScenarios: staffMember.availableScenarios.filter(scenario => scenario !== scenarioTitle)
+      // アプリケーションのフィールド名をデータベースのフィールド名に変換
+      const dbStaffData = {
+        name: staffMember.name,
+        line_name: staffMember.lineName,
+        x_account: staffMember.xAccount,
+        role: staffMember.role,
+        stores: staffMember.stores,
+        ng_days: staffMember.ngDays,
+        want_to_learn: staffMember.wantToLearn,
+        available_scenarios: staffMember.availableScenarios.filter(scenario => scenario !== scenarioTitle),
+        notes: staffMember.notes,
+        phone: staffMember.contact.phone,
+        email: staffMember.contact.email,
+        availability: staffMember.availability,
+        experience: staffMember.experience,
+        special_scenarios: staffMember.specialScenarios,
+        status: staffMember.status
       };
-      await update(staffMember.id, updatedStaff);
+      await update(staffMember.id, dbStaffData);
     }
   }, [staff, update]);
 
@@ -200,7 +227,7 @@ export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
   const batchSyncScenarios = useCallback(async (scenarioGMMap: { [scenarioTitle: string]: string[] }) => {
     // 各スタッフのシナリオを更新
     const updatePromises = staff.map(async (staffMember) => {
-      const updatedScenarios = new Set(staffMember.availableScenarios);
+      const updatedScenarios = new Set(staffMember.availableScenarios || []);
       
       // 各シナリオをチェックして、このスタッフがGMかどうか確認
       Object.entries(scenarioGMMap).forEach(([scenarioTitle, gmNames]) => {
@@ -212,11 +239,26 @@ export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
       const newScenarios = Array.from(updatedScenarios);
       
       // シナリオリストが変更された場合のみ更新
-      if (JSON.stringify(newScenarios.sort()) !== JSON.stringify(staffMember.availableScenarios.sort())) {
-        await update(staffMember.id, {
-          ...staffMember,
-          availableScenarios: newScenarios
-        });
+      if (JSON.stringify(newScenarios.sort()) !== JSON.stringify((staffMember.availableScenarios || []).sort())) {
+        // アプリケーションのフィールド名をデータベースのフィールド名に変換
+        const dbStaffData = {
+          name: staffMember.name,
+          line_name: staffMember.lineName,
+          x_account: staffMember.xAccount,
+          role: staffMember.role,
+          stores: staffMember.stores,
+          ng_days: staffMember.ngDays,
+          want_to_learn: staffMember.wantToLearn,
+          available_scenarios: newScenarios,
+          notes: staffMember.notes,
+          phone: staffMember.contact.phone,
+          email: staffMember.contact.email,
+          availability: staffMember.availability,
+          experience: staffMember.experience,
+          special_scenarios: staffMember.specialScenarios,
+          status: staffMember.status
+        };
+        await update(staffMember.id, dbStaffData);
       }
     });
     

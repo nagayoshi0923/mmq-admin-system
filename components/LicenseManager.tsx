@@ -1082,7 +1082,7 @@ ${author.author} 様
                         <TableHead className="w-32">合計金額</TableHead>
                       </TableRow>
                     </TableHeader>
-                  <TableBody>
+                    <TableBody>
                     {getAuthorsWithScenarioCount().map(authorSummary => {
                       const totalAmount = authorSummary.scenarioUsage.reduce((sum, s) => sum + s.totalAmount, 0);
                       

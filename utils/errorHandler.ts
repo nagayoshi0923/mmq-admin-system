@@ -55,7 +55,7 @@ class ErrorHandler {
     this.notifyUser(error);
 
     // 開発環境でのコンソール出力
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.MODE === 'development') {
       console.group(`🚨 ${error.type.toUpperCase()} Error`);
       console.error('Message:', error.message);
       console.error('User Message:', error.userMessage);
@@ -316,7 +316,7 @@ class ErrorHandler {
     }
 
     // LocalStorageに保存（開発環境のみ）
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.MODE === 'development') {
       try {
         const recentLogs = this.errorLogs.slice(-20); // 最新20件のみ保存
         localStorage.setItem('app-error-logs', JSON.stringify(recentLogs));
