@@ -25,6 +25,7 @@ import {
 import { useStaff } from '../contexts/StaffContext';
 import { useScenarios } from '../contexts/ScenarioContext';
 import { useSchedule } from '../contexts/ScheduleContext';
+import { useSupabaseData } from '../hooks/useSupabaseData';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ja';
 
@@ -84,7 +85,15 @@ export function StaffDashboard({ staffId, staffName }: StaffDashboardProps) {
   const { events } = useSchedule();
   
   const [schedules, setSchedules] = useState<DaySchedule[]>([]);
-  const [salaryRecords, setSalaryRecords] = useState<SalaryRecord[]>([]);
+  // 給与記録はSupabaseから取得
+  const {
+    data: salaryRecords,
+    loading: salaryLoading
+  } = useSupabaseData<any>({
+    table: 'staff_attendance',
+    realtime: true,
+    orderBy: { column: 'date', ascending: false }
+  });
   const [staffScenarios, setStaffScenarios] = useState<StaffScenario[]>([]);
   const [isScenarioDialogOpen, setIsScenarioDialogOpen] = useState(false);
   const [editingScenario, setEditingScenario] = useState<StaffScenario | null>(null);
@@ -142,15 +151,7 @@ export function StaffDashboard({ staffId, staffName }: StaffDashboardProps) {
       }
     }
 
-    // 給与記録を読み込み
-    const savedSalary = localStorage.getItem(`staff-salary-${staffId}`);
-    if (savedSalary) {
-      try {
-        setSalaryRecords(JSON.parse(savedSalary));
-      } catch (error) {
-        console.error('給与データの読み込みに失敗:', error);
-      }
-    }
+    // 給与記録はSupabaseから自動取得される
 
     // スタッフシナリオを読み込み
     const savedScenarios = localStorage.getItem(`staff-scenarios-${staffId}`);
@@ -171,6 +172,12 @@ export function StaffDashboard({ staffId, staffName }: StaffDashboardProps) {
       event.gms.includes(staffName)
     );
   }, [events, staffName]);
+
+  // スタッフの給与記録をフィルタリング
+  const staffSalaryRecords = useMemo(() => {
+    if (!salaryRecords) return [];
+    return salaryRecords.filter((record: any) => record.staff_id === staffId);
+  }, [salaryRecords, staffId]);
 
   // 時間帯変更ハンドラー
   const handleTimeSlotChange = (dateIndex: number, timeSlot: keyof DaySchedule['timeSlots'], checked: boolean) => {
@@ -269,14 +276,20 @@ export function StaffDashboard({ staffId, staffName }: StaffDashboardProps) {
 
   // 給与計算
   const totalEarnings = useMemo(() => {
-    return salaryRecords.reduce((total, record) => total + record.amount, 0);
-  }, [salaryRecords]);
+    return staffSalaryRecords.reduce((total, record) => total + record.salary_amount, 0);
+  }, [staffSalaryRecords]);
 
   const pendingEarnings = useMemo(() => {
-    return salaryRecords
+    return staffSalaryRecords
       .filter(record => record.status === 'pending')
-      .reduce((total, record) => total + record.amount, 0);
-  }, [salaryRecords]);
+      .reduce((total, record) => total + record.salary_amount, 0);
+  }, [staffSalaryRecords]);
+
+  const paidEarnings = useMemo(() => {
+    return staffSalaryRecords
+      .filter(record => record.status === 'paid')
+      .reduce((total, record) => total + record.salary_amount, 0);
+  }, [staffSalaryRecords]);
 
   // 難易度ラベル
   const getDifficultyLabel = (difficulty: number) => {
@@ -456,7 +469,7 @@ export function StaffDashboard({ staffId, staffName }: StaffDashboardProps) {
 
           {/* 給与管理タブ */}
           <TabsContent value="salary" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium">総収入</CardTitle>
@@ -464,6 +477,16 @@ export function StaffDashboard({ staffId, staffName }: StaffDashboardProps) {
                 <CardContent>
                   <div className="text-2xl font-bold text-green-600">
                     ¥{totalEarnings.toLocaleString()}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">支払済み</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-blue-600">
+                    ¥{paidEarnings.toLocaleString()}
                   </div>
                 </CardContent>
               </Card>
@@ -497,28 +520,27 @@ export function StaffDashboard({ staffId, staffName }: StaffDashboardProps) {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>日付</TableHead>
-                      <TableHead>シナリオ</TableHead>
-                      <TableHead>会場</TableHead>
-                      <TableHead>時間</TableHead>
-                      <TableHead>単価</TableHead>
-                      <TableHead>金額</TableHead>
-                      <TableHead>ステータス</TableHead>
+                    <TableHead>日付</TableHead>
+                    <TableHead>シナリオ</TableHead>
+                    <TableHead>会場</TableHead>
+                    <TableHead>役割</TableHead>
+                    <TableHead>金額</TableHead>
+                    <TableHead>ステータス</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {salaryRecords.map((record) => (
+                    {staffSalaryRecords.map((record) => (
                       <TableRow key={record.id}>
                         <TableCell>{dayjs(record.date).format('M/D')}</TableCell>
-                        <TableCell>{record.scenario}</TableCell>
+                        <TableCell>{record.scenario_title}</TableCell>
                         <TableCell>{record.venue}</TableCell>
-                        <TableCell>{record.hours}時間</TableCell>
-                        <TableCell>¥{record.rate.toLocaleString()}</TableCell>
-                        <TableCell>¥{record.amount.toLocaleString()}</TableCell>
+                        <TableCell>{record.role}</TableCell>
+                        <TableCell>¥{record.salary_amount.toLocaleString()}</TableCell>
                         <TableCell>
                           <Badge 
                             variant={record.status === 'paid' ? 'default' : 'secondary'}
-                            className={record.status === 'paid' ? 'bg-green-100 text-green-800' : ''}
+                            className={record.status === 'paid' ? 'bg-green-100 text-green-800' : 
+                                     record.status === 'approved' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'}
                           >
                             {record.status === 'paid' ? '支払済み' : 
                              record.status === 'approved' ? '承認済み' : '未承認'}
@@ -528,7 +550,7 @@ export function StaffDashboard({ staffId, staffName }: StaffDashboardProps) {
                     ))}
                   </TableBody>
                 </Table>
-                {salaryRecords.length === 0 && (
+                {staffSalaryRecords.length === 0 && (
                   <div className="text-center text-muted-foreground py-8">
                     給与記録がありません
                   </div>

@@ -276,6 +276,84 @@ export interface Database {
         };
       };
 
+      // シナリオ給料テーブル
+      scenario_salaries: {
+        Row: {
+          id: string;
+          scenario_title: string;
+          role: 'GM' | 'サポート';
+          base_salary: number;
+          bonus_rate: number;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          scenario_title: string;
+          role: 'GM' | 'サポート';
+          base_salary: number;
+          bonus_rate?: number;
+          is_active?: boolean;
+        };
+        Update: {
+          id?: string;
+          scenario_title?: string;
+          role?: 'GM' | 'サポート';
+          base_salary?: number;
+          bonus_rate?: number;
+          is_active?: boolean;
+        };
+      };
+
+      // スタッフ出勤記録テーブル
+      staff_attendance: {
+        Row: {
+          id: string;
+          staff_id: string;
+          event_id: string;
+          scenario_title: string;
+          role: 'GM' | 'サポート';
+          date: string;
+          venue: string;
+          start_time: string;
+          end_time: string;
+          salary_amount: number;
+          status: 'pending' | 'approved' | 'paid';
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          staff_id: string;
+          event_id: string;
+          scenario_title: string;
+          role: 'GM' | 'サポート';
+          date: string;
+          venue: string;
+          start_time: string;
+          end_time: string;
+          salary_amount: number;
+          status?: 'pending' | 'approved' | 'paid';
+          notes?: string | null;
+        };
+        Update: {
+          id?: string;
+          staff_id?: string;
+          event_id?: string;
+          scenario_title?: string;
+          role?: 'GM' | 'サポート';
+          date?: string;
+          venue?: string;
+          start_time?: string;
+          end_time?: string;
+          salary_amount?: number;
+          status?: 'pending' | 'approved' | 'paid';
+          notes?: string | null;
+        };
+      };
+
       // 編集履歴テーブル
       edit_history: {
         Row: {
