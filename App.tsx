@@ -29,6 +29,7 @@ import { setupGlobalErrorHandlers } from './utils/errorHandler';
 // Lazy load components for better performance
 const ScheduleManager = lazy(() => import('./components/ScheduleManager').then(module => ({ default: module.ScheduleManager })));
 const StaffManager = lazy(() => import('./components/StaffManager').then(module => ({ default: module.StaffManager })));
+const StaffDashboard = lazy(() => import('./components/StaffDashboard').then(module => ({ default: module.StaffDashboard })));
 const ScenarioManager = lazy(() => import('./components/ScenarioManager').then(module => ({ default: module.ScenarioManager })));
 const StoreManager = lazy(() => import('./components/StoreManager').then(module => ({ default: module.StoreManager })));
 const ReservationManager = lazy(() => import('./components/ReservationManager').then(module => ({ default: module.ReservationManager })));
@@ -51,6 +52,7 @@ const TAB_ROUTES = {
   'schedule': '#schedule',
   'reservations': '#reservations',
   'staff': '#staff',
+  'staff-dashboard': '#staff-dashboard',
   'scenarios': '#scenarios',
   'stores': '#stores',
   'sales': '#sales',
@@ -68,10 +70,23 @@ export default function App() {
   // URLハッシュからデフォルトタブを決定
   const getDefaultTab = () => {
     const hash = window.location.hash;
+    // スタッフダッシュボードのハッシュをチェック
+    if (hash.startsWith('#staff-dashboard/')) {
+      return 'staff-dashboard';
+    }
     return HASH_TO_TAB[hash] || 'schedule';
   };
 
   const [activeTab, setActiveTab] = useState(getDefaultTab);
+  
+  // スタッフIDを取得
+  const getStaffIdFromHash = () => {
+    const hash = window.location.hash;
+    const match = hash.match(/#staff-dashboard\/(.+)/);
+    return match ? match[1] : null;
+  };
+
+  const [staffId, setStaffId] = useState(getStaffIdFromHash);
 
   // グローバルエラーハンドラーを設定
   useEffect(() => {
@@ -82,9 +97,17 @@ export default function App() {
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash;
-      const tab = HASH_TO_TAB[hash];
-      if (tab) {
-        setActiveTab(tab);
+      // スタッフダッシュボードのハッシュをチェック
+      if (hash.startsWith('#staff-dashboard/')) {
+        setActiveTab('staff-dashboard');
+        const newStaffId = getStaffIdFromHash();
+        setStaffId(newStaffId);
+      } else {
+        const tab = HASH_TO_TAB[hash];
+        if (tab) {
+          setActiveTab(tab);
+          setStaffId(null);
+        }
       }
     };
 
@@ -188,6 +211,18 @@ export default function App() {
                 <TabsContent value="staff">
                   <Suspense fallback={<LoadingSpinner />}>
                     <StaffManager />
+                  </Suspense>
+                </TabsContent>
+
+                <TabsContent value="staff-dashboard">
+                  <Suspense fallback={<LoadingSpinner />}>
+                    {staffId ? (
+                      <StaffDashboard staffId={staffId} staffName="スタッフ" />
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        スタッフが選択されていません
+                      </div>
+                    )}
                   </Suspense>
                 </TabsContent>
 

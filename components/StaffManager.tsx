@@ -18,9 +18,9 @@ import GripVertical from 'lucide-react/dist/esm/icons/grip-vertical';
 import TestTube from 'lucide-react/dist/esm/icons/test-tube';
 import Phone from 'lucide-react/dist/esm/icons/phone';
 import Mail from 'lucide-react/dist/esm/icons/mail';
-import Calendar from 'lucide-react/dist/esm/icons/calendar';
 import Plus from 'lucide-react/dist/esm/icons/plus';
 import Pencil from 'lucide-react/dist/esm/icons/pencil';
+import User from 'lucide-react/dist/esm/icons/user';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { ScrollArea } from './ui/scroll-area';
 
@@ -29,7 +29,6 @@ import { useStaff, Staff } from '../contexts/StaffContext';
 import { setStaffUpdateFunction } from '../contexts/ScenarioContext';
 import { isValidStaff, isNotNullish, safeGetArray, safeToString } from '../utils/typeGuards';
 import { StaffDialog } from './StaffDialog';
-import { StaffScheduleDialog } from './StaffScheduleDialog';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { Avatar, AvatarFallback } from './ui/avatar';
@@ -162,14 +161,12 @@ export const StaffManager = React.memo(() => {
   const [sortField, setSortField] = useState<keyof Staff | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   
-  // スケジュールダイアログの状態
-  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
-  const [selectedStaffForSchedule, setSelectedStaffForSchedule] = useState<Staff | null>(null);
   
-  // スケジュールダイアログを開く
-  const openScheduleDialog = useCallback((staff: Staff) => {
-    setSelectedStaffForSchedule(staff);
-    setScheduleDialogOpen(true);
+  
+  
+  // ダッシュボードページに遷移
+  const navigateToDashboard = useCallback((staff: Staff) => {
+    window.location.hash = `#staff-dashboard/${staff.id}`;
   }, []);
   
   // スタッフスケジュールのモックデータ
@@ -693,10 +690,10 @@ export const StaffManager = React.memo(() => {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                title="スケジュール管理"
-                                onClick={() => openScheduleDialog(member)}
+                                title="ダッシュボード"
+                                onClick={() => navigateToDashboard(member)}
                               >
-                                <Calendar className="w-4 h-4" />
+                                <User className="w-4 h-4" />
                               </Button>
                               <Button
                                 variant="ghost"
@@ -855,18 +852,7 @@ export const StaffManager = React.memo(() => {
         </div>
       </TooltipProvider>
       
-      {/* スケジュールダイアログ */}
-      {selectedStaffForSchedule && (
-        <StaffScheduleDialog
-          isOpen={scheduleDialogOpen}
-          onClose={() => {
-            setScheduleDialogOpen(false);
-            setSelectedStaffForSchedule(null);
-          }}
-          staffId={selectedStaffForSchedule.id}
-          staffName={selectedStaffForSchedule.name}
-        />
-      )}
+      
     </DndProvider>
   );
 });
