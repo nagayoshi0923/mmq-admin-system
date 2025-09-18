@@ -11,7 +11,9 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    host: true
+    host: true,
+    hmr: { overlay: false },
+    fs: { strict: false }
   },
   build: {
     rollupOptions: {
@@ -55,7 +57,13 @@ export default defineConfig({
     // チャンクサイズ警告の閾値を調整
     chunkSizeWarningLimit: 1000,
     
-    // 圧縮設定（開発時は無効化）
-    minify: false
+    // 圧縮設定
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true
+      }
+    }
   }
 })

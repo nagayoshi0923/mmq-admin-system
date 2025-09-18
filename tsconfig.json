@@ -14,6 +14,11 @@
     "strict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
+    "skipLibCheck": true,
+    "noImplicitAny": false,
+    "noImplicitReturns": false,
+    "noImplicitThis": false,
+    "noUncheckedIndexedAccess": false,
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {

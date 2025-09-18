@@ -861,8 +861,47 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
     return scenarios.filter(scenario => scenario.status === 'available');
   }, [scenarios]);
 
+  // 作者名の表記揺れチェック
+  const checkAuthorNameVariations = useCallback((inputAuthor: string) => {
+    if (!Array.isArray(scenarios)) return null;
+    
+    const existingAuthors = scenarios.map(s => s.author).filter(Boolean);
+    const normalizedInput = inputAuthor.trim().toLowerCase();
+    
+    // 完全一致チェック
+    const exactMatch = existingAuthors.find(author => 
+      author.toLowerCase() === normalizedInput
+    );
+    if (exactMatch) return { type: 'exact', author: exactMatch };
+    
+    // 表記揺れチェック（簡易版）
+    const variations = existingAuthors.filter(author => {
+      const normalized = author.toLowerCase();
+      // スペースの有無、記号の違いなどを考慮
+      const cleanInput = normalizedInput.replace(/[^\w]/g, '');
+      const cleanAuthor = normalized.replace(/[^\w]/g, '');
+      return cleanInput === cleanAuthor && cleanInput.length > 2;
+    });
+    
+    if (variations.length > 0) {
+      return { type: 'variation', authors: variations };
+    }
+    
+    return null;
+  }, [scenarios]);
+
   const addScenario = useCallback(async (scenario: Scenario) => {
     try {
+      // 作者名の表記揺れチェック
+      const authorCheck = checkAuthorNameVariations(scenario.author);
+      if (authorCheck) {
+        if (authorCheck.type === 'exact') {
+          throw new Error(`作者名「${authorCheck.author}」は既に登録されています。`);
+        } else if (authorCheck.type === 'variation') {
+          throw new Error(`類似の作者名が見つかりました: ${authorCheck.authors.join(', ')}。表記を統一してください。`);
+        }
+      }
+
       // ローカル構造をSupabase構造に変換（不要なフィールドを除外）
       const supabaseScenario = {
         title: scenario.title,
@@ -902,7 +941,7 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
       console.error('シナリオ追加エラー:', error);
       return { data: null, error: error instanceof Error ? error.message : 'シナリオ追加に失敗しました' };
     }
-  }, [insert]);
+  }, [insert, checkAuthorNameVariations]);
 
   const updateScenario = useCallback(async (scenario: Scenario) => {
     try {

@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react';
+import { useSupabaseData } from '../hooks/useSupabaseData';
+import { useSupabase } from '../contexts/SupabaseContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -818,43 +820,57 @@ export function ScheduleManager() {
   };
 
   // 公演を中止
-  const cancelEvent = () => {
+  const cancelEvent = async () => {
     if (!cancelDialog.event) return;
 
     const eventToCancel = cancelDialog.event;
     
-    // ローカルストレージは使用しない（Supabaseのリアルタイム同期のみ）
+    try {
+      // Supabaseでイベントを中止状態に更新
+      await updateSupabaseEvent(eventToCancel.id, { is_cancelled: true });
 
-    // 編集履歴に中止を追加
-    addEditEntry({
-      user: 'ま sui',
-      action: 'update',
-      target: `${eventToCancel.date} ${eventToCancel.venue} - ${eventToCancel.scenario}`,
-      summary: `公演を中止：${eventToCancel.scenario}（${eventToCancel.startTime}-${eventToCancel.endTime}）`,
-      category: 'schedule',
-      changes: [
-        { field: 'ステータス', oldValue: '開催', newValue: '中止' }
-      ]
-    });
+      // 編集履歴に中止を追加
+      addEditEntry({
+        user: 'ま sui',
+        action: 'update',
+        target: `${eventToCancel.date} ${eventToCancel.venue} - ${eventToCancel.scenario}`,
+        summary: `公演を中止：${eventToCancel.scenario}（${eventToCancel.startTime}-${eventToCancel.endTime}）`,
+        category: 'schedule',
+        changes: [
+          { field: 'ステータス', oldValue: '開催', newValue: '中止' }
+        ]
+      });
+
+      console.log('イベントを中止しました:', eventToCancel.id);
+    } catch (error) {
+      console.error('イベントの中止に失敗:', error);
+    }
 
     setCancelDialog({ open: false, event: null });
   };
 
   // 公演の中止を解除
-  const uncancelEvent = (event: ScheduleEvent) => {
-    // ローカルストレージは使用しない（Supabaseのリアルタイム同期のみ）
+  const uncancelEvent = async (event: ScheduleEvent) => {
+    try {
+      // Supabaseでイベントの中止状態を解除
+      await updateSupabaseEvent(event.id, { is_cancelled: false });
 
-    // 編集履歴に中止解除を追加
-    addEditEntry({
-      user: 'ま sui',
-      action: 'update',
-      target: `${event.date} ${event.venue} - ${event.scenario}`,
-      summary: `公演の中止を解除：${event.scenario}（${event.startTime}-${event.endTime}）`,
-      category: 'schedule',
-      changes: [
-        { field: 'ステータス', oldValue: '中止', newValue: '開催' }
-      ]
-    });
+      // 編集履歴に中止解除を追加
+      addEditEntry({
+        user: 'ま sui',
+        action: 'update',
+        target: `${event.date} ${event.venue} - ${event.scenario}`,
+        summary: `公演の中止を解除：${event.scenario}（${event.startTime}-${event.endTime}）`,
+        category: 'schedule',
+        changes: [
+          { field: 'ステータス', oldValue: '中止', newValue: '開催' }
+        ]
+      });
+
+      console.log('イベントの中止を解除しました:', event.id);
+    } catch (error) {
+      console.error('イベントの中止解除に失敗:', error);
+    }
   };
 
   return (

@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useSupabaseData } from '../hooks/useSupabaseData';
+import { useSupabase } from '../contexts/SupabaseContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -110,81 +112,45 @@ function DraggableCustomerRow({ index, customer, moveRow, children }: DraggableC
 }
 
 export function CustomerManager() {
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const { isConnected } = useSupabase();
 
-  // 初期データ
-  const initialCustomers: Customer[] = [
-    {
-      id: '1',
-      name: '田中太郎',
-      email: 'tanaka@example.com',
-      phone: '090-1234-5678',
-      joinDate: '2024-06-15',
-      totalVisits: 8,
-      totalSpent: 48000,
-      lastVisit: '2025-01-15',
-      preferredGenres: ['ミステリー', 'ホラー'],
-      favoriteScenarios: ['人狼村の惨劇', '密室の謎'],
-      participantType: 'group',
-      status: 'vip',
-      birthMonth: 3,
-      tags: ['リピーター', '友人紹介'],
-      notes: '常連客。友人をよく連れてくる。'
-    },
-    {
-      id: '2',
-      name: '佐藤花子',
-      email: 'sato@example.com',
-      joinDate: '2024-09-20',
-      totalVisits: 3,
-      totalSpent: 15000,
-      lastVisit: '2025-01-10',
-      preferredGenres: ['恋愛', 'コメディ'],
-      favoriteScenarios: ['学園ミステリー'],
-      participantType: 'individual',
-      status: 'active',
-      birthMonth: 7,
-      tags: ['初心者歓迎']
-    },
-    {
-      id: '3',
-      name: '株式会社ABC',
-      email: 'info@abc-corp.com',
-      phone: '03-1234-5678',
-      joinDate: '2024-11-01',
-      totalVisits: 5,
-      totalSpent: 125000,
-      lastVisit: '2024-12-25',
-      preferredGenres: ['チームビルディング'],
-      favoriteScenarios: [],
-      participantType: 'corporate',
-      status: 'active',
-      tags: ['法人客', '大人数'],
-      notes: '四半期ごとにチームビルディングで利用'
-    }
-  ];
+  // Supabaseから顧客データを取得
+  const {
+    data: customersData,
+    loading: customersLoading,
+    error: customersError,
+    insert: insertCustomer,
+    update: updateCustomer,
+    delete: deleteCustomer,
+    refetch: refetchCustomers
+  } = useSupabaseData<any>({
+    table: 'customers',
+    realtime: true,
+    orderBy: { column: 'name', ascending: true }
+  });
 
-  // データ永続化 - localStorage から初期データを読み込み
-  useEffect(() => {
-    const savedCustomers = localStorage.getItem('murder-mystery-customers');
-    if (savedCustomers) {
-      try {
-        setCustomers(JSON.parse(savedCustomers));
-      } catch (error) {
-        console.error('Failed to load customers data:', error);
-        setCustomers(initialCustomers);
-      }
-    } else {
-      setCustomers(initialCustomers);
-    }
-  }, []);
-
-  // データ永続化 - customers が変更されるたびに localStorage に保存
-  useEffect(() => {
-    if (customers.length > 0) {
-      localStorage.setItem('murder-mystery-customers', JSON.stringify(customers));
-    }
-  }, [customers]);
+  // データをアプリケーション形式に変換
+  const customers = useMemo(() => {
+    if (!Array.isArray(customersData)) return [];
+    
+    return customersData.map((customer: any) => ({
+      id: customer.id,
+      name: customer.name,
+      email: customer.email,
+      phone: customer.phone,
+      joinDate: customer.created_at ? new Date(customer.created_at).toISOString().split('T')[0] : '',
+      totalVisits: customer.total_visits || 0,
+      totalSpent: 0, // 売上データから計算する必要がある
+      lastVisit: customer.last_visit,
+      preferredGenres: customer.preferred_scenarios || [],
+      favoriteScenarios: customer.preferred_scenarios || [],
+      participantType: 'individual' as const, // デフォルト値
+      status: customer.status || 'active',
+      birthMonth: customer.birthday ? new Date(customer.birthday).getMonth() + 1 : undefined,
+      tags: [], // タグ機能は後で実装
+      notes: customer.notes
+    }));
+  }, [customersData]);
 
   const [visitHistory] = useState<VisitHistory[]>([
     {

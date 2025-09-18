@@ -400,6 +400,272 @@ export interface Database {
           }[];
         };
       };
+
+      // ライセンス計算テーブル
+      license_calculations: {
+        Row: {
+          id: string;
+          scenario_title: string;
+          author: string;
+          email: string;
+          discord_channel: string | null;
+          license_rate: number;
+          contact_method: 'email' | 'discord';
+          calculated_at: string;
+          sent_at: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          scenario_title: string;
+          author: string;
+          email: string;
+          discord_channel?: string | null;
+          license_rate: number;
+          contact_method: 'email' | 'discord';
+          calculated_at: string;
+          sent_at?: string | null;
+          notes?: string | null;
+        };
+        Update: {
+          id?: string;
+          scenario_title?: string;
+          author?: string;
+          email?: string;
+          discord_channel?: string | null;
+          license_rate?: number;
+          contact_method?: 'email' | 'discord';
+          calculated_at?: string;
+          sent_at?: string | null;
+          notes?: string | null;
+        };
+      };
+
+      // シナリオ作者テーブル
+      scenario_authors: {
+        Row: {
+          id: string;
+          scenario_title: string;
+          author: string;
+          email: string;
+          discord_channel: string | null;
+          license_rate: number;
+          contact_method: 'email' | 'discord';
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          scenario_title: string;
+          author: string;
+          email: string;
+          discord_channel?: string | null;
+          license_rate: number;
+          contact_method: 'email' | 'discord';
+        };
+        Update: {
+          id?: string;
+          scenario_title?: string;
+          author?: string;
+          email?: string;
+          discord_channel?: string | null;
+          license_rate?: number;
+          contact_method?: 'email' | 'discord';
+        };
+      };
+
+      // 在庫アイテムテーブル
+      inventory_items: {
+        Row: {
+          id: string;
+          name: string;
+          category: 'props' | 'equipment' | 'costume' | 'furniture' | 'other';
+          quantity: number;
+          unit: string;
+          min_stock: number;
+          current_location: string;
+          status: 'available' | 'in_use' | 'maintenance' | 'disposed';
+          condition: 'excellent' | 'good' | 'fair' | 'poor' | 'damaged';
+          purchase_date: string | null;
+          purchase_price: number | null;
+          next_maintenance: string | null;
+          notes: string | null;
+          supplier: string | null;
+          used_in_scenarios: string[];
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          category: 'props' | 'equipment' | 'costume' | 'furniture' | 'other';
+          quantity: number;
+          unit: string;
+          min_stock: number;
+          current_location: string;
+          status: 'available' | 'in_use' | 'maintenance' | 'disposed';
+          condition: 'excellent' | 'good' | 'fair' | 'poor' | 'damaged';
+          purchase_date?: string | null;
+          purchase_price?: number | null;
+          next_maintenance?: string | null;
+          notes?: string | null;
+          supplier?: string | null;
+          used_in_scenarios?: string[];
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          category?: 'props' | 'equipment' | 'costume' | 'furniture' | 'other';
+          quantity?: number;
+          unit?: string;
+          min_stock?: number;
+          current_location?: string;
+          status?: 'available' | 'in_use' | 'maintenance' | 'disposed';
+          condition?: 'excellent' | 'good' | 'fair' | 'poor' | 'damaged';
+          purchase_date?: string | null;
+          purchase_price?: number | null;
+          next_maintenance?: string | null;
+          notes?: string | null;
+          supplier?: string | null;
+          used_in_scenarios?: string[];
+        };
+      };
+
+      // 在庫移動記録テーブル
+      stock_movements: {
+        Row: {
+          id: string;
+          item_id: string;
+          type: 'in' | 'out' | 'transfer' | 'adjustment';
+          quantity: number;
+          date: string;
+          from_location: string | null;
+          to_location: string | null;
+          reason: string;
+          performed_by: string;
+          related_scenario: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          item_id: string;
+          type: 'in' | 'out' | 'transfer' | 'adjustment';
+          quantity: number;
+          date: string;
+          from_location?: string | null;
+          to_location?: string | null;
+          reason: string;
+          performed_by: string;
+          related_scenario?: string | null;
+        };
+        Update: {
+          id?: string;
+          item_id?: string;
+          type?: 'in' | 'out' | 'transfer' | 'adjustment';
+          quantity?: number;
+          date?: string;
+          from_location?: string | null;
+          to_location?: string | null;
+          reason?: string;
+          performed_by?: string;
+          related_scenario?: string | null;
+        };
+      };
+
+      // 顧客テーブル
+      customers: {
+        Row: {
+          id: string;
+          name: string;
+          email: string | null;
+          phone: string | null;
+          birthday: string | null;
+          gender: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null;
+          address: string | null;
+          notes: string | null;
+          total_visits: number;
+          last_visit: string | null;
+          preferred_scenarios: string[];
+          status: 'active' | 'inactive' | 'blacklisted';
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          email?: string | null;
+          phone?: string | null;
+          birthday?: string | null;
+          gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null;
+          address?: string | null;
+          notes?: string | null;
+          total_visits?: number;
+          last_visit?: string | null;
+          preferred_scenarios?: string[];
+          status?: 'active' | 'inactive' | 'blacklisted';
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          email?: string | null;
+          phone?: string | null;
+          birthday?: string | null;
+          gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null;
+          address?: string | null;
+          notes?: string | null;
+          total_visits?: number;
+          last_visit?: string | null;
+          preferred_scenarios?: string[];
+          status?: 'active' | 'inactive' | 'blacklisted';
+        };
+      };
+
+      // 売上記録テーブル
+      sales_records: {
+        Row: {
+          id: string;
+          date: string;
+          customer_id: string | null;
+          customer_name: string;
+          scenario_title: string;
+          venue: string;
+          amount: number;
+          payment_method: 'cash' | 'card' | 'transfer' | 'other';
+          staff_id: string | null;
+          staff_name: string;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          date: string;
+          customer_id?: string | null;
+          customer_name: string;
+          scenario_title: string;
+          venue: string;
+          amount: number;
+          payment_method: 'cash' | 'card' | 'transfer' | 'other';
+          staff_id?: string | null;
+          staff_name: string;
+          notes?: string | null;
+        };
+        Update: {
+          id?: string;
+          date?: string;
+          customer_id?: string | null;
+          customer_name?: string;
+          scenario_title?: string;
+          venue?: string;
+          amount?: number;
+          payment_method?: 'cash' | 'card' | 'transfer' | 'other';
+          staff_id?: string | null;
+          staff_name?: string;
+          notes?: string | null;
+        };
+      };
     };
     Views: {
       [_ in never]: never;

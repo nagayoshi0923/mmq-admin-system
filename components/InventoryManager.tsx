@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useSupabaseData } from '../hooks/useSupabaseData';
+import { useSupabase } from '../contexts/SupabaseContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -114,140 +116,79 @@ function DraggableInventoryRow({ index, item, moveRow, children }: DraggableInve
 }
 
 export function InventoryManager() {
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const { isConnected } = useSupabase();
 
-  // 初期データ
-  const initialInventory: InventoryItem[] = [
-    {
-      id: '1',
-      name: '血のりボトル',
-      category: 'prop',
-      subcategory: '特殊効果',
-      quantity: 5,
-      unit: 'ml',
-      minStock: 2,
-      currentLocation: '馬場店倉庫A',
-      status: 'available',
-      condition: 'good',
-      purchaseDate: '2024-06-15',
-      purchasePrice: 1200,
-      supplier: 'ホラー用品店',
-      usedInScenarios: ['人狼村の惨劇', '密室の謎'],
-      lastUsed: '2025-01-15',
-      notes: '使用後は必ず補充確認'
-    },
-    {
-      id: '2',
-      name: '警察手帳レプリカ',
-      category: 'prop',
-      subcategory: '身分証',
-      quantity: 3,
-      unit: '個',
-      minStock: 2,
-      currentLocation: '別館①小道具室',
-      status: 'in-use',
-      condition: 'excellent',
-      purchaseDate: '2024-08-20',
-      purchasePrice: 2500,
-      usedInScenarios: ['刑事ミステリー', '潜入捜査'],
-      lastUsed: '2025-01-14'
-    },
-    {
-      id: '3',
-      name: 'ビクトリアンドレス',
-      category: 'costume',
-      subcategory: '19世紀',
-      quantity: 2,
-      unit: '着',
-      minStock: 1,
-      currentLocation: '大久保店衣装室',
-      status: 'maintenance',
-      condition: 'fair',
-      purchaseDate: '2024-03-10',
-      purchasePrice: 15000,
-      nextMaintenance: '2025-02-01',
-      usedInScenarios: ['ヴィクトリア朝の惨劇'],
-      notes: 'サイズL、クリーニング中'
-    },
-    {
-      id: '4',
-      name: 'A4コピー用紙',
-      category: 'consumable',
-      quantity: 500,
-      unit: '枚',
-      minStock: 100,
-      currentLocation: '各店舗事務室',
-      status: 'available',
-      condition: 'excellent',
-      purchaseDate: '2025-01-01',
-      purchasePrice: 800,
-      supplier: 'オフィス用品店',
-      usedInScenarios: []
-    },
-    {
-      id: '5',
-      name: 'マイクロフォン',
-      category: 'equipment',
-      quantity: 1,
-      unit: '台',
-      minStock: 1,
-      currentLocation: '大塚店音響室',
-      status: 'available',
-      condition: 'good',
-      purchaseDate: '2024-09-05',
-      purchasePrice: 12000,
-      nextMaintenance: '2025-03-05',
-      notes: '定期点検必要',
-      usedInScenarios: []
-    }
-  ];
+  // Supabaseから在庫データを取得
+  const {
+    data: inventoryData,
+    loading: inventoryLoading,
+    error: inventoryError,
+    insert: insertInventory,
+    update: updateInventory,
+    delete: deleteInventory,
+    refetch: refetchInventory
+  } = useSupabaseData<any>({
+    table: 'inventory_items',
+    realtime: true,
+    orderBy: { column: 'name', ascending: true }
+  });
 
-  // データ永続化 - localStorage から初期データを読み込み
-  useEffect(() => {
-    const savedInventory = localStorage.getItem('murder-mystery-inventory');
-    if (savedInventory) {
-      try {
-        setInventory(JSON.parse(savedInventory));
-      } catch (error) {
-        console.error('Failed to load inventory data:', error);
-        setInventory(initialInventory);
-      }
-    } else {
-      setInventory(initialInventory);
-    }
-  }, []);
+  // Supabaseから在庫移動記録を取得
+  const {
+    data: stockMovementsData,
+    loading: movementsLoading,
+    error: movementsError,
+    insert: insertStockMovement,
+    refetch: refetchMovements
+  } = useSupabaseData<any>({
+    table: 'stock_movements',
+    realtime: true,
+    orderBy: { column: 'date', ascending: false }
+  });
 
-  // データ永続化 - inventory が変更されるたびに localStorage に保存
-  useEffect(() => {
-    if (inventory.length > 0) {
-      localStorage.setItem('murder-mystery-inventory', JSON.stringify(inventory));
-    }
-  }, [inventory]);
+  // データをアプリケーション形式に変換
+  const inventory = useMemo(() => {
+    if (!Array.isArray(inventoryData)) return [];
+    
+    return inventoryData.map((item: any) => ({
+      id: item.id,
+      name: item.name,
+      category: item.category,
+      subcategory: item.subcategory,
+      quantity: item.quantity,
+      unit: item.unit,
+      minStock: item.min_stock,
+      currentLocation: item.current_location,
+      status: item.status,
+      condition: item.condition,
+      purchaseDate: item.purchase_date,
+      purchasePrice: item.purchase_price,
+      supplier: item.supplier,
+      usedInScenarios: item.used_in_scenarios || [],
+      lastUsed: item.last_used,
+      nextMaintenance: item.next_maintenance,
+      notes: item.notes,
+      imageUrl: item.image_url
+    }));
+  }, [inventoryData]);
 
-  const [stockMovements] = useState<StockMovement[]>([
-    {
-      id: '1',
-      itemId: '1',
-      type: 'out',
-      quantity: 1,
-      date: '2025-01-15',
-      fromLocation: '馬場店倉庫A',
-      reason: 'シナリオ使用',
-      performedBy: '田中GM',
-      relatedScenario: '人狼村の惨劇'
-    },
-    {
-      id: '2',
-      itemId: '3',
-      type: 'transfer',
-      quantity: 1,
-      date: '2025-01-10',
-      fromLocation: '馬場店衣装室',
-      toLocation: '大久保店衣装室',
-      reason: '店舗間移動',
-      performedBy: '佐藤スタッフ'
-    }
-  ]);
+  const stockMovements = useMemo(() => {
+    if (!Array.isArray(stockMovementsData)) return [];
+    
+    return stockMovementsData.map((movement: any) => ({
+      id: movement.id,
+      itemId: movement.item_id,
+      type: movement.type,
+      quantity: movement.quantity,
+      date: movement.date,
+      fromLocation: movement.from_location,
+      toLocation: movement.to_location,
+      reason: movement.reason,
+      performedBy: movement.performed_by,
+      relatedScenario: movement.related_scenario
+    }));
+  }, [stockMovementsData]);
+
 
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -261,8 +202,47 @@ export function InventoryManager() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // アイテム削除関数
-  const handleDeleteItem = (item: InventoryItem) => {
-    setInventory(prev => prev.filter(i => i.id !== item.id));
+  const handleDeleteItem = async (item: InventoryItem) => {
+    try {
+      await deleteInventory(item.id);
+    } catch (error) {
+      console.error('在庫アイテムの削除に失敗:', error);
+    }
+  };
+
+  // アイテム保存関数
+  const handleSaveItem = async (item: InventoryItem) => {
+    try {
+      const dbItem = {
+        name: item.name,
+        category: item.category,
+        subcategory: item.subcategory,
+        quantity: item.quantity,
+        unit: item.unit,
+        min_stock: item.minStock,
+        current_location: item.currentLocation,
+        status: item.status,
+        condition: item.condition,
+        purchase_date: item.purchaseDate,
+        purchase_price: item.purchasePrice,
+        supplier: item.supplier,
+        used_in_scenarios: item.usedInScenarios,
+        last_used: item.lastUsed,
+        next_maintenance: item.nextMaintenance,
+        notes: item.notes,
+        image_url: item.imageUrl
+      };
+
+      if (item.id && inventory.some(i => i.id === item.id)) {
+        // 更新
+        await updateInventory(item.id, dbItem);
+      } else {
+        // 新規追加
+        await insertInventory(dbItem);
+      }
+    } catch (error) {
+      console.error('在庫アイテムの保存に失敗:', error);
+    }
   };
 
   // ソート処理関数
@@ -931,7 +911,12 @@ export function InventoryManager() {
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                   キャンセル
                 </Button>
-                <Button onClick={() => setIsDialogOpen(false)}>
+                <Button onClick={() => {
+                  if (selectedItem) {
+                    handleSaveItem(selectedItem);
+                    setIsDialogOpen(false);
+                  }
+                }}>
                   保存
                 </Button>
               </div>

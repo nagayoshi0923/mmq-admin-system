@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useSupabaseData } from '../hooks/useSupabaseData';
+import { useSupabase } from '../contexts/SupabaseContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -162,8 +164,12 @@ export function SalesManager() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // 売上記録削除関数
-  const handleDeleteSalesRecord = (record: SalesRecord) => {
-    setSalesRecords(prev => prev.filter(r => r.id !== record.id));
+  const handleDeleteSalesRecord = async (record: SalesRecord) => {
+    try {
+      await deleteSales(record.id);
+    } catch (error) {
+      console.error('売上記録の削除に失敗:', error);
+    }
   };
 
   // ソート処理関数

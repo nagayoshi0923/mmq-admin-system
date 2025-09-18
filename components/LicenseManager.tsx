@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
-import { usePersistedState } from '../hooks/usePersistedState';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useSupabaseData } from '../hooks/useSupabaseData';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -28,6 +28,7 @@ import Edit2 from 'lucide-react/dist/esm/icons/edit-2';
 import BookOpen from 'lucide-react/dist/esm/icons/book-open';
 import { useScenarios } from '../contexts/ScenarioContext';
 import { useEditHistory } from '../contexts/EditHistoryContext';
+import { useSupabase } from '../contexts/SupabaseContext';
 import { toast } from 'sonner';
 
 interface ScheduleEvent {
@@ -70,10 +71,19 @@ interface ScenarioAuthor {
   contactMethod: 'email' | 'discord';
 }
 
+interface ScenarioUsage {
+  scenario: string;
+  count: number;
+  licenseRate: number;
+  totalAmount: number;
+}
+
 interface AuthorSummary {
   authorName: string;
   scenarioCount: number;
   scenarios: ScenarioAuthor[];
+  monthlyUsage: number;
+  scenarioUsage: ScenarioUsage[];
 }
 
 // 月名配列
@@ -125,6 +135,7 @@ const mockScenarioAuthors: ScenarioAuthor[] = [
 export function LicenseManager() {
   const { getAvailableScenarios } = useScenarios();
   const { addEditEntry } = useEditHistory();
+  const { isConnected } = useSupabase();
   
   // Safely get available scenarios with fallback
   const availableScenarios = useMemo(() => {
@@ -158,7 +169,7 @@ export function LicenseManager() {
     calculation: null
   });
 
-  // 作者編集フォームの状態
+  // 作者編集フォームの状態（シナリオ管理から参照するため、編集機能は無効化）
   const [authorForm, setAuthorForm] = useState({
     scenario: '',
     author: '',
@@ -171,47 +182,145 @@ export function LicenseManager() {
   // 計算メモの状態
   const [calculationNotes, setCalculationNotes] = useState('');
 
-  // usePersistedStateで統一されたLocalStorage操作
-  const [calculations, setCalculations] = usePersistedState<LicenseCalculation[]>(
-    'murder-mystery-license-calculations',
-    [],
-    {
-      // 日付オブジェクトのシリアライズ/デシリアライズ
-      deserialize: (value) => {
-        const parsed = JSON.parse(value);
-        return parsed.map((calc: any) => ({
-          ...calc,
-          calculatedAt: calc.calculatedAt ? new Date(calc.calculatedAt) : undefined,
-          sentAt: calc.sentAt ? new Date(calc.sentAt) : undefined
-        }));
-      },
-      onError: (error, operation) => {
-        console.error(`ライセンス計算データの${operation === 'read' ? '読み込み' : '保存'}に失敗:`, error);
-      }
-    }
-  );
+  // Supabaseからライセンス計算データを取得
+  const {
+    data: calculations,
+    loading: calculationsLoading,
+    error: calculationsError,
+    insert: insertCalculation,
+    update: updateCalculation,
+    delete: deleteCalculation,
+    refetch: refetchCalculations
+  } = useSupabaseData<any>({
+    table: 'license_calculations',
+    realtime: true,
+    orderBy: { column: 'calculated_at', ascending: false }
+  });
 
-  const [authorData, setAuthorData] = usePersistedState<ScenarioAuthor[]>(
-    'murder-mystery-scenario-authors',
-    mockScenarioAuthors,
-    {
-      onError: (error, operation) => {
-        console.error(`シナリオ作者データの${operation === 'read' ? '読み込み' : '保存'}に失敗:`, error);
+  // シナリオ管理から作者データを取得（シナリオテーブルから）
+  const {
+    data: scenariosData,
+    loading: scenariosLoading,
+    error: scenariosError
+  } = useSupabaseData<any>({
+    table: 'scenarios',
+    realtime: true,
+    orderBy: { column: 'author', ascending: true }
+  });
+
+  // 作者データを取得（scenario_authorsテーブルから）
+  const {
+    data: authorData,
+    loading: authorLoading,
+    error: authorError,
+    insert: insertAuthor,
+    update: updateAuthor,
+    delete: deleteAuthor
+  } = useSupabaseData<any>({
+    table: 'scenario_authors',
+    realtime: true,
+    orderBy: { column: 'scenario_title', ascending: true }
+  });
+
+  // データをアプリケーション形式に変換
+  const convertedCalculations = useMemo(() => {
+    if (!Array.isArray(calculations)) return [];
+    
+    return calculations.map((calc: any) => ({
+      id: calc.id,
+      month: new Date(calc.calculated_at).getMonth() + 1,
+      year: new Date(calc.calculated_at).getFullYear(),
+      scenarioUsage: { [calc.scenario_title]: 1 }, // 簡略化
+      status: calc.sent_at ? 'sent' : 'calculated',
+      calculatedAt: calc.calculated_at ? new Date(calc.calculated_at) : undefined,
+      sentAt: calc.sent_at ? new Date(calc.sent_at) : undefined,
+      totalEvents: 1,
+      notes: calc.notes
+    }));
+  }, [calculations]);
+
+  // シナリオデータから作者情報を抽出
+  const convertedAuthors = useMemo(() => {
+    if (!Array.isArray(scenariosData)) return mockScenarioAuthors;
+    
+    // 作者ごとにシナリオをグループ化
+    const authorMap = new Map();
+    
+    scenariosData.forEach((scenario: any) => {
+      const author = scenario.author;
+      if (!author) return;
+      
+      if (!authorMap.has(author)) {
+        authorMap.set(author, {
+          author: author,
+          scenarios: [],
+          totalLicenseRate: 0
+        });
       }
-    }
-  );
+      
+      authorMap.get(author).scenarios.push({
+        scenario: scenario.title,
+        author: author,
+        email: '', // シナリオテーブルにはメール情報がない
+        discordChannel: '', // シナリオテーブルにはDiscord情報がない
+        licenseRate: scenario.license_amount || 0,
+        contactMethod: 'email' as const // デフォルト値
+      });
+      
+      authorMap.get(author).totalLicenseRate += scenario.license_amount || 0;
+    });
+    
+    // 作者ごとのシナリオリストに変換（すべてのシナリオを含める）
+    const authors = Array.from(authorMap.values()).flatMap(authorData => 
+      authorData.scenarios // すべてのシナリオを含める
+    );
+    
+    return authors.length > 0 ? authors : mockScenarioAuthors;
+  }, [scenariosData]);
+
+  // Supabaseからスケジュールデータを取得
+  const {
+    data: scheduleEvents,
+    loading: scheduleLoading,
+    error: scheduleError
+  } = useSupabaseData<any>({
+    table: 'schedule_events',
+    realtime: true,
+    orderBy: { column: 'date', ascending: true }
+  });
 
   // スケジュールデータを取得
   const getScheduleData = (): { [key: string]: DaySchedule[] } => {
-    const savedScheduleEvents = localStorage.getItem('murder-mystery-schedule-events');
-    if (savedScheduleEvents) {
-      try {
-        return JSON.parse(savedScheduleEvents);
-      } catch (error) {
-        console.error('スケジュールデータの読み込みに失敗しました:', error);
+    if (!Array.isArray(scheduleEvents)) return {};
+    
+    // スケジュールイベントを日付ごとにグループ化
+    const groupedEvents: { [key: string]: DaySchedule[] } = {};
+    
+    scheduleEvents.forEach((event: any) => {
+      const date = event.date;
+      if (!groupedEvents[date]) {
+        groupedEvents[date] = [];
       }
-    }
-    return {};
+      
+      groupedEvents[date].push({
+        date: event.date,
+        dayOfWeek: new Date(event.date).toLocaleDateString('ja-JP', { weekday: 'long' }),
+        isHoliday: false, // 簡略化
+        events: [{
+          id: event.id,
+          date: event.date,
+          venue: event.venue,
+          scenario: event.scenario,
+          gms: event.gms || [],
+          startTime: event.start_time,
+          endTime: event.end_time,
+          category: event.category,
+          isCancelled: event.is_cancelled || false
+        }]
+      });
+    });
+    
+    return groupedEvents;
   };
 
   // 指定月のシナリオ使用回数を計算
@@ -236,46 +345,51 @@ export function LicenseManager() {
   };
 
   // 月別計算の実行
-  const performCalculation = () => {
+  const performCalculation = async () => {
     const { scenarioUsage, totalEvents } = calculateMonthlyUsage(selectedYear, selectedMonth);
     
-    const calculationId = `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}`;
-    const existingIndex = calculations.findIndex(calc => calc.id === calculationId);
+    const calculationId = crypto.randomUUID();
+    const existingCalculation = convertedCalculations.find(calc => calc.id === calculationId);
 
-    const newCalculation: LicenseCalculation = {
+    const newCalculation = {
       id: calculationId,
-      month: monthNames[selectedMonth - 1],
-      year: selectedYear,
-      scenarioUsage,
-      status: 'calculated',
-      calculatedAt: new Date(),
-      totalEvents,
-      notes: calculationNotes.trim() || undefined
+      scenario_title: Object.keys(scenarioUsage)[0] || '', // 簡略化
+      author: convertedAuthors.find(a => a.scenario === Object.keys(scenarioUsage)[0])?.author || '',
+      email: convertedAuthors.find(a => a.scenario === Object.keys(scenarioUsage)[0])?.email || '',
+      discord_channel: convertedAuthors.find(a => a.scenario === Object.keys(scenarioUsage)[0])?.discordChannel || null,
+      license_rate: convertedAuthors.find(a => a.scenario === Object.keys(scenarioUsage)[0])?.licenseRate || 0,
+      contact_method: convertedAuthors.find(a => a.scenario === Object.keys(scenarioUsage)[0])?.contactMethod || 'email',
+      calculated_at: new Date().toISOString(),
+      sent_at: null,
+      notes: calculationNotes.trim() || null
     };
 
-    if (existingIndex >= 0) {
-      const updatedCalculations = [...calculations];
-      updatedCalculations[existingIndex] = newCalculation;
-      setCalculations(updatedCalculations);
-    } else {
-      setCalculations(prev => [...prev, newCalculation]);
+    try {
+      if (existingCalculation) {
+        await updateCalculation(calculationId, newCalculation);
+      } else {
+        await insertCalculation(newCalculation);
+      }
+
+      // 編集履歴に追加
+      addEditEntry({
+        user: 'ま sui',
+        action: existingCalculation ? 'update' : 'create',
+        target: `${selectedYear}年${monthNames[selectedMonth - 1]}のライセンス計算`,
+        summary: `ライセンス計算を実行：合計${totalEvents}件の公演`,
+        category: 'license',
+        changes: Object.entries(scenarioUsage).map(([scenario, count]) => ({
+          field: scenario,
+          newValue: `${count}回`
+        }))
+      });
+
+      setCalculationNotes(''); // メモをクリア
+      toast.success(`${selectedYear}年${monthNames[selectedMonth - 1]}のライセンス計算が完了しました`);
+    } catch (error) {
+      console.error('ライセンス計算の保存に失敗:', error);
+      toast.error('ライセンス計算の保存に失敗しました');
     }
-
-    // 編集履歴に追加
-    addEditEntry({
-      user: 'ま sui',
-      action: existingIndex >= 0 ? 'update' : 'create',
-      target: `${selectedYear}年${monthNames[selectedMonth - 1]}のライセンス計算`,
-      summary: `ライセンス計算を実行：合計${totalEvents}件の公演`,
-      category: 'license',
-      changes: Object.entries(scenarioUsage).map(([scenario, count]) => ({
-        field: scenario,
-        newValue: `${count}回`
-      }))
-    });
-
-    setCalculationNotes(''); // メモをクリア
-    toast.success(`${selectedYear}年${monthNames[selectedMonth - 1]}のライセンス計算が完了しました`);
   };
 
   // 確定と送信
@@ -297,7 +411,7 @@ export function LicenseManager() {
     // 各シナリオ作者への送信をシミュレート
     const sentMessages: string[] = [];
     Object.entries(confirmDialog.calculation.scenarioUsage).forEach(([scenario, count]) => {
-      const author = authorData.find(a => a.scenario === scenario);
+      const author = convertedAuthors.find(a => a.scenario === scenario);
       if (author) {
         const licenseAmount = count * author.licenseRate;
         
@@ -377,7 +491,7 @@ ${author.author} 様
   };
 
   // 現在の月の計算データ
-  const currentCalculation = calculations.find(calc => 
+  const currentCalculation = convertedCalculations.find(calc =>
     calc.year === selectedYear && calc.month === monthNames[selectedMonth - 1]
   );
 
@@ -390,7 +504,7 @@ ${author.author} 様
   // 総計算
   const getTotalAmount = (calculation: LicenseCalculation) => {
     return Object.entries(calculation.scenarioUsage).reduce((total, [scenario, count]) => {
-      const author = authorData.find(a => a.scenario === scenario);
+      const author = convertedAuthors.find(a => a.scenario === scenario);
       return total + (count * (author?.licenseRate || 0));
     }, 0);
   };
@@ -446,7 +560,7 @@ ${author.author} 様
   };
 
   // 作者情報を保存
-  const saveAuthor = () => {
+  const saveAuthor = async () => {
     // 利用可能なシナリオがない場合
     if (filteredScenarios.length === 0) {
       toast.error('利用可能なシナリオがありません。先にシナリオを登録してください。');
@@ -470,7 +584,7 @@ ${author.author} 様
     }
 
     // 重複チェック（編集時は自分以外）
-    const existingAuthor = authorData.find(a => 
+    const existingAuthor = convertedAuthors.find(a => 
       a.scenario === authorForm.scenario && 
       (!editingAuthor || a.scenario !== editingAuthor.scenario)
     );
@@ -479,87 +593,160 @@ ${author.author} 様
       return;
     }
 
-    const newAuthor: ScenarioAuthor = {
-      scenario: authorForm.scenario,
+    const newAuthor = {
+      scenario_title: authorForm.scenario,
       author: authorForm.author,
-      email: authorForm.contactMethod === 'email' ? authorForm.email : undefined,
-      discordChannel: authorForm.contactMethod === 'discord' ? authorForm.discordChannel : undefined,
-      licenseRate: authorForm.licenseRate,
-      contactMethod: authorForm.contactMethod
+      email: authorForm.contactMethod === 'email' ? authorForm.email : '',
+      discord_channel: authorForm.contactMethod === 'discord' ? authorForm.discordChannel : null,
+      license_rate: authorForm.licenseRate,
+      contact_method: authorForm.contactMethod
     };
 
-    if (editingAuthor) {
-      // 編集
-      const updatedAuthors = authorData.map(a => 
-        a.scenario === editingAuthor.scenario ? newAuthor : a
-      );
-      setAuthorData(updatedAuthors);
+    try {
+      if (editingAuthor) {
+        // 編集
+        const existingDbAuthor = authorData.find(a => a.scenario_title === editingAuthor.scenario);
+        if (existingDbAuthor) {
+          await updateAuthor(existingDbAuthor.id, newAuthor);
+        }
 
-      addEditEntry({
-        user: 'ま sui',
-        action: 'update',
-        target: `シナリオ作者: ${authorForm.scenario}`,
-        summary: `作者情報を更新`,
-        category: 'license',
-        changes: [
-          { field: '作者名', oldValue: editingAuthor.author, newValue: authorForm.author },
-          { field: 'ライセンス料', oldValue: editingAuthor.licenseRate.toString(), newValue: authorForm.licenseRate.toString() }
-        ]
-      });
+        addEditEntry({
+          user: 'ま sui',
+          action: 'update',
+          target: `シナリオ作者: ${authorForm.scenario}`,
+          summary: `作者情報を更新`,
+          category: 'license',
+          changes: [
+            { field: '作者名', oldValue: editingAuthor.author, newValue: authorForm.author },
+            { field: 'ライセンス料', oldValue: editingAuthor.licenseRate.toString(), newValue: authorForm.licenseRate.toString() }
+          ]
+        });
 
-      toast.success('作者情報を更新しました');
-    } else {
-      // 新規追加
-      setAuthorData([...authorData, newAuthor]);
+        toast.success('作者情報を更新しました');
+      } else {
+        // 新規追加
+        await insertAuthor(newAuthor);
 
-      addEditEntry({
-        user: 'ま sui',
-        action: 'create',
-        target: `シナリオ作者: ${authorForm.scenario}`,
-        summary: `新規作者情報を追加`,
-        category: 'license',
-        changes: [
-          { field: '作者名', newValue: authorForm.author },
-          { field: 'ライセンス料', newValue: authorForm.licenseRate.toString() },
-          { field: '連絡方法', newValue: authorForm.contactMethod }
-        ]
-      });
+        addEditEntry({
+          user: 'ま sui',
+          action: 'create',
+          target: `シナリオ作者: ${authorForm.scenario}`,
+          summary: `新規作者情報を追加`,
+          category: 'license',
+          changes: [
+            { field: '作者名', newValue: authorForm.author },
+            { field: 'ライセンス料', newValue: authorForm.licenseRate.toString() },
+            { field: '連絡方法', newValue: authorForm.contactMethod }
+          ]
+        });
 
-      toast.success('作者情報を追加しました');
+        toast.success('作者情報を追加しました');
+      }
+    } catch (error) {
+      console.error('作者情報の保存に失敗:', error);
+      toast.error('作者情報の保存に失敗しました');
     }
 
     setIsAuthorDialogOpen(false);
   };
 
   // 作者削除
-  const deleteAuthor = (scenario: string) => {
-    const updatedAuthors = authorData.filter(a => a.scenario !== scenario);
-    setAuthorData(updatedAuthors);
+  const deleteAuthorData = async (scenario: string) => {
+    try {
+      const existingDbAuthor = authorData.find(a => a.scenario_title === scenario);
+      if (existingDbAuthor) {
+        await deleteAuthor(existingDbAuthor.id);
+      }
 
-    addEditEntry({
-      user: 'ま sui',
-      action: 'delete',
-      target: `シナリオ作者: ${scenario}`,
-      summary: `作者情報を削除`,
-      category: 'license',
-      changes: []
-    });
+      addEditEntry({
+        user: 'ま sui',
+        action: 'delete',
+        target: `シナリオ作者: ${scenario}`,
+        summary: `作者情報を削除`,
+        category: 'license',
+        changes: []
+      });
 
-    toast.success('作者情報を削除しました');
+      toast.success('作者情報を削除しました');
+    } catch (error) {
+      console.error('作者情報の削除に失敗:', error);
+      toast.error('作者情報の削除に失敗しました');
+    }
   };
 
   // 作者ごとのシナリオ作品数を計算
   const getAuthorScenarioCount = (authorName: string) => {
-    return authorData.filter(author => author.author === authorName).length;
+    return convertedAuthors.filter(author => author.author === authorName).length;
   };
 
-  // 作者リストの取得（重複を除去し、作品数付き）
+  // 作者の月別公演回数を計算
+  const getAuthorMonthlyUsage = (authorName: string, year: number, month: number) => {
+    if (!Array.isArray(scheduleEvents)) return 0;
+    
+    const monthKey = `${year}-${month.toString().padStart(2, '0')}`;
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+    
+    // その作者のシナリオが使用された回数を計算
+    const authorScenarios = convertedAuthors
+      .filter(author => author.author === authorName)
+      .map(author => author.scenario);
+    
+    const monthlyEvents = scheduleEvents.filter((event: any) => {
+      const eventDate = new Date(event.date);
+      return eventDate >= startDate && 
+             eventDate <= endDate && 
+             authorScenarios.includes(event.scenario) &&
+             !event.is_cancelled; // 中止されたイベントを除外
+    });
+    
+    return monthlyEvents.length;
+  };
+
+  // 作者のシナリオ別月別公演回数を計算
+  const getAuthorScenarioUsage = (authorName: string, year: number, month: number) => {
+    if (!Array.isArray(scheduleEvents)) return [];
+    
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+    
+    // その作者のシナリオが使用された回数をシナリオ別に集計
+    const authorScenarios = convertedAuthors
+      .filter(author => author.author === authorName)
+      .map(author => author.scenario);
+    
+    const monthlyEvents = scheduleEvents.filter((event: any) => {
+      const eventDate = new Date(event.date);
+      return eventDate >= startDate && 
+             eventDate <= endDate && 
+             authorScenarios.includes(event.scenario) &&
+             !event.is_cancelled; // 中止されたイベントを除外
+    });
+    
+    // シナリオ別に集計
+    const scenarioUsage = monthlyEvents.reduce((acc: { [scenario: string]: number }, event: any) => {
+      const scenario = event.scenario;
+      acc[scenario] = (acc[scenario] || 0) + 1;
+      return acc;
+    }, {});
+    
+    return Object.entries(scenarioUsage).map(([scenario, count]) => ({
+      scenario,
+      count,
+      licenseRate: convertedAuthors.find(a => a.scenario === scenario)?.licenseRate || 0,
+      totalAmount: (convertedAuthors.find(a => a.scenario === scenario)?.licenseRate || 0) * count
+    }));
+  };
+
+  // 作者リストの取得（重複を除去し、作品数と月別公演回数付き）
   const getAuthorsWithScenarioCount = (): AuthorSummary[] => {
-    const uniqueAuthors = Array.from(new Set(authorData.map(a => a.author)));
+    const uniqueAuthors = Array.from(new Set(convertedAuthors.map(a => a.author)));
     return uniqueAuthors.map(authorName => ({
       authorName,
       scenarioCount: getAuthorScenarioCount(authorName),
-      scenarios: authorData.filter(a => a.author === authorName)
+      scenarios: convertedAuthors.filter(a => a.author === authorName),
+      monthlyUsage: getAuthorMonthlyUsage(authorName, selectedYear, selectedMonth),
+      scenarioUsage: getAuthorScenarioUsage(authorName, selectedYear, selectedMonth)
     })).sort((a, b) => a.authorName.localeCompare(b.authorName));
   };
 
@@ -715,7 +902,7 @@ ${author.author} 様
                         </TableHeader>
                         <TableBody>
                           {Object.entries(currentCalculation.scenarioUsage).map(([scenario, count]) => {
-                            const author = authorData.find(a => a.scenario === scenario);
+                            const author = convertedAuthors.find(a => a.scenario === scenario);
                             const amount = count * (author?.licenseRate || 0);
                             return (
                               <TableRow key={scenario}>
@@ -784,7 +971,7 @@ ${author.author} 様
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {calculations
+                    {convertedCalculations
                       .sort((a, b) => b.year - a.year || b.id.localeCompare(a.id))
                       .map(calculation => (
                         <TableRow key={calculation.id}>
@@ -828,142 +1015,128 @@ ${author.author} 様
           <TabsContent value="authors" className="space-y-6">
             {/* 作者サマリー */}
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <BookOpen className="w-5 h-5" />
-                  作者別サマリー
-                </CardTitle>
-                <Button onClick={() => openAuthorDialog()}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  新規作者追加
-                </Button>
+              <CardHeader>
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <BookOpen className="w-5 h-5" />
+                      作者別サマリー
+                    </CardTitle>
+                    <Button 
+                      onClick={() => openAuthorDialog()}
+                      disabled
+                      title="作者情報はシナリオ管理で管理されます"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      新規作者追加（無効化）
+                    </Button>
+                  </div>
+                  
+                  {/* 月選択コントロール */}
+                  <div className="flex items-center justify-center gap-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (selectedMonth === 1) {
+                          setSelectedYear(selectedYear - 1);
+                          setSelectedMonth(12);
+                        } else {
+                          setSelectedMonth(selectedMonth - 1);
+                        }
+                      }}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    
+                    <div className="text-lg font-medium">
+                      {selectedYear}年{monthNames[selectedMonth - 1]}
+                    </div>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (selectedMonth === 12) {
+                          setSelectedYear(selectedYear + 1);
+                          setSelectedMonth(1);
+                        } else {
+                          setSelectedMonth(selectedMonth + 1);
+                        }
+                      }}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>作者名</TableHead>
-                      <TableHead>作品数</TableHead>
-                      <TableHead>平均ライセンス料</TableHead>
-                      <TableHead>連絡方法</TableHead>
-                      <TableHead>操作</TableHead>
-                    </TableRow>
-                  </TableHeader>
+                <div className="overflow-x-auto">
+                  <Table className="min-w-full">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-32">作者名</TableHead>
+                        <TableHead className="w-48">シナリオ名</TableHead>
+                        <TableHead className="w-24">公演回数</TableHead>
+                        <TableHead className="w-32">ライセンス料</TableHead>
+                        <TableHead className="w-32">合計金額</TableHead>
+                      </TableRow>
+                    </TableHeader>
                   <TableBody>
                     {getAuthorsWithScenarioCount().map(authorSummary => {
-                      const avgRate = Math.round(
-                        authorSummary.scenarios.reduce((sum, s) => sum + s.licenseRate, 0) / authorSummary.scenarios.length
-                      );
-                      const primaryContact = authorSummary.scenarios[0]?.contactMethod;
+                      const totalAmount = authorSummary.scenarioUsage.reduce((sum, s) => sum + s.totalAmount, 0);
                       
                       return (
-                        <TableRow key={authorSummary.authorName}>
-                          <TableCell>{authorSummary.authorName}</TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">
-                              {authorSummary.scenarioCount}作品
-                            </Badge>
-                          </TableCell>
-                          <TableCell>¥{avgRate.toLocaleString()}</TableCell>
-                          <TableCell>
-                            {primaryContact === 'email' && (
-                              <Badge variant="outline">
-                                <Mail className="w-3 h-3 mr-1" />
-                                メール
-                              </Badge>
-                            )}
-                            {primaryContact === 'discord' && (
-                              <Badge variant="outline">
-                                <MessageSquare className="w-3 h-3 mr-1" />
-                                Discord
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openAuthorDialog(authorSummary.scenarios[0])}
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
+                        <React.Fragment key={authorSummary.authorName}>
+                          {/* 作者の基本情報行 */}
+                          <TableRow className="bg-muted/50">
+                            <TableCell rowSpan={authorSummary.scenarioUsage.length > 0 ? authorSummary.scenarioUsage.length + 1 : 1}>
+                              <div className="font-medium">{authorSummary.authorName}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {authorSummary.scenarioCount}作品・{authorSummary.monthlyUsage}回公演
+                              </div>
+                            </TableCell>
+                            <TableCell colSpan={4} className="text-center font-medium">
+                              合計: ¥{totalAmount.toLocaleString()}
+                            </TableCell>
+                          </TableRow>
+                          
+                          {/* シナリオ別詳細行 */}
+                          {authorSummary.scenarioUsage.length > 0 ? (
+                            authorSummary.scenarioUsage.map((usage, index) => (
+                              <TableRow key={`${authorSummary.authorName}-${usage.scenario}`}>
+                                <TableCell>
+                                  <div className="font-medium">{usage.scenario}</div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="secondary">
+                                    {usage.count}回
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="text-sm">¥{usage.licenseRate.toLocaleString()}</div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="font-medium">¥{usage.totalAmount.toLocaleString()}</div>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                {selectedYear}年{monthNames[selectedMonth - 1]}の公演はありません
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </React.Fragment>
                       );
                     })}
                   </TableBody>
-                </Table>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
 
-            {/* 詳細シナリオ一覧 */}
-            <Card>
-              <CardHeader>
-                <CardTitle>シナリオ詳細一覧</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>シナリオ名</TableHead>
-                      <TableHead>作者名</TableHead>
-                      <TableHead>ライセンス料</TableHead>
-                      <TableHead>連絡方法</TableHead>
-                      <TableHead>連絡先</TableHead>
-                      <TableHead>操作</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {authorData
-                      .sort((a, b) => a.scenario.localeCompare(b.scenario))
-                      .map(author => (
-                        <TableRow key={author.scenario}>
-                          <TableCell>{author.scenario}</TableCell>
-                          <TableCell>{author.author}</TableCell>
-                          <TableCell>{author.licenseRate.toLocaleString()}</TableCell>
-                          <TableCell>
-                            {author.contactMethod === 'email' && (
-                              <Badge variant="outline">
-                                <Mail className="w-3 h-3 mr-1" />
-                                メール
-                              </Badge>
-                            )}
-                            {author.contactMethod === 'discord' && (
-                              <Badge variant="outline">
-                                <MessageSquare className="w-3 h-3 mr-1" />
-                                Discord
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="max-w-48 truncate">
-                            {author.contactMethod === 'email' ? author.email : author.discordChannel}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openAuthorDialog(author)}
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => deleteAuthor(author.scenario)}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
 
@@ -1021,7 +1194,7 @@ ${author.author} 様
                     </SelectTrigger>
                     <SelectContent>
                       {filteredScenarios
-                        .filter(scenario => !authorData.find(a => a.scenario === scenario))
+                        .filter(scenario => !convertedAuthors.find(a => a.scenario === scenario))
                         .map(scenario => (
                           <SelectItem key={scenario} value={scenario}>
                             {scenario}
