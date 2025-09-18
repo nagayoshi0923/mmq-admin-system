@@ -1132,8 +1132,7 @@ ${author.author} 様
                       );
                     })}
                   </TableBody>
-                  </Table>
-                </div>
+                </Table>
               </CardContent>
             </Card>
 

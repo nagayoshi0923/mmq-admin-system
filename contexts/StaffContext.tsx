@@ -69,6 +69,7 @@ export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
   } = useSupabaseData<any>({
     table: 'staff',
     realtime: true,
+    select: 'id, name, line_name, x_account, role, stores, ng_days, want_to_learn, available_scenarios, notes, phone, email, availability, experience, special_scenarios, status, created_at, updated_at',
     // fallbackKey: 'murder-mystery-staff', // ローカルストレージを無効化
     orderBy: { column: 'name', ascending: true }
   });

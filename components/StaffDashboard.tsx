@@ -98,8 +98,8 @@ export function StaffDashboard({ staffId, staffName }: StaffDashboardProps) {
   // スタッフの出勤可能時間データをSupabaseから取得
   const {
     data: availabilityData,
-    insertData: insertAvailability,
-    updateData: updateAvailability,
+    insert: insertAvailability,
+    update: updateAvailability,
     loading: availabilityLoading
   } = useSupabaseData<any>({
     table: 'staff_availability',
