@@ -26,6 +26,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- 既存のトリガーを削除してから再作成
+DROP TRIGGER IF EXISTS trigger_update_staff_availability_updated_at ON staff_availability;
 CREATE TRIGGER trigger_update_staff_availability_updated_at
   BEFORE UPDATE ON staff_availability
   FOR EACH ROW
@@ -34,6 +36,8 @@ CREATE TRIGGER trigger_update_staff_availability_updated_at
 -- RLSを有効化（開発中は無効化、本番で有効化）
 ALTER TABLE staff_availability ENABLE ROW LEVEL SECURITY;
 
+-- 既存のポリシーを削除してから再作成
+DROP POLICY IF EXISTS "Enable all operations for all users" ON staff_availability;
 -- 開発用のポリシー（本番では適切なポリシーに変更）
 CREATE POLICY "Enable all operations for all users" ON staff_availability
   FOR ALL USING (true);
