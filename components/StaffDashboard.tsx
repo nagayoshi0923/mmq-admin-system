@@ -7,6 +7,7 @@ import { Checkbox } from './ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { 
   Calendar, 
   Clock, 
@@ -315,194 +316,234 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, staffNa
         </div>
       </div>
 
-      {/* スケジュール管理 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Calendar className="w-5 h-5 mr-2" />
-            出勤可能時間スケジュール
-          </CardTitle>
-          <CardDescription>
-            今月の出勤可能時間を設定してください。チェックを入れた時間帯に出勤可能です。
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {/* 時間帯ヘッダー */}
-            <div className="grid grid-cols-4 gap-4">
-              <div className="font-medium">日付</div>
-              {timeSlots.map(timeSlot => (
-                <div key={timeSlot.id} className="text-center">
-                  <div className="font-medium">{timeSlot.label}</div>
-                  <div className="text-sm text-muted-foreground">{timeSlot.time}</div>
-                </div>
-              ))}
-            </div>
+      {/* タブコンテンツ */}
+      <Tabs defaultValue="schedule" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="schedule">今月のスケジュール</TabsTrigger>
+          <TabsTrigger value="scenarios">利用可能シナリオ</TabsTrigger>
+          <TabsTrigger value="submit">スケジュール提出</TabsTrigger>
+        </TabsList>
 
-            {/* スケジュールテーブル */}
-            <div className="space-y-2">
-              {schedules.map((schedule, index) => (
-                <div key={schedule.date} className="grid grid-cols-4 gap-4 items-center p-3 border rounded-lg">
-                  <div className="font-medium">
-                    {dayjs(schedule.date).format('MM/DD (ddd)')}
-                  </div>
-                  {timeSlots.map(timeSlot => (
-                    <div key={timeSlot.id} className="flex items-center justify-center">
-                      <Checkbox
-                        id={`${schedule.date}-${timeSlot.id}`}
-                        checked={schedule.timeSlots[timeSlot.id as keyof typeof schedule.timeSlots]}
-                        onCheckedChange={(checked) => 
-                          handleTimeSlotChange(index, timeSlot.id as keyof DaySchedule['timeSlots'], checked as boolean)
-                        }
-                      />
-                      <label 
-                        htmlFor={`${schedule.date}-${timeSlot.id}`}
-                        className="text-sm cursor-pointer flex flex-col"
-                      >
-                        <span className="ml-2">{timeSlot.label}</span>
-                      </label>
+        <TabsContent value="schedule" className="space-y-4">
+          {/* 今月の公演スケジュール */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Clock className="w-5 h-5 mr-2" />
+                今月の公演スケジュール
+              </CardTitle>
+              <CardDescription>
+                {staffName}が担当する今月の公演一覧です。
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {currentMonthEvents.length > 0 ? (
+                <div className="space-y-2">
+                  {currentMonthEvents.map((event, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <div className="font-medium">{event.scenario}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {dayjs(event.date).format('MM/DD (ddd)')} {event.startTime} - {event.endTime}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {event.venue} | {event.category}
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {event.is_cancelled ? (
+                          <span className="text-red-600 text-sm">キャンセル</span>
+                        ) : (
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
-              ))}
-            </div>
-
-            {/* 提出ボタン */}
-            <div className="flex justify-end pt-4">
-              <Button 
-                onClick={handleSubmitSchedule}
-                disabled={availabilityLoading}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                スケジュールを提出
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 今月の公演スケジュール */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Clock className="w-5 h-5 mr-2" />
-            今月の公演スケジュール
-          </CardTitle>
-          <CardDescription>
-            {staffName}が担当する今月の公演一覧です。
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {currentMonthEvents.length > 0 ? (
-            <div className="space-y-2">
-              {currentMonthEvents.map((event, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <div className="font-medium">{event.scenario}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {dayjs(event.date).format('MM/DD (ddd)')} {event.startTime} - {event.endTime}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {event.venue} | {event.category}
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {event.is_cancelled ? (
-                      <span className="text-red-600 text-sm">キャンセル</span>
-                    ) : (
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                    )}
-                  </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  今月の公演はありません
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              今月の公演はありません
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* 利用可能シナリオ管理 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <User className="w-5 h-5 mr-2" />
-            利用可能シナリオ
-          </CardTitle>
-          <CardDescription>
-            {staffName}が担当可能なシナリオの一覧です。
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {/* シナリオ追加フォーム */}
-            <div className="flex items-center space-x-2">
-              <Input
-                placeholder="シナリオタイトル"
-                value={newScenario.title}
-                onChange={(e) => setNewScenario(prev => ({ ...prev, title: e.target.value }))}
-                className="flex-1"
-              />
-              <Select
-                value={newScenario.difficulty}
-                onValueChange={(value) => setNewScenario(prev => ({ ...prev, difficulty: value }))}
-              >
-                <SelectTrigger className="w-32">
-                  <SelectValue placeholder="難易度" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="easy">簡単</SelectItem>
-                  <SelectItem value="medium">普通</SelectItem>
-                  <SelectItem value="hard">難しい</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button onClick={handleAddScenario} size="sm">
-                <Plus className="w-4 h-4 mr-1" />
-                追加
-              </Button>
-            </div>
-
-            {/* シナリオ一覧 */}
-            <div className="space-y-2">
-              {availableScenarios.map((scenario, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex-1">
-                    <div className="font-medium">{scenario.title}</div>
-                    <div className="text-sm text-muted-foreground">
-                      難易度: {scenario.difficulty} | プレイ人数: {scenario.playerCount.min}-{scenario.playerCount.max}人 | 所要時間: {scenario.duration}分
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditScenario(scenario)}
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteScenario(scenario.title)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
+        <TabsContent value="scenarios" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <User className="w-5 h-5 mr-2" />
+                利用可能シナリオ
+              </CardTitle>
+              <CardDescription>
+                {staffName}が担当可能なシナリオの一覧です。
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* シナリオ追加フォーム */}
+                <div className="flex items-center space-x-2">
+                  <Input
+                    placeholder="シナリオタイトル"
+                    value={newScenario.title}
+                    onChange={(e) => setNewScenario(prev => ({ ...prev, title: e.target.value }))}
+                    className="flex-1 border border-slate-200"
+                  />
+                  <Select
+                    value={newScenario.difficulty}
+                    onValueChange={(value) => setNewScenario(prev => ({ ...prev, difficulty: value }))}
+                  >
+                    <SelectTrigger className="w-32 border border-slate-200">
+                      <SelectValue placeholder="難易度" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="easy">簡単</SelectItem>
+                      <SelectItem value="medium">普通</SelectItem>
+                      <SelectItem value="hard">難しい</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button onClick={handleAddScenario} size="sm">
+                    <Plus className="w-4 h-4 mr-1" />
+                    追加
+                  </Button>
                 </div>
-              ))}
-            </div>
 
-            {availableScenarios.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                利用可能なシナリオがありません
+                {/* シナリオ一覧 */}
+                <div className="space-y-2">
+                  {availableScenarios.map((scenario, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="font-medium">{scenario.title}</div>
+                        <div className="text-sm text-muted-foreground">
+                          難易度: {scenario.difficulty} | プレイ人数: {scenario.playerCount.min}-{scenario.playerCount.max}人 | 所要時間: {scenario.duration}分
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditScenario(scenario)}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteScenario(scenario.title)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {availableScenarios.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    利用可能なシナリオがありません
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="submit" className="space-y-4">
+          {/* 出勤可能時間スケジュール */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Calendar className="w-5 h-5 mr-2" />
+                出勤可能時間スケジュール
+              </CardTitle>
+              <CardDescription>
+                今月の出勤可能時間を設定してください。チェックを入れた時間帯に出勤可能です。
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* 時間帯ヘッダー */}
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="font-medium">日付</div>
+                  {timeSlots.map(timeSlot => (
+                    <div key={timeSlot.id} className="text-center">
+                      <div className="font-medium">{timeSlot.label}</div>
+                      <div className="text-sm text-muted-foreground">{timeSlot.time}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* スケジュールテーブル */}
+                <div className="space-y-2">
+                  {schedules.map((schedule, index) => (
+                    <div key={schedule.date} className="grid grid-cols-4 gap-4 items-center p-3 border rounded-lg">
+                      <div className="font-medium">
+                        {dayjs(schedule.date).format('MM/DD (ddd)')}
+                      </div>
+                      {timeSlots.map(timeSlot => (
+                        <div key={timeSlot.id} className="flex items-center justify-center">
+                          <Checkbox
+                            id={`${schedule.date}-${timeSlot.id}`}
+                            checked={schedule.timeSlots[timeSlot.id as keyof typeof schedule.timeSlots]}
+                            onCheckedChange={(checked) => 
+                              handleTimeSlotChange(index, timeSlot.id as keyof DaySchedule['timeSlots'], checked as boolean)
+                            }
+                          />
+                          <label 
+                            htmlFor={`${schedule.date}-${timeSlot.id}`}
+                            className="text-sm cursor-pointer flex flex-col"
+                          >
+                            <span className="ml-2">{timeSlot.label}</span>
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* スケジュール提出 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Save className="w-5 h-5 mr-2" />
+                スケジュール提出
+              </CardTitle>
+              <CardDescription>
+                設定した出勤可能時間スケジュールを提出してください。
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="text-center py-8">
+                  <div className="mb-4">
+                    <Calendar className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">スケジュール提出</h3>
+                    <p className="text-muted-foreground mb-4">
+                      出勤可能時間を設定したら、このボタンからスケジュールを提出してください。
+                    </p>
+                    <div className="text-sm text-muted-foreground mb-4">
+                      出勤可能日数: <span className="font-bold text-green-600">{availableDaysCount}日</span>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={handleSubmitSchedule}
+                    disabled={availabilityLoading}
+                    className="bg-blue-600 hover:bg-blue-700 text-lg px-8 py-3"
+                    size="lg"
+                  >
+                    <Save className="w-5 h-5 mr-2" />
+                    スケジュールを提出
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* 編集ダイアログ */}
       <Dialog open={isEditing} onOpenChange={setIsEditing}>

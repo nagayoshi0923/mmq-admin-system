@@ -54,6 +54,7 @@ interface WorkloadSummary {
   sessionsCount: number; // 総公演数
   upcomingSessions: number; // 予定公演数
   completedSessions: number; // 完了公演数
+  schedules: StaffSchedule[]; // スケジュール一覧
 }
 
 // モックデータ
@@ -214,7 +215,8 @@ export const StaffManager = React.memo(() => {
       totalHours: memberSchedules.length * 4, // 1公演4時間と仮定
       sessionsCount: memberSchedules.length,
       upcomingSessions,
-      completedSessions
+      completedSessions,
+      schedules: memberSchedules
     };
   });
   
@@ -266,8 +268,8 @@ export const StaffManager = React.memo(() => {
         category: 'staff',
         changes: [
           { field: '名前', newValue: safeStaffData.name },
-          { field: '役割', newValue: safeStaffData.role.join(', ') },
-          { field: '勤務店舗', newValue: safeStaffData.stores.join(', ') }
+          { field: '役割', newValue: Array.isArray(safeStaffData.role) ? safeStaffData.role.join(', ') : safeStaffData.role || '未設定' },
+          { field: '勤務店舗', newValue: Array.isArray(safeStaffData.stores) ? safeStaffData.stores.join(', ') : safeStaffData.stores || '未設定' }
         ]
       });
     }
@@ -286,7 +288,7 @@ export const StaffManager = React.memo(() => {
       category: 'staff',
       changes: [
         { field: '名前', oldValue: staffData.name, newValue: '削除済み' },
-        { field: '役割', oldValue: staffData.role.join(', '), newValue: '削除済み' }
+        { field: '役割', oldValue: Array.isArray(staffData.role) ? staffData.role.join(', ') : staffData.role || '未設定', newValue: '削除済み' }
       ]
     });
   }, [removeStaff, addEditEntry]);
@@ -468,11 +470,13 @@ export const StaffManager = React.memo(() => {
 
           {/* タブコンテンツ */}
           <Tabs defaultValue="staff-list" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="staff-list" className="text-xs sm:text-sm">スタッフ一覧</TabsTrigger>
               <TabsTrigger value="schedules" className="text-xs sm:text-sm">スケジュール詳細</TabsTrigger>
               <TabsTrigger value="workload" className="text-xs sm:text-sm">負荷分析</TabsTrigger>
+              <TabsTrigger value="analytics" className="text-xs sm:text-sm">分析</TabsTrigger>
             </TabsList>
+
 
             <TabsContent value="staff-list" className="space-y-4">
               <Card>
@@ -511,15 +515,6 @@ export const StaffManager = React.memo(() => {
                           <div className="flex items-center gap-2">
                             勤務店舗
                             {getSortIcon('stores')}
-                          </div>
-                        </TableHead>
-                        <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50"
-                          onClick={() => handleSort('availability')}
-                        >
-                          <div className="flex items-center gap-2">
-                            勤務可能日
-                            {getSortIcon('availability')}
                           </div>
                         </TableHead>
                         <TableHead 
@@ -584,35 +579,17 @@ export const StaffManager = React.memo(() => {
                           </TableCell>
                           <TableCell>
                             <div className="max-w-[140px]">
-                              {member.stores.length <= 2 ? (
-                                <span className="text-sm">{member.stores.join(', ')}</span>
+                              {Array.isArray(member.stores) && member.stores.length <= 2 ? (
+                                <span className="text-sm">{Array.isArray(member.stores) ? member.stores.join(', ') : member.stores || '未設定'}</span>
                               ) : (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <span className="text-sm cursor-help">
-                                      {member.stores.slice(0, 2).join(', ')}, 他{member.stores.length - 2}店舗
+                                      {Array.isArray(member.stores) ? member.stores.slice(0, 2).join(', ') + ', 他' + (member.stores.length - 2) + '店舗' : member.stores || '未設定'}
                                     </span>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>{member.stores.join(', ')}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="max-w-[140px]">
-                              {member.availability.length <= 3 ? (
-                                <span className="text-sm">{member.availability.join(', ')}</span>
-                              ) : (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <span className="text-sm cursor-help">
-                                      {member.availability.slice(0, 3).join(', ')}, 他{member.availability.length - 3}日
-                                    </span>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>{member.availability.join(', ')}</p>
+                                    <p>{Array.isArray(member.stores) ? member.stores.join(', ') : member.stores || '未設定'}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               )}
@@ -848,11 +825,131 @@ export const StaffManager = React.memo(() => {
                 </CardContent>
               </Card>
             </TabsContent>
+
+            <TabsContent value="analytics" className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>役割別分布</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {['GM', 'サポート', 'マネージャー', '社長', '企画', '事務'].map(role => {
+                        const count = staff.filter(s => s.role.includes(role)).length;
+                        const percentage = staff.length > 0 ? Math.round(count / staff.length * 100) : 0;
+                        return (
+                          <div key={role} className="flex items-center justify-between">
+                            <span className="text-sm font-medium">{role}</span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-24 bg-gray-200 rounded-full h-2">
+                                <div 
+                                  className="bg-blue-600 h-2 rounded-full" 
+                                  style={{ width: `${percentage}%` }}
+                                ></div>
+                              </div>
+                              <span className="text-sm text-muted-foreground w-8">{count}名</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>ステータス別分布</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {[
+                        { status: 'active', label: '勤務中', color: 'bg-green-600' },
+                        { status: 'inactive', label: '休止中', color: 'bg-yellow-600' },
+                        { status: 'on-leave', label: '休暇中', color: 'bg-red-600' }
+                      ].map(({ status, label, color }) => {
+                        const count = staff.filter(s => s.status === status).length;
+                        const percentage = staff.length > 0 ? Math.round(count / staff.length * 100) : 0;
+                        return (
+                          <div key={status} className="flex items-center justify-between">
+                            <span className="text-sm font-medium">{label}</span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-24 bg-gray-200 rounded-full h-2">
+                                <div 
+                                  className={`${color} h-2 rounded-full`}
+                                  style={{ width: `${percentage}%` }}
+                                ></div>
+                              </div>
+                              <span className="text-sm text-muted-foreground w-8">{count}名</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>シナリオ対応能力</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {staff
+                        .filter(s => s.availableScenarios && s.availableScenarios.length > 0)
+                        .sort((a, b) => (b.availableScenarios?.length || 0) - (a.availableScenarios?.length || 0))
+                        .slice(0, 10)
+                        .map(member => (
+                          <div key={member.id} className="flex items-center justify-between p-2 border rounded-lg">
+                            <div>
+                              <p className="font-medium">{member.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {Array.isArray(member.role) ? member.role.join(', ') : member.role || '未設定'}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold">{member.availableScenarios?.length || 0}個</p>
+                              <p className="text-xs text-muted-foreground">対応可能</p>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>勤務店舗分布</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {Array.from(new Set(staff.flatMap(s => s.stores)))
+                        .map(store => {
+                          const count = staff.filter(s => s.stores.includes(store)).length;
+                          return (
+                            <div key={store} className="flex items-center justify-between p-2 border rounded-lg">
+                              <span className="font-medium">{store}</span>
+                              <div className="flex items-center gap-2">
+                                <div className="w-16 bg-gray-200 rounded-full h-2">
+                                  <div 
+                                    className="bg-purple-600 h-2 rounded-full" 
+                                    style={{ width: `${Math.min(count / staff.length * 100, 100)}%` }}
+                                  ></div>
+                                </div>
+                                <span className="text-sm text-muted-foreground w-8">{count}名</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
           </Tabs>
         </div>
       </TooltipProvider>
-      
-      
     </DndProvider>
   );
 });
