@@ -967,15 +967,15 @@ export function ScheduleManager() {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <Table>
+            <Table className="w-full table-fixed">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-16">日付</TableHead>
                   <TableHead className="w-12">曜日</TableHead>
                   <TableHead className="w-[100px]">会場</TableHead>
-                  <TableHead className="min-w-[200px]">午前（~12:00）</TableHead>
-                  <TableHead className="min-w-[200px]">午後（12:00~17:00）</TableHead>
-                  <TableHead className="min-w-[200px]">夜間（17:00~）</TableHead>
+                  <TableHead className="w-1/3">午前（~12:00）</TableHead>
+                  <TableHead className="w-1/3">午後（12:00~17:00）</TableHead>
+                  <TableHead className="w-1/3">夜間（17:00~）</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1059,15 +1059,18 @@ export function ScheduleManager() {
                                             {event.scenario || '未定'}
                                           </div>
                                           
-                                          <div className={`text-xs text-muted-foreground mb-1 ${event.isCancelled ? 'line-through' : ''}`}>
-                                            GM: {event.gms.length > 0 ? event.gms.join(', ') : '未定'}
-                                          </div>
-                                          
-                                          {event.notes && (
-                                            <div className={`text-xs text-muted-foreground truncate ${event.isCancelled ? 'line-through' : ''}`}>
-                                              {event.notes}
+                                          <div className={`text-xs text-muted-foreground mb-1 pr-8 ${event.isCancelled ? 'line-through' : ''}`}>
+                                            <div className="break-words overflow-hidden">
+                                              <div className="whitespace-normal">
+                                                GM: {event.gms.length > 0 ? event.gms.join(', ') : '未定'}
+                                                {event.notes && (
+                                                  <span className="ml-2 text-muted-foreground">
+                                                    - {event.notes}
+                                                  </span>
+                                                )}
+                                              </div>
                                             </div>
-                                          )}
+                                          </div>
                                         </div>
 
                                         {/* 中止ボタン */}
