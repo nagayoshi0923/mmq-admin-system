@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -21,6 +21,7 @@ import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
 import Users from 'lucide-react/dist/esm/icons/users';
 import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
 import Ban from 'lucide-react/dist/esm/icons/ban';
 import { ItemEditHistory } from './ItemEditHistory';
 import { useEditHistory, EditHistoryEntry } from '../contexts/EditHistoryContext';
@@ -28,6 +29,53 @@ import { useEditHistory, EditHistoryEntry } from '../contexts/EditHistoryContext
 import { useScenarios } from '../contexts/ScenarioContext';
 import { useSchedule } from '../contexts/ScheduleContext';
 import { useStaff } from '../contexts/StaffContext';
+
+// 複数選択用のカスタムドロップダウン
+const MultiSelectDropdown = ({ 
+  isOpen, 
+  onClose, 
+  children, 
+  triggerRef 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  children: React.ReactNode;
+  triggerRef: React.RefObject<HTMLButtonElement>;
+}) => {
+  const contentRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        contentRef.current &&
+        !contentRef.current.contains(event.target as Node) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(event.target as Node)
+      ) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose, triggerRef]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      ref={contentRef}
+      className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-y-auto"
+    >
+      {children}
+    </div>
+  );
+};
 
 type EventCategory = 'オープン公演' | '貸切公演' | 'GMテスト' | 'テストプレイ' | '出張公演';
 
@@ -454,6 +502,12 @@ export function ScheduleManager() {
     open: false, 
     event: null 
   });
+  
+  // ドロップダウンの開閉状態
+  const [gmDropdownOpen, setGmDropdownOpen] = useState(false);
+  const [observerDropdownOpen, setObserverDropdownOpen] = useState(false);
+  const gmTriggerRef = React.useRef<HTMLButtonElement>(null);
+  const observerTriggerRef = React.useRef<HTMLButtonElement>(null);
   
   // ローカルストレージは完全に無効化（Supabaseのみ使用）
   // const [scheduleEvents, setScheduleEvents] = useState<{ [key: string]: DaySchedule[] }>(calendarData);
@@ -1188,41 +1242,49 @@ export function ScheduleManager() {
             {/* GM選択 */}
             <div className="space-y-2">
               <Label>担当GM</Label>
-              <Select
-                value=""
-                onValueChange={(value) => {
-                  if (value) {
-                    if (formData.gms.includes(value)) {
-                      // 既に選択済みの場合は削除
-                      setFormData(prev => ({ ...prev, gms: prev.gms.filter(g => g !== value) }));
-                    } else {
-                      // 未選択の場合は追加
-                      setFormData(prev => ({ ...prev, gms: [...prev.gms, value] }));
-                    }
-                  }
-                }}
-              >
-                <SelectTrigger className="border border-slate-200">
-                  <SelectValue placeholder="GMを選択してください" />
-                </SelectTrigger>
-                <SelectContent>
-                  {staff
-                    .filter(staffMember => staffMember.status === 'active')
-                    .map(staffMember => {
-                      const isSelected = formData.gms.includes(staffMember.name);
-                      return (
-                        <SelectItem key={staffMember.id} value={staffMember.name}>
-                          <div className="flex items-center gap-2">
+              <div className="relative">
+                <Button
+                  ref={gmTriggerRef}
+                  variant="outline"
+                  className="w-full justify-between border border-slate-200"
+                  onClick={() => setGmDropdownOpen(!gmDropdownOpen)}
+                >
+                  <span>GMを選択してください</span>
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+                
+                <MultiSelectDropdown
+                  isOpen={gmDropdownOpen}
+                  onClose={() => setGmDropdownOpen(false)}
+                  triggerRef={gmTriggerRef}
+                >
+                  <div className="p-1">
+                    {staff
+                      .filter(staffMember => staffMember.status === 'active')
+                      .map(staffMember => {
+                        const isSelected = formData.gms.includes(staffMember.name);
+                        return (
+                          <div
+                            key={staffMember.id}
+                            className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-100 cursor-pointer rounded-sm"
+                            onClick={() => {
+                              if (formData.gms.includes(staffMember.name)) {
+                                setFormData(prev => ({ ...prev, gms: prev.gms.filter(g => g !== staffMember.name) }));
+                              } else {
+                                setFormData(prev => ({ ...prev, gms: [...prev.gms, staffMember.name] }));
+                              }
+                            }}
+                          >
                             {isSelected && <span className="text-blue-600">✓</span>}
                             <span className={isSelected ? 'text-blue-600 font-medium' : ''}>
                               {staffMember.name}
                             </span>
                           </div>
-                        </SelectItem>
-                      );
-                    })}
-                </SelectContent>
-              </Select>
+                        );
+                      })}
+                  </div>
+                </MultiSelectDropdown>
+              </div>
               
               {/* 選択されたGM一覧 */}
               {formData.gms.length > 0 && (
@@ -1251,41 +1313,49 @@ export function ScheduleManager() {
             {/* 見学者選択 */}
             <div className="space-y-2">
               <Label>見学者</Label>
-              <Select
-                value=""
-                onValueChange={(value) => {
-                  if (value) {
-                    if (formData.observers.includes(value)) {
-                      // 既に選択済みの場合は削除
-                      setFormData(prev => ({ ...prev, observers: prev.observers.filter(o => o !== value) }));
-                    } else {
-                      // 未選択の場合は追加
-                      setFormData(prev => ({ ...prev, observers: [...prev.observers, value] }));
-                    }
-                  }
-                }}
-              >
-                <SelectTrigger className="border border-slate-200">
-                  <SelectValue placeholder="見学者を選択してください" />
-                </SelectTrigger>
-                <SelectContent>
-                  {staff
-                    .filter(staffMember => staffMember.status === 'active')
-                    .map(staffMember => {
-                      const isSelected = formData.observers.includes(staffMember.name);
-                      return (
-                        <SelectItem key={staffMember.id} value={staffMember.name}>
-                          <div className="flex items-center gap-2">
+              <div className="relative">
+                <Button
+                  ref={observerTriggerRef}
+                  variant="outline"
+                  className="w-full justify-between border border-slate-200"
+                  onClick={() => setObserverDropdownOpen(!observerDropdownOpen)}
+                >
+                  <span>見学者を選択してください</span>
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+                
+                <MultiSelectDropdown
+                  isOpen={observerDropdownOpen}
+                  onClose={() => setObserverDropdownOpen(false)}
+                  triggerRef={observerTriggerRef}
+                >
+                  <div className="p-1">
+                    {staff
+                      .filter(staffMember => staffMember.status === 'active')
+                      .map(staffMember => {
+                        const isSelected = formData.observers.includes(staffMember.name);
+                        return (
+                          <div
+                            key={staffMember.id}
+                            className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-100 cursor-pointer rounded-sm"
+                            onClick={() => {
+                              if (formData.observers.includes(staffMember.name)) {
+                                setFormData(prev => ({ ...prev, observers: prev.observers.filter(o => o !== staffMember.name) }));
+                              } else {
+                                setFormData(prev => ({ ...prev, observers: [...prev.observers, staffMember.name] }));
+                              }
+                            }}
+                          >
                             {isSelected && <span className="text-green-600">✓</span>}
                             <span className={isSelected ? 'text-green-600 font-medium' : ''}>
                               {staffMember.name}
                             </span>
                           </div>
-                        </SelectItem>
-                      );
-                    })}
-                </SelectContent>
-              </Select>
+                        );
+                      })}
+                  </div>
+                </MultiSelectDropdown>
+              </div>
               
               {/* 選択された見学者一覧 */}
               {formData.observers.length > 0 && (
