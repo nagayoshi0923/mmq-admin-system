@@ -823,7 +823,20 @@ export function ScheduleManager() {
 
     const eventToCancel = cancelDialog.event;
     
-    // ローカルストレージは使用しない（Supabaseのリアルタイム同期のみ）
+    // Supabaseでイベントを中止状態に更新
+    try {
+      const supabaseUpdates = {
+        is_cancelled: true
+      };
+      
+      updateSupabaseEvent(eventToCancel.id, supabaseUpdates).then(() => {
+        console.log('イベントを中止しました:', eventToCancel.id);
+      }).catch(error => {
+        console.error('Supabase中止更新エラー:', error);
+      });
+    } catch (error) {
+      console.error('Supabase中止処理エラー:', error);
+    }
 
     // 編集履歴に中止を追加
     addEditEntry({
@@ -842,7 +855,20 @@ export function ScheduleManager() {
 
   // 公演の中止を解除
   const uncancelEvent = (event: ScheduleEvent) => {
-    // ローカルストレージは使用しない（Supabaseのリアルタイム同期のみ）
+    // Supabaseでイベントの中止状態を解除
+    try {
+      const supabaseUpdates = {
+        is_cancelled: false
+      };
+      
+      updateSupabaseEvent(event.id, supabaseUpdates).then(() => {
+        console.log('イベントの中止を解除しました:', event.id);
+      }).catch(error => {
+        console.error('Supabase中止解除更新エラー:', error);
+      });
+    } catch (error) {
+      console.error('Supabase中止解除処理エラー:', error);
+    }
 
     // 編集履歴に中止解除を追加
     addEditEntry({
