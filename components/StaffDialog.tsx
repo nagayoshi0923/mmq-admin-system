@@ -13,6 +13,7 @@ import { useScenarios } from '../contexts/ScenarioContext';
 import { Staff } from '../contexts/StaffContext';
 import { ItemEditHistory } from './ItemEditHistory';
 import MultiSelectDropdown, { MultiSelectTrigger, MultiSelectItem } from './ui/multi-select-dropdown';
+import MultiSelectGrid from './ui/multi-select-grid';
 
 interface StaffDialogProps {
   staff?: Staff;
@@ -346,44 +347,28 @@ const StaffDialog = memo(function StaffDialog({ staff, onSave, trigger }: StaffD
           {(formData.role.includes('GM') || formData.role.includes('マネージャー') || formData.role.includes('企画')) && (
             <div className="space-y-4">
               <h3>公演可能シナリオ</h3>
-              <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto border rounded-lg p-3">
-                {scenarios.map(scenario => (
-                  <div key={scenario.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`scenario-${scenario.id}`}
-                      checked={formData.availableScenarios?.includes(scenario.title) || false}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setFormData(prev => ({
-                            ...prev,
-                            availableScenarios: [...(prev.availableScenarios || []), scenario.title]
-                          }));
-                        } else {
-                          setFormData(prev => ({
-                            ...prev,
-                            availableScenarios: (prev.availableScenarios || []).filter(s => s !== scenario.title)
-                          }));
-                        }
-                      }}
-                    />
-                    <Label htmlFor={`scenario-${scenario.id}`} className="text-sm cursor-pointer">
-                      {scenario.title}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                選択済み: {formData.availableScenarios?.length || 0}件
-              </div>
-              {formData.availableScenarios && formData.availableScenarios.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {formData.availableScenarios.map(scenario => (
-                    <Badge key={scenario} variant="outline" className="text-xs">
-                      {scenario}
-                    </Badge>
-                  ))}
-                </div>
-              )}
+              <MultiSelectGrid
+                items={scenarios.map(scenario => ({ id: scenario.id, title: scenario.title }))}
+                selectedItems={formData.availableScenarios || []}
+                onToggle={(scenarioTitle) => {
+                  if (formData.availableScenarios?.includes(scenarioTitle)) {
+                    setFormData(prev => ({
+                      ...prev,
+                      availableScenarios: (prev.availableScenarios || []).filter(s => s !== scenarioTitle)
+                    }));
+                  } else {
+                    setFormData(prev => ({
+                      ...prev,
+                      availableScenarios: [...(prev.availableScenarios || []), scenarioTitle]
+                    }));
+                  }
+                }}
+                gridCols={2}
+                maxHeight="max-h-60"
+                showCount={true}
+                showBadges={true}
+                emptyMessage="利用可能なシナリオがありません"
+              />
             </div>
           )}
 
