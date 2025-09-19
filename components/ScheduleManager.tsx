@@ -27,6 +27,7 @@ import { useEditHistory, EditHistoryEntry } from '../contexts/EditHistoryContext
 
 import { useScenarios } from '../contexts/ScenarioContext';
 import { useSchedule } from '../contexts/ScheduleContext';
+import { useStaff } from '../contexts/StaffContext';
 
 type EventCategory = 'オープン公演' | '貸切公演' | 'GMテスト' | 'テストプレイ' | '出張公演';
 
@@ -400,13 +401,11 @@ const initialMockSchedule: DaySchedule[] = [
 // 店舗一覧
 const venues = ['馬場', '別館①', '別館②', '大久保', '大塚', '埼玉大宮'];
 
-// GM一覧
-const availableGMs = ['りんな', 'マツケン', 'れいにー', 'ソラ', 'つばめ', '八継ジノ', 'りえぞー', 'キュウ', 'Remia', 'イワセモリシ', 'えりん', 'しらやま'];
-
 export function ScheduleManager() {
   const { getAvailableScenarios } = useScenarios();
   const availableScenarios = getAvailableScenarios();
   const { addEditEntry } = useEditHistory();
+  const { staff } = useStaff();
   
   // Supabase連携
   const { 
@@ -1181,22 +1180,26 @@ export function ScheduleManager() {
             <div className="space-y-2">
               <Label>担当GM</Label>
               <div className="grid grid-cols-3 gap-2">
-                {availableGMs.map(gm => (
-                  <div key={gm} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`gm-${gm}`}
-                      checked={formData.gms.includes(gm)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setFormData(prev => ({ ...prev, gms: [...prev.gms, gm] }));
-                        } else {
-                          setFormData(prev => ({ ...prev, gms: prev.gms.filter(g => g !== gm) }));
-                        }
-                      }}
-                    />
-                    <Label htmlFor={`gm-${gm}`} className="text-sm">{gm}</Label>
-                  </div>
-                ))}
+                {staff
+                  .filter(staffMember => staffMember.status === 'active')
+                  .map(staffMember => (
+                    <div key={staffMember.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`gm-${staffMember.name}`}
+                        checked={formData.gms.includes(staffMember.name)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setFormData(prev => ({ ...prev, gms: [...prev.gms, staffMember.name] }));
+                          } else {
+                            setFormData(prev => ({ ...prev, gms: prev.gms.filter(g => g !== staffMember.name) }));
+                          }
+                        }}
+                      />
+                      <Label htmlFor={`gm-${staffMember.name}`} className="text-sm">
+                        {staffMember.name}
+                      </Label>
+                    </div>
+                  ))}
               </div>
             </div>
 
