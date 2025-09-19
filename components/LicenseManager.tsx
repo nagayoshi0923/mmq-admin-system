@@ -1276,20 +1276,4 @@ ${author.author} 様
         </Dialog>
       </div>
     );
-  } catch (error) {
-    console.error('ライセンス管理でエラーが発生しました:', error);
-    return (
-      <div className="p-6">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center text-muted-foreground">
-              ライセンス管理の読み込み中にエラーが発生しました。
-              <br />
-              ページを再読み込みしてください。
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 }
