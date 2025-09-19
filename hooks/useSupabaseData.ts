@@ -74,21 +74,12 @@ export function useSupabaseData<T extends { id: string }>(
         });
       }
 
-      // ログ出力（開発環境のみ）
-      // if (import.meta.env.MODE === 'development') {
-      //   console.log(`Supabaseからデータを取得中: ${options.table}`);
-      // }
       const { data: fetchedData, error: fetchError } = await query;
 
       if (fetchError) {
         console.error(`Supabaseクエリエラー (${options.table}):`, fetchError);
         throw fetchError;
       }
-
-      // ログ出力（開発環境のみ）
-      // if (import.meta.env.MODE === 'development') {
-      //   console.log(`データ取得成功 (${options.table}):`, fetchedData?.length || 0, '件');
-      // }
 
       setData((fetchedData as unknown as T[]) || []);
       
@@ -196,9 +187,6 @@ export function useSupabaseData<T extends { id: string }>(
 
   // データ削除
   const deleteItem = useCallback(async (id: string) => {
-    // if (import.meta.env.MODE === 'development') {
-    //   console.log(`🗑️ Attempting to delete from ${options.table} with id:`, id);
-    // }
     
     if (!isSupabaseConfigured()) {
       console.error('❌ Supabase未設定');
@@ -206,9 +194,6 @@ export function useSupabaseData<T extends { id: string }>(
     }
 
     try {
-      // if (import.meta.env.MODE === 'development') {
-      //   console.log(`🔄 Executing DELETE query for ${options.table}...`);
-      // }
       const { error: deleteError, count } = await supabase
         .from(options.table)
         .delete({ count: 'exact' })
@@ -219,9 +204,6 @@ export function useSupabaseData<T extends { id: string }>(
         throw deleteError;
       }
 
-      // if (import.meta.env.MODE === 'development') {
-      //   console.log(`✅ Supabase DELETE successful for ${options.table}, affected rows:`, count);
-      // }
       
       if (count === 0) {
         console.warn(`⚠️ No rows were deleted. ID ${id} may not exist in ${options.table}`);
@@ -230,9 +212,6 @@ export function useSupabaseData<T extends { id: string }>(
       // 手動でローカル状態を更新（リアルタイム同期の遅延対策）
       setData(prev => {
         const filtered = prev.filter(item => item.id !== id);
-        // if (import.meta.env.MODE === 'development') {
-        //   console.log(`🔄 Local state updated: ${prev.length} -> ${filtered.length} items`);
-        // }
         return filtered;
       });
       
@@ -240,7 +219,6 @@ export function useSupabaseData<T extends { id: string }>(
       if (options.fallbackKey) {
         const updatedData = data.filter(item => item.id !== id);
         localStorage.setItem(options.fallbackKey, JSON.stringify(updatedData));
-        console.log(`💾 Local storage updated for ${options.fallbackKey}`);
       }
 
       return { error: null };
@@ -304,14 +282,8 @@ export function useSupabaseData<T extends { id: string }>(
   // リアルタイム購読の設定
   useEffect(() => {
     if (options.realtime && isSupabaseConfigured()) {
-      // 既存のチャンネルがあれば削除
-      if (realtimeChannel) {
-        realtimeChannel.unsubscribe();
-        setRealtimeChannel(null);
-      }
-      
       const channel = supabase
-        .channel(`${options.table}-changes-${Date.now()}`)
+        .channel(`${options.table}-changes`)
         .on('postgres_changes', 
           { 
             event: '*', 
@@ -319,56 +291,38 @@ export function useSupabaseData<T extends { id: string }>(
             table: options.table 
           }, 
           (payload) => {
-            // if (import.meta.env.MODE === 'development') {
-            //   console.log(`🔄 Realtime change in ${options.table}:`, payload.eventType, payload);
-            // }
             
             switch (payload.eventType) {
               case 'INSERT':
-                console.log(`➕ INSERT: Adding new item with id ${payload.new.id}`);
                 setData(prev => {
                   // 重複チェック
                   const exists = prev.some(item => item.id === payload.new.id);
                   if (exists) {
-                    console.log(`⚠️ Item ${payload.new.id} already exists, skipping INSERT`);
                     return prev;
                   }
                   return [...prev, payload.new as T];
                 });
                 break;
               case 'UPDATE':
-                console.log(`✏️ UPDATE: Updating item with id ${payload.new.id}`);
                 setData(prev => prev.map(item => 
                   item.id === payload.new.id ? payload.new as T : item
                 ));
                 break;
               case 'DELETE':
-                // if (import.meta.env.MODE === 'development') {
-                //   console.log(`🗑️ DELETE: Removing item with id ${payload.old.id}`);
-                // }
                 setData(prev => {
                   const filtered = prev.filter(item => item.id !== payload.old.id);
-                  // if (import.meta.env.MODE === 'development') {
-                  //   console.log(`🗑️ DELETE: Filtered ${prev.length} -> ${filtered.length} items`);
-                  // }
                   return filtered;
                 });
                 break;
               default:
-                console.log(`❓ Unknown event type: ${(payload as any).eventType}`);
             }
           }
         )
         .subscribe((status) => {
-          // if (import.meta.env.MODE === 'development') {
-          //   console.log(`📡 Realtime subscription status for ${options.table}:`, status);
-          // }
+          // Realtime subscription status
         });
 
       setRealtimeChannel(channel);
-      // if (import.meta.env.MODE === 'development') {
-      //   console.log(`🚀 Started realtime subscription for ${options.table}`);
-      // }
 
       return () => {
         channel.unsubscribe();

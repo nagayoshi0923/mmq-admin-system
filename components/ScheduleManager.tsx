@@ -1,6 +1,4 @@
-import { useState, useMemo } from 'react';
-import { useSupabaseData } from '../hooks/useSupabaseData';
-import { useSupabase } from '../contexts/SupabaseContext';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -10,6 +8,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { ScrollArea } from './ui/scroll-area';
 import { Checkbox } from './ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
@@ -23,6 +22,7 @@ import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
 import Users from 'lucide-react/dist/esm/icons/users';
 import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
 import Ban from 'lucide-react/dist/esm/icons/ban';
 import { ItemEditHistory } from './ItemEditHistory';
 import { useEditHistory, EditHistoryEntry } from '../contexts/EditHistoryContext';
@@ -30,7 +30,53 @@ import { useEditHistory, EditHistoryEntry } from '../contexts/EditHistoryContext
 import { useScenarios } from '../contexts/ScenarioContext';
 import { useSchedule } from '../contexts/ScheduleContext';
 import { useStaff } from '../contexts/StaffContext';
-import { GMSelector } from './GMSelector';
+
+// 複数選択用のカスタムドロップダウン
+const MultiSelectDropdown = ({ 
+  isOpen, 
+  onClose, 
+  children, 
+  triggerRef 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  children: React.ReactNode;
+  triggerRef: React.RefObject<HTMLButtonElement>;
+}) => {
+  const contentRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        contentRef.current &&
+        !contentRef.current.contains(event.target as Node) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(event.target as Node)
+      ) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose, triggerRef]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      ref={contentRef}
+      className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-y-auto"
+    >
+      {children}
+    </div>
+  );
+};
 
 type EventCategory = 'オープン公演' | '貸切公演' | 'GMテスト' | 'テストプレイ' | '出張公演';
 
@@ -40,6 +86,7 @@ interface ScheduleEvent {
   venue: string;
   scenario: string;
   gms: string[];
+  observers?: string[];
   startTime: string;
   endTime: string;
   category: EventCategory;
@@ -212,7 +259,6 @@ const convertDateFromISO = (isoDateStr: string): string => {
 const convertSupabaseEventToScheduleEvent = (supabaseEvent: any): ScheduleEvent => {
   // 必須フィールドの安全チェック
   if (!supabaseEvent || !supabaseEvent.id || !supabaseEvent.date) {
-    console.warn('Invalid supabase event data:', supabaseEvent);
     return {
       id: 'invalid-' + Date.now(),
       date: '1/1',
@@ -262,6 +308,39 @@ const isEndTimeModified = (startTime: string, endTime: string, scenarioTitle: st
   
   const expectedEndTime = calculateEndTime(startTime, scenario.id, scenarios);
   return expectedEndTime !== endTime;
+};
+
+// 公演間隔が1.5時間未満かチェック
+const hasShortInterval = (event: ScheduleEvent, allEvents: ScheduleEvent[]): boolean => {
+  if (!event.startTime || !event.endTime) return false;
+  
+  const eventEndMinutes = timeToMinutes(event.endTime);
+  const eventStartMinutes = timeToMinutes(event.startTime);
+  
+  // 同じ日付・同じ会場の他の公演を取得
+  const sameDayVenueEvents = allEvents.filter(e => 
+    e.date === event.date && 
+    e.venue === event.venue && 
+    e.id !== event.id &&
+    !e.isCancelled
+  );
+  
+  for (const otherEvent of sameDayVenueEvents) {
+    if (!otherEvent.startTime || !otherEvent.endTime) continue;
+    
+    const otherStartMinutes = timeToMinutes(otherEvent.startTime);
+    const otherEndMinutes = timeToMinutes(otherEvent.endTime);
+    
+    // この公演の終了時間から他の公演の開始時間までの間隔をチェック
+    const intervalToNext = otherStartMinutes - eventEndMinutes;
+    const intervalFromPrev = eventStartMinutes - otherEndMinutes;
+    
+    // 1.5時間 = 90分未満の場合は警告
+    if (intervalToNext > 0 && intervalToNext < 90) return true;
+    if (intervalFromPrev > 0 && intervalFromPrev < 90) return true;
+  }
+  
+  return false;
 };
 
 // カレンダー生成のユーティリティ関数
@@ -405,10 +484,10 @@ const initialMockSchedule: DaySchedule[] = [
 const venues = ['馬場', '別館①', '別館②', '大久保', '大塚', '埼玉大宮'];
 
 export function ScheduleManager() {
-  const { staff } = useStaff();
   const { getAvailableScenarios } = useScenarios();
   const availableScenarios = getAvailableScenarios();
   const { addEditEntry } = useEditHistory();
+  const { staff } = useStaff();
   
   // Supabase連携
   const { 
@@ -452,6 +531,16 @@ export function ScheduleManager() {
     open: false, 
     event: null 
   });
+  const [uncancelDialog, setUncancelDialog] = useState<{ open: boolean; event: ScheduleEvent | null }>({ 
+    open: false, 
+    event: null 
+  });
+  
+  // ドロップダウンの開閉状態
+  const [gmDropdownOpen, setGmDropdownOpen] = useState(false);
+  const [observerDropdownOpen, setObserverDropdownOpen] = useState(false);
+  const gmTriggerRef = React.useRef<HTMLButtonElement>(null);
+  const observerTriggerRef = React.useRef<HTMLButtonElement>(null);
   
   // ローカルストレージは完全に無効化（Supabaseのみ使用）
   // const [scheduleEvents, setScheduleEvents] = useState<{ [key: string]: DaySchedule[] }>(calendarData);
@@ -462,6 +551,7 @@ export function ScheduleManager() {
   const [formData, setFormData] = useState({
     scenario: '',
     gms: [] as string[],
+    observers: [] as string[],
     startTime: '',
     endTime: '',
     category: 'オープン公演' as EventCategory,
@@ -523,8 +613,6 @@ export function ScheduleManager() {
 
   // 選択された月のスケジュールを取得（ローカル + Supabase統合）
   const currentMonthSchedule = useMemo(() => {
-    console.log('🔄 Calculating currentMonthSchedule with safeSupabaseEvents:', safeSupabaseEvents.length);
-    
     // Supabaseイベントのみを使用（ローカルストレージは完全に無視）
     const supabaseEventsByDate: { [date: string]: ScheduleEvent[] } = {};
     safeSupabaseEvents.forEach(event => {
@@ -564,7 +652,6 @@ export function ScheduleManager() {
       }
     });
     
-    console.log('✅ Final schedule calculated:', schedule.length, 'days');
     return schedule;
   }, [selectedMonth, safeSupabaseEvents]); // scheduleEventsを依存配列から削除
 
@@ -615,6 +702,7 @@ export function ScheduleManager() {
     setFormData({
       scenario: '',
       gms: [],
+      observers: [],
       startTime: defaultStartTime,
       endTime: defaultStartTime,
       category: 'オープン公演',
@@ -630,6 +718,7 @@ export function ScheduleManager() {
     setFormData({
       scenario: event.scenario || '',
       gms: event.gms || [],
+      observers: event.observers || [],
       startTime: event.startTime || '19:00',
       endTime: event.endTime || '21:00',
       category: event.category || 'オープン公演',
@@ -652,13 +741,15 @@ export function ScheduleManager() {
   // シナリオ変更時の処理（自動保存はしない）
   const handleScenarioChange = (scenarioTitle: string) => {
     const actualScenarioTitle = scenarioTitle === 'unspecified' ? '' : scenarioTitle;
-    setFormData(prev => ({ ...prev, scenario: actualScenarioTitle }));
-    
-    // シナリオが選択され、開始時間が設定されている場合は終了時間を自動計算（保存はしない）
-    if (actualScenarioTitle && formData.startTime) {
-      const endTime = calculateEndTimeLocal(formData.startTime, actualScenarioTitle);
-      setFormData(prev => ({ ...prev, endTime }));
-    }
+    setFormData(prev => {
+      const newFormData = { ...prev, scenario: actualScenarioTitle };
+      // シナリオが選択され、開始時間が設定されている場合は終了時間を自動計算
+      if (actualScenarioTitle && actualScenarioTitle !== '未定' && prev.startTime) {
+        const endTime = calculateEndTimeLocal(prev.startTime, actualScenarioTitle);
+        newFormData.endTime = endTime;
+      }
+      return newFormData;
+    });
   };
 
   // イベントを保存（保存ボタンクリック時のみ実行）
@@ -669,6 +760,7 @@ export function ScheduleManager() {
       ...editingEvent,
       scenario: formData.scenario,
       gms: formData.gms,
+      observers: formData.observers,
       startTime: formData.startTime,
       endTime: formData.endTime,
       category: formData.category,
@@ -717,7 +809,7 @@ export function ScheduleManager() {
         };
         
         addSupabaseEvent(supabaseEventData).then(() => {
-          console.log('新規イベントをSupabaseに保存しました:', supabaseEventData);
+          // イベント保存完了
         }).catch(error => {
           console.error('Supabase保存エラー:', error);
         });
@@ -735,7 +827,7 @@ export function ScheduleManager() {
         };
         
         updateSupabaseEvent(updatedEvent.id, supabaseUpdates).then(() => {
-          console.log('イベントをSupabaseで更新しました:', updatedEvent.id);
+          // イベント更新完了
         }).catch(error => {
           console.error('Supabase更新エラー:', error);
         });
@@ -763,7 +855,7 @@ export function ScheduleManager() {
     // まずSupabaseから削除（リアルタイム同期のため）
     try {
       deleteSupabaseEvent(eventToDelete.id).then(() => {
-        console.log('イベントをSupabaseから削除しました:', eventToDelete.id);
+        // イベント削除完了
       }).catch(error => {
         console.error('Supabase削除エラー:', error);
       });
@@ -801,6 +893,7 @@ export function ScheduleManager() {
     setFormData({
       scenario: '',
       gms: [],
+      observers: [],
       startTime: '19:00',
       endTime: '21:00',
       category: 'オープン公演',
@@ -819,58 +912,81 @@ export function ScheduleManager() {
     setCancelDialog({ open: true, event });
   };
 
+  // 中止解除確認ダイアログを開く
+  const openUncancelDialog = (event: ScheduleEvent) => {
+    setUncancelDialog({ open: true, event });
+  };
+
   // 公演を中止
-  const cancelEvent = async () => {
+  const cancelEvent = () => {
     if (!cancelDialog.event) return;
 
     const eventToCancel = cancelDialog.event;
     
+    // Supabaseでイベントを中止状態に更新
     try {
-      // Supabaseでイベントを中止状態に更新
-      await updateSupabaseEvent(eventToCancel.id, { is_cancelled: true });
-
-      // 編集履歴に中止を追加
-      addEditEntry({
-        user: 'ま sui',
-        action: 'update',
-        target: `${eventToCancel.date} ${eventToCancel.venue} - ${eventToCancel.scenario}`,
-        summary: `公演を中止：${eventToCancel.scenario}（${eventToCancel.startTime}-${eventToCancel.endTime}）`,
-        category: 'schedule',
-        changes: [
-          { field: 'ステータス', oldValue: '開催', newValue: '中止' }
-        ]
+      const supabaseUpdates = {
+        is_cancelled: true
+      };
+      
+      updateSupabaseEvent(eventToCancel.id, supabaseUpdates).then(() => {
+        // イベント中止完了
+      }).catch(error => {
+        console.error('Supabase中止更新エラー:', error);
       });
-
-      console.log('イベントを中止しました:', eventToCancel.id);
     } catch (error) {
-      console.error('イベントの中止に失敗:', error);
+      console.error('Supabase中止処理エラー:', error);
     }
+
+    // 編集履歴に中止を追加
+    addEditEntry({
+      user: 'ま sui',
+      action: 'update',
+      target: `${eventToCancel.date} ${eventToCancel.venue} - ${eventToCancel.scenario}`,
+      summary: `公演を中止：${eventToCancel.scenario}（${eventToCancel.startTime}-${eventToCancel.endTime}）`,
+      category: 'schedule',
+      changes: [
+        { field: 'ステータス', oldValue: '開催', newValue: '中止' }
+      ]
+    });
 
     setCancelDialog({ open: false, event: null });
   };
 
   // 公演の中止を解除
-  const uncancelEvent = async (event: ScheduleEvent) => {
+  const uncancelEvent = () => {
+    if (!uncancelDialog.event) return;
+
+    const event = uncancelDialog.event;
+    
+    // Supabaseでイベントの中止状態を解除
     try {
-      // Supabaseでイベントの中止状態を解除
-      await updateSupabaseEvent(event.id, { is_cancelled: false });
-
-      // 編集履歴に中止解除を追加
-      addEditEntry({
-        user: 'ま sui',
-        action: 'update',
-        target: `${event.date} ${event.venue} - ${event.scenario}`,
-        summary: `公演の中止を解除：${event.scenario}（${event.startTime}-${event.endTime}）`,
-        category: 'schedule',
-        changes: [
-          { field: 'ステータス', oldValue: '中止', newValue: '開催' }
-        ]
+      const supabaseUpdates = {
+        is_cancelled: false
+      };
+      
+      updateSupabaseEvent(event.id, supabaseUpdates).then(() => {
+        // イベント中止解除完了
+      }).catch(error => {
+        console.error('Supabase中止解除更新エラー:', error);
       });
-
-      console.log('イベントの中止を解除しました:', event.id);
     } catch (error) {
-      console.error('イベントの中止解除に失敗:', error);
+      console.error('Supabase中止解除処理エラー:', error);
     }
+
+    // 編集履歴に中止解除を追加
+    addEditEntry({
+      user: 'ま sui',
+      action: 'update',
+      target: `${event.date} ${event.venue} - ${event.scenario}`,
+      summary: `公演の中止を解除：${event.scenario}（${event.startTime}-${event.endTime}）`,
+      category: 'schedule',
+      changes: [
+        { field: 'ステータス', oldValue: '中止', newValue: '開催' }
+      ]
+    });
+
+    setUncancelDialog({ open: false, event: null });
   };
 
   return (
@@ -938,20 +1054,21 @@ export function ScheduleManager() {
           <CardTitle>リストカレンダー - {selectedMonth.replace('-', '年').replace(/^(\d{4})年(\d{2})$/, '$1年$2月')}</CardTitle>
           <p className="text-sm text-muted-foreground">
             ※公演間インターバルが1.5時間未満の場合は赤い枠で警告表示されます<br/>
-            ※シナリオやGMが未定の場合は黄色い枠で警告表示されます
+            ※シナリオやGMが未定の場合は黄色い枠で警告表示されます<br/>
+            ※シナリオの標準時間と異なる場合はオレンジ色のアイコンで表示されます
           </p>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <Table>
+            <Table className="w-full table-fixed">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-16">日付</TableHead>
                   <TableHead className="w-12">曜日</TableHead>
                   <TableHead className="w-[100px]">会場</TableHead>
-                  <TableHead className="min-w-[200px]">午前（~12:00）</TableHead>
-                  <TableHead className="min-w-[200px]">午後（12:00~17:00）</TableHead>
-                  <TableHead className="min-w-[200px]">夜間（17:00~）</TableHead>
+                  <TableHead className="w-1/3">午前（~12:00）</TableHead>
+                  <TableHead className="w-1/3">午後（12:00~17:00）</TableHead>
+                  <TableHead className="w-1/3">夜間（17:00~）</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -993,6 +1110,7 @@ export function ScheduleManager() {
                                   {events.map(event => {
                                     const isIncomplete = isIncompleteEvent(event);
                                     const reservationCount = getReservationCount(event);
+                                    const hasShortIntervalFlag = hasShortInterval(event, safeSupabaseEvents);
                                     
                                     return (
                                       <div
@@ -1003,6 +1121,8 @@ export function ScheduleManager() {
                                             : categoryColors[event.category] || 'bg-gray-50 border-gray-200'
                                         } ${
                                           isIncomplete ? 'border-yellow-400 border-2' : ''
+                                        } ${
+                                          hasShortIntervalFlag ? 'border-red-400 border-2' : ''
                                         }`}
                                       >
                                         <div 
@@ -1035,15 +1155,18 @@ export function ScheduleManager() {
                                             {event.scenario || '未定'}
                                           </div>
                                           
-                                          <div className={`text-xs text-muted-foreground mb-1 ${event.isCancelled ? 'line-through' : ''}`}>
-                                            GM: {event.gms.length > 0 ? event.gms.join(', ') : '未定'}
-                                          </div>
-                                          
-                                          {event.notes && (
-                                            <div className={`text-xs text-muted-foreground truncate ${event.isCancelled ? 'line-through' : ''}`}>
-                                              {event.notes}
+                                          <div className={`text-xs text-muted-foreground mb-1 pr-8 ${event.isCancelled ? 'line-through' : ''}`}>
+                                            <div className="break-words overflow-hidden">
+                                              <div className="whitespace-normal">
+                                                GM: {event.gms.length > 0 ? event.gms.join(', ') : '未定'}
+                                                {event.notes && (
+                                                  <span className="ml-2 text-muted-foreground">
+                                                    - {event.notes}
+                                                  </span>
+                                                )}
+                                              </div>
                                             </div>
-                                          )}
+                                          </div>
                                         </div>
 
                                         {/* 中止ボタン */}
@@ -1069,7 +1192,7 @@ export function ScheduleManager() {
                                             className="absolute bottom-1 right-1 h-6 w-6 p-0 hover:bg-green-100 hover:text-green-600"
                                             onClick={(e) => {
                                               e.stopPropagation();
-                                              uncancelEvent(event);
+                                              openUncancelDialog(event);
                                             }}
                                           >
                                             <Plus className="w-3 h-3" />
@@ -1077,7 +1200,7 @@ export function ScheduleManager() {
                                         )}
 
                                         {(isIncomplete || (event.scenario && event.startTime && event.endTime && 
-                                          isEndTimeModified(event.startTime, event.endTime, event.scenario, availableScenarios))) && (
+                                          isEndTimeModified(event.startTime, event.endTime, event.scenario, availableScenarios)) || hasShortIntervalFlag) && (
                                           <div className="absolute top-1 right-1 flex gap-1">
                                             {isIncomplete && (
                                               <AlertTriangle className="w-3 h-3 text-yellow-500" />
@@ -1085,6 +1208,9 @@ export function ScheduleManager() {
                                             {event.scenario && event.startTime && event.endTime && 
                                              isEndTimeModified(event.startTime, event.endTime, event.scenario, availableScenarios) && (
                                               <AlertTriangle className="w-3 h-3 text-amber-600" />
+                                            )}
+                                            {hasShortIntervalFlag && (
+                                              <AlertTriangle className="w-3 h-3 text-red-500" />
                                             )}
                                           </div>
                                         )}
@@ -1138,7 +1264,7 @@ export function ScheduleManager() {
             <div className="space-y-2">
               <Label htmlFor="scenario">シナリオ</Label>
               <Select value={formData.scenario || 'unspecified'} onValueChange={handleScenarioChange}>
-                <SelectTrigger>
+                <SelectTrigger className="border border-slate-200">
                   <SelectValue placeholder="シナリオを選択" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1150,13 +1276,148 @@ export function ScheduleManager() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
             {/* GM選択 */}
             <div className="space-y-2">
               <Label>担当GM</Label>
-              <GMSelector
-                selectedGMs={formData.gms}
-                onGMChange={(gms) => setFormData(prev => ({ ...prev, gms }))}
-              />
+              <div className="relative">
+                <Button
+                  ref={gmTriggerRef}
+                  variant="outline"
+                  className="w-full justify-between border border-slate-200"
+                  onClick={() => setGmDropdownOpen(!gmDropdownOpen)}
+                >
+                  <span>GMを選択してください</span>
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+                
+                <MultiSelectDropdown
+                  isOpen={gmDropdownOpen}
+                  onClose={() => setGmDropdownOpen(false)}
+                  triggerRef={gmTriggerRef}
+                >
+                  <div className="p-1">
+                    {staff
+                      .filter(staffMember => staffMember.status === 'active')
+                      .map(staffMember => {
+                        const isSelected = formData.gms.includes(staffMember.name);
+                        return (
+                          <div
+                            key={staffMember.id}
+                            className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-100 cursor-pointer rounded-sm"
+                            onClick={() => {
+                              if (formData.gms.includes(staffMember.name)) {
+                                setFormData(prev => ({ ...prev, gms: prev.gms.filter(g => g !== staffMember.name) }));
+                              } else {
+                                setFormData(prev => ({ ...prev, gms: [...prev.gms, staffMember.name] }));
+                              }
+                            }}
+                          >
+                            {isSelected && <span className="text-blue-600">✓</span>}
+                            <span className={isSelected ? 'text-blue-600 font-medium' : ''}>
+                              {staffMember.name}
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </MultiSelectDropdown>
+              </div>
+              
+              {/* 選択されたGM一覧 */}
+              {formData.gms.length > 0 && (
+                <div className="space-y-1">
+                  <Label className="text-sm text-muted-foreground">選択されたGM:</Label>
+                  <div className="flex flex-wrap gap-1">
+                    {formData.gms.map((gm, index) => (
+                      <div key={index} className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-sm">
+                        <span>{gm}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, gms: prev.gms.filter(g => g !== gm) }));
+                          }}
+                          className="hover:bg-blue-200 rounded-full p-0.5"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 見学者選択 */}
+            <div className="space-y-2">
+              <Label>見学者</Label>
+              <div className="relative">
+                <Button
+                  ref={observerTriggerRef}
+                  variant="outline"
+                  className="w-full justify-between border border-slate-200"
+                  onClick={() => setObserverDropdownOpen(!observerDropdownOpen)}
+                >
+                  <span>見学者を選択してください</span>
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+                
+                <MultiSelectDropdown
+                  isOpen={observerDropdownOpen}
+                  onClose={() => setObserverDropdownOpen(false)}
+                  triggerRef={observerTriggerRef}
+                >
+                  <div className="p-1">
+                    {staff
+                      .filter(staffMember => staffMember.status === 'active')
+                      .map(staffMember => {
+                        const isSelected = formData.observers.includes(staffMember.name);
+                        return (
+                          <div
+                            key={staffMember.id}
+                            className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-100 cursor-pointer rounded-sm"
+                            onClick={() => {
+                              if (formData.observers.includes(staffMember.name)) {
+                                setFormData(prev => ({ ...prev, observers: prev.observers.filter(o => o !== staffMember.name) }));
+                              } else {
+                                setFormData(prev => ({ ...prev, observers: [...prev.observers, staffMember.name] }));
+                              }
+                            }}
+                          >
+                            {isSelected && <span className="text-green-600">✓</span>}
+                            <span className={isSelected ? 'text-green-600 font-medium' : ''}>
+                              {staffMember.name}
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </MultiSelectDropdown>
+              </div>
+              
+              {/* 選択された見学者一覧 */}
+              {formData.observers.length > 0 && (
+                <div className="space-y-1">
+                  <Label className="text-sm text-muted-foreground">選択された見学者:</Label>
+                  <div className="flex flex-wrap gap-1">
+                    {formData.observers.map((observer, index) => (
+                      <div key={index} className="flex items-center gap-1 bg-green-100 text-green-800 px-2 py-1 rounded-md text-sm">
+                        <span>{observer}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, observers: prev.observers.filter(o => o !== observer) }));
+                          }}
+                          className="hover:bg-green-200 rounded-full p-0.5"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 開始時間 */}
@@ -1165,100 +1426,117 @@ export function ScheduleManager() {
               <Select
                 value={formData.startTime}
                 onValueChange={(value) => {
-                  setFormData(prev => ({ ...prev, startTime: value }));
-                  // シナリオが選択されている場合、自動で終了時間を計算
-                  if (formData.scenario) {
-                    const endTime = calculateEndTimeLocal(value, formData.scenario);
-                    setFormData(prev => ({ ...prev, endTime }));
-                  }
+                  setFormData(prev => {
+                    const newFormData = { ...prev, startTime: value };
+                    // シナリオが選択されている場合、自動で終了時間を計算
+                    if (prev.scenario && prev.scenario !== '未定') {
+                      const endTime = calculateEndTimeLocal(value, prev.scenario);
+                      newFormData.endTime = endTime;
+                    }
+                    return newFormData;
+                  });
                 }}
               >
-                <SelectTrigger id="startTime">
+                <SelectTrigger id="startTime" className="border border-gray-300">
                   <SelectValue placeholder="開始時間を選択" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="09:00">09:00</SelectItem>
-                  <SelectItem value="09:30">09:30</SelectItem>
-                  <SelectItem value="10:00">10:00</SelectItem>
-                  <SelectItem value="10:30">10:30</SelectItem>
-                  <SelectItem value="11:00">11:00</SelectItem>
-                  <SelectItem value="11:30">11:30</SelectItem>
-                  <SelectItem value="12:00">12:00</SelectItem>
-                  <SelectItem value="12:30">12:30</SelectItem>
-                  <SelectItem value="13:00">13:00</SelectItem>
-                  <SelectItem value="13:30">13:30</SelectItem>
-                  <SelectItem value="14:00">14:00</SelectItem>
-                  <SelectItem value="14:30">14:30</SelectItem>
-                  <SelectItem value="15:00">15:00</SelectItem>
-                  <SelectItem value="15:30">15:30</SelectItem>
-                  <SelectItem value="16:00">16:00</SelectItem>
-                  <SelectItem value="16:30">16:30</SelectItem>
-                  <SelectItem value="17:00">17:00</SelectItem>
-                  <SelectItem value="17:30">17:30</SelectItem>
-                  <SelectItem value="18:00">18:00</SelectItem>
-                  <SelectItem value="18:30">18:30</SelectItem>
-                  <SelectItem value="19:00">19:00</SelectItem>
-                  <SelectItem value="19:30">19:30</SelectItem>
-                  <SelectItem value="20:00">20:00</SelectItem>
-                  <SelectItem value="20:30">20:30</SelectItem>
-                  <SelectItem value="21:00">21:00</SelectItem>
-                  <SelectItem value="21:30">21:30</SelectItem>
-                  <SelectItem value="22:00">22:00</SelectItem>
+                <SelectContent className="max-h-[200px]">
+                  <ScrollArea className="h-[200px]">
+                    <SelectItem value="09:00">09:00</SelectItem>
+                    <SelectItem value="09:30">09:30</SelectItem>
+                    <SelectItem value="10:00">10:00</SelectItem>
+                    <SelectItem value="10:30">10:30</SelectItem>
+                    <SelectItem value="11:00">11:00</SelectItem>
+                    <SelectItem value="11:30">11:30</SelectItem>
+                    <SelectItem value="12:00">12:00</SelectItem>
+                    <SelectItem value="12:30">12:30</SelectItem>
+                    <SelectItem value="13:00">13:00</SelectItem>
+                    <SelectItem value="13:30">13:30</SelectItem>
+                    <SelectItem value="14:00">14:00</SelectItem>
+                    <SelectItem value="14:30">14:30</SelectItem>
+                    <SelectItem value="15:00">15:00</SelectItem>
+                    <SelectItem value="15:30">15:30</SelectItem>
+                    <SelectItem value="16:00">16:00</SelectItem>
+                    <SelectItem value="16:30">16:30</SelectItem>
+                    <SelectItem value="17:00">17:00</SelectItem>
+                    <SelectItem value="17:30">17:30</SelectItem>
+                    <SelectItem value="18:00">18:00</SelectItem>
+                    <SelectItem value="18:30">18:30</SelectItem>
+                    <SelectItem value="19:00">19:00</SelectItem>
+                    <SelectItem value="19:30">19:30</SelectItem>
+                    <SelectItem value="20:00">20:00</SelectItem>
+                    <SelectItem value="20:30">20:30</SelectItem>
+                    <SelectItem value="21:00">21:00</SelectItem>
+                    <SelectItem value="21:30">21:30</SelectItem>
+                    <SelectItem value="22:00">22:00</SelectItem>
+                  </ScrollArea>
                 </SelectContent>
               </Select>
             </div>
 
             {/* 終了時間 */}
             <div className="space-y-2">
-              <Label htmlFor="endTime">終了時間</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="endTime">終了時間</Label>
+                {formData.scenario && formData.scenario !== '未定' && (
+                  <span className="text-xs text-muted-foreground">
+                    (シナリオ時間: {(() => {
+                      const scenario = availableScenarios.find(s => s.title === formData.scenario);
+                      return scenario ? `${scenario.duration / 60}時間` : '';
+                    })()})
+                  </span>
+                )}
+              </div>
               <Select
                 value={formData.endTime}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, endTime: value }))}
               >
-                <SelectTrigger id="endTime">
+                <SelectTrigger id="endTime" className="border border-gray-300">
                   <SelectValue placeholder="終了時間を選択" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10:00">10:00</SelectItem>
-                  <SelectItem value="10:30">10:30</SelectItem>
-                  <SelectItem value="11:00">11:00</SelectItem>
-                  <SelectItem value="11:30">11:30</SelectItem>
-                  <SelectItem value="12:00">12:00</SelectItem>
-                  <SelectItem value="12:30">12:30</SelectItem>
-                  <SelectItem value="13:00">13:00</SelectItem>
-                  <SelectItem value="13:30">13:30</SelectItem>
-                  <SelectItem value="14:00">14:00</SelectItem>
-                  <SelectItem value="14:30">14:30</SelectItem>
-                  <SelectItem value="15:00">15:00</SelectItem>
-                  <SelectItem value="15:30">15:30</SelectItem>
-                  <SelectItem value="16:00">16:00</SelectItem>
-                  <SelectItem value="16:30">16:30</SelectItem>
-                  <SelectItem value="17:00">17:00</SelectItem>
-                  <SelectItem value="17:30">17:30</SelectItem>
-                  <SelectItem value="18:00">18:00</SelectItem>
-                  <SelectItem value="18:30">18:30</SelectItem>
-                  <SelectItem value="19:00">19:00</SelectItem>
-                  <SelectItem value="19:30">19:30</SelectItem>
-                  <SelectItem value="20:00">20:00</SelectItem>
-                  <SelectItem value="20:30">20:30</SelectItem>
-                  <SelectItem value="21:00">21:00</SelectItem>
-                  <SelectItem value="21:30">21:30</SelectItem>
-                  <SelectItem value="22:00">22:00</SelectItem>
-                  <SelectItem value="22:30">22:30</SelectItem>
-                  <SelectItem value="23:00">23:00</SelectItem>
-                  <SelectItem value="23:30">23:30</SelectItem>
-                  <SelectItem value="00:00">00:00</SelectItem>
-                  <SelectItem value="00:30">00:30</SelectItem>
-                  <SelectItem value="01:00">01:00</SelectItem>
-                  <SelectItem value="01:30">01:30</SelectItem>
-                  <SelectItem value="02:00">02:00</SelectItem>
+                <SelectContent className="max-h-[200px]">
+                  <ScrollArea className="h-[200px]">
+                    <SelectItem value="10:00">10:00</SelectItem>
+                    <SelectItem value="10:30">10:30</SelectItem>
+                    <SelectItem value="11:00">11:00</SelectItem>
+                    <SelectItem value="11:30">11:30</SelectItem>
+                    <SelectItem value="12:00">12:00</SelectItem>
+                    <SelectItem value="12:30">12:30</SelectItem>
+                    <SelectItem value="13:00">13:00</SelectItem>
+                    <SelectItem value="13:30">13:30</SelectItem>
+                    <SelectItem value="14:00">14:00</SelectItem>
+                    <SelectItem value="14:30">14:30</SelectItem>
+                    <SelectItem value="15:00">15:00</SelectItem>
+                    <SelectItem value="15:30">15:30</SelectItem>
+                    <SelectItem value="16:00">16:00</SelectItem>
+                    <SelectItem value="16:30">16:30</SelectItem>
+                    <SelectItem value="17:00">17:00</SelectItem>
+                    <SelectItem value="17:30">17:30</SelectItem>
+                    <SelectItem value="18:00">18:00</SelectItem>
+                    <SelectItem value="18:30">18:30</SelectItem>
+                    <SelectItem value="19:00">19:00</SelectItem>
+                    <SelectItem value="19:30">19:30</SelectItem>
+                    <SelectItem value="20:00">20:00</SelectItem>
+                    <SelectItem value="20:30">20:30</SelectItem>
+                    <SelectItem value="21:00">21:00</SelectItem>
+                    <SelectItem value="21:30">21:30</SelectItem>
+                    <SelectItem value="22:00">22:00</SelectItem>
+                    <SelectItem value="22:30">22:30</SelectItem>
+                    <SelectItem value="23:00">23:00</SelectItem>
+                    <SelectItem value="23:30">23:30</SelectItem>
+                    <SelectItem value="00:00">00:00</SelectItem>
+                    <SelectItem value="00:30">00:30</SelectItem>
+                    <SelectItem value="01:00">01:00</SelectItem>
+                    <SelectItem value="01:30">01:30</SelectItem>
+                    <SelectItem value="02:00">02:00</SelectItem>
+                  </ScrollArea>
                 </SelectContent>
               </Select>
               {formData.scenario && formData.startTime && formData.endTime && 
                isEndTimeModified(formData.startTime, formData.endTime, formData.scenario, availableScenarios) && (
                 <div className="flex items-center gap-1 text-amber-600 text-sm">
                   <AlertTriangle className="w-4 h-4" />
-                  <span>標準公演時間と異なります</span>
+                  <span>シナリオの標準時間と異なります（手動調整可能）</span>
                 </div>
               )}
             </div>
@@ -1267,7 +1545,7 @@ export function ScheduleManager() {
             <div className="space-y-2">
               <Label htmlFor="category">公演カテゴリ</Label>
               <Select value={formData.category} onValueChange={(value: EventCategory) => setFormData(prev => ({ ...prev, category: value }))}>
-                <SelectTrigger>
+                <SelectTrigger className="border border-slate-200">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1287,6 +1565,7 @@ export function ScheduleManager() {
                   value={formData.reservationInfo}
                   onChange={(e) => setFormData(prev => ({ ...prev, reservationInfo: e.target.value }))}
                   placeholder="予約者名や企業名など"
+                  className="border border-slate-200"
                 />
               </div>
             )}
@@ -1300,6 +1579,7 @@ export function ScheduleManager() {
                 onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                 placeholder="特記事項や注意点など"
                 rows={3}
+                className="border border-gray-300"
               />
             </div>
 
@@ -1312,29 +1592,14 @@ export function ScheduleManager() {
                   </Button>
                 )}
               </div>
-              <div className="flex justify-between">
-                <div>
-                  {/* 既存イベントの場合のみ削除ボタンを表示 */}
-                  {editingEvent && !editingEvent.id.startsWith('new-') && (
-                    <Button 
-                      onClick={() => openDeleteDialog(editingEvent)}
-                      className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white border-red-600 hover:border-red-700"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      削除
-                    </Button>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={closeDialog}>
-                    キャンセル
-                  </Button>
-                  <Button onClick={saveEvent}>
-                    保存
-                  </Button>
-                </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={closeDialog}>
+                  キャンセル
+                </Button>
+                <Button onClick={saveEvent}>
+                  保存
+                </Button>
               </div>
-            </div>
             </div>
             </TabsContent>
             
@@ -1418,6 +1683,33 @@ export function ScheduleManager() {
           <AlertDialogCancel>キャンセル</AlertDialogCancel>
           <AlertDialogAction onClick={cancelEvent} className="bg-red-600 hover:bg-red-700">
             中止する
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    {/* 中止解除確認ダイアログ */}
+    <AlertDialog open={uncancelDialog.open} onOpenChange={(open) => setUncancelDialog({ ...uncancelDialog, open })}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>公演の中止解除確認</AlertDialogTitle>
+          <AlertDialogDescription>
+            以下の公演の中止を解除しますか？公演が再開されます。
+            <br />
+            <br />
+            <strong>日時:</strong> {uncancelDialog.event?.date} {uncancelDialog.event?.startTime}-{uncancelDialog.event?.endTime}
+            <br />
+            <strong>会場:</strong> {uncancelDialog.event?.venue}
+            <br />
+            <strong>シナリオ:</strong> {uncancelDialog.event?.scenario}
+            <br />
+            <strong>GM:</strong> {uncancelDialog.event?.gms.join(', ')}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>キャンセル</AlertDialogCancel>
+          <AlertDialogAction onClick={uncancelEvent} className="bg-green-600 hover:bg-green-700">
+            中止を解除する
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

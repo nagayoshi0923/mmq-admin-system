@@ -270,9 +270,7 @@ export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
     let isMounted = true;
     
     if (isMounted) {
-      // console.log('StaffContextの連携機能を初期化中...');
       setStaffUpdateFunction((staffName: string, scenarioTitle: string, action: 'add' | 'remove') => {
-        // console.log(`スタッフ更新呼び出し: ${staffName} - ${scenarioTitle} - ${action}`);
         if (action === 'add') {
           addScenarioToStaff(staffName, scenarioTitle);
         } else {
@@ -294,7 +292,7 @@ export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
   // レガシー関数（後方互換性のため）
   const updateStaffList = useCallback((newStaffList: Staff[]) => {
     // この関数は後方互換性のために残しているが、実際の更新はSupabaseを通じて行う
-    console.warn('updateStaffList is deprecated. Use individual CRUD operations instead.');
+    // updateStaffList is deprecated. Use individual CRUD operations instead.
   }, []);
 
   return (
