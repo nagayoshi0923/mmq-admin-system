@@ -8,6 +8,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { ScrollArea } from './ui/scroll-area';
 import { Checkbox } from './ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
@@ -308,6 +309,39 @@ const isEndTimeModified = (startTime: string, endTime: string, scenarioTitle: st
   
   const expectedEndTime = calculateEndTime(startTime, scenario.id, scenarios);
   return expectedEndTime !== endTime;
+};
+
+// 公演間隔が1.5時間未満かチェック
+const hasShortInterval = (event: ScheduleEvent, allEvents: ScheduleEvent[]): boolean => {
+  if (!event.startTime || !event.endTime) return false;
+  
+  const eventEndMinutes = timeToMinutes(event.endTime);
+  const eventStartMinutes = timeToMinutes(event.startTime);
+  
+  // 同じ日付・同じ会場の他の公演を取得
+  const sameDayVenueEvents = allEvents.filter(e => 
+    e.date === event.date && 
+    e.venue === event.venue && 
+    e.id !== event.id &&
+    !e.isCancelled
+  );
+  
+  for (const otherEvent of sameDayVenueEvents) {
+    if (!otherEvent.startTime || !otherEvent.endTime) continue;
+    
+    const otherStartMinutes = timeToMinutes(otherEvent.startTime);
+    const otherEndMinutes = timeToMinutes(otherEvent.endTime);
+    
+    // この公演の終了時間から他の公演の開始時間までの間隔をチェック
+    const intervalToNext = otherStartMinutes - eventEndMinutes;
+    const intervalFromPrev = eventStartMinutes - otherEndMinutes;
+    
+    // 1.5時間 = 90分未満の場合は警告
+    if (intervalToNext > 0 && intervalToNext < 90) return true;
+    if (intervalFromPrev > 0 && intervalFromPrev < 90) return true;
+  }
+  
+  return false;
 };
 
 // カレンダー生成のユーティリティ関数
@@ -711,13 +745,15 @@ export function ScheduleManager() {
   // シナリオ変更時の処理（自動保存はしない）
   const handleScenarioChange = (scenarioTitle: string) => {
     const actualScenarioTitle = scenarioTitle === 'unspecified' ? '' : scenarioTitle;
-    setFormData(prev => ({ ...prev, scenario: actualScenarioTitle }));
-    
-    // シナリオが選択され、開始時間が設定されている場合は終了時間を自動計算（保存はしない）
-    if (actualScenarioTitle && formData.startTime) {
-      const endTime = calculateEndTimeLocal(formData.startTime, actualScenarioTitle);
-      setFormData(prev => ({ ...prev, endTime }));
-    }
+    setFormData(prev => {
+      const newFormData = { ...prev, scenario: actualScenarioTitle };
+      // シナリオが選択され、開始時間が設定されている場合は終了時間を自動計算
+      if (actualScenarioTitle && actualScenarioTitle !== '未定' && prev.startTime) {
+        const endTime = calculateEndTimeLocal(prev.startTime, actualScenarioTitle);
+        newFormData.endTime = endTime;
+      }
+      return newFormData;
+    });
   };
 
   // イベントを保存（保存ボタンクリック時のみ実行）
@@ -1022,7 +1058,8 @@ export function ScheduleManager() {
           <CardTitle>リストカレンダー - {selectedMonth.replace('-', '年').replace(/^(\d{4})年(\d{2})$/, '$1年$2月')}</CardTitle>
           <p className="text-sm text-muted-foreground">
             ※公演間インターバルが1.5時間未満の場合は赤い枠で警告表示されます<br/>
-            ※シナリオやGMが未定の場合は黄色い枠で警告表示されます
+            ※シナリオやGMが未定の場合は黄色い枠で警告表示されます<br/>
+            ※シナリオの標準時間と異なる場合はオレンジ色のアイコンで表示されます
           </p>
         </CardHeader>
         <CardContent>
@@ -1077,6 +1114,7 @@ export function ScheduleManager() {
                                   {events.map(event => {
                                     const isIncomplete = isIncompleteEvent(event);
                                     const reservationCount = getReservationCount(event);
+                                    const hasShortIntervalFlag = hasShortInterval(event, safeSupabaseEvents);
                                     
                                     return (
                                       <div
@@ -1087,6 +1125,8 @@ export function ScheduleManager() {
                                             : categoryColors[event.category] || 'bg-gray-50 border-gray-200'
                                         } ${
                                           isIncomplete ? 'border-yellow-400 border-2' : ''
+                                        } ${
+                                          hasShortIntervalFlag ? 'border-red-400 border-2' : ''
                                         }`}
                                       >
                                         <div 
@@ -1164,7 +1204,7 @@ export function ScheduleManager() {
                                         )}
 
                                         {(isIncomplete || (event.scenario && event.startTime && event.endTime && 
-                                          isEndTimeModified(event.startTime, event.endTime, event.scenario, availableScenarios))) && (
+                                          isEndTimeModified(event.startTime, event.endTime, event.scenario, availableScenarios)) || hasShortIntervalFlag) && (
                                           <div className="absolute top-1 right-1 flex gap-1">
                                             {isIncomplete && (
                                               <AlertTriangle className="w-3 h-3 text-yellow-500" />
@@ -1172,6 +1212,9 @@ export function ScheduleManager() {
                                             {event.scenario && event.startTime && event.endTime && 
                                              isEndTimeModified(event.startTime, event.endTime, event.scenario, availableScenarios) && (
                                               <AlertTriangle className="w-3 h-3 text-amber-600" />
+                                            )}
+                                            {hasShortIntervalFlag && (
+                                              <AlertTriangle className="w-3 h-3 text-red-500" />
                                             )}
                                           </div>
                                         )}
@@ -1387,52 +1430,67 @@ export function ScheduleManager() {
               <Select
                 value={formData.startTime}
                 onValueChange={(value) => {
-                  setFormData(prev => ({ ...prev, startTime: value }));
-                  // シナリオが選択されている場合、自動で終了時間を計算
-                  if (formData.scenario) {
-                    const endTime = calculateEndTimeLocal(value, formData.scenario);
-                    setFormData(prev => ({ ...prev, endTime }));
-                  }
+                  setFormData(prev => {
+                    const newFormData = { ...prev, startTime: value };
+                    // シナリオが選択されている場合、自動で終了時間を計算
+                    if (prev.scenario && prev.scenario !== '未定') {
+                      const endTime = calculateEndTimeLocal(value, prev.scenario);
+                      newFormData.endTime = endTime;
+                    }
+                    return newFormData;
+                  });
                 }}
               >
                 <SelectTrigger id="startTime" className="border border-gray-300">
                   <SelectValue placeholder="開始時間を選択" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="09:00">09:00</SelectItem>
-                  <SelectItem value="09:30">09:30</SelectItem>
-                  <SelectItem value="10:00">10:00</SelectItem>
-                  <SelectItem value="10:30">10:30</SelectItem>
-                  <SelectItem value="11:00">11:00</SelectItem>
-                  <SelectItem value="11:30">11:30</SelectItem>
-                  <SelectItem value="12:00">12:00</SelectItem>
-                  <SelectItem value="12:30">12:30</SelectItem>
-                  <SelectItem value="13:00">13:00</SelectItem>
-                  <SelectItem value="13:30">13:30</SelectItem>
-                  <SelectItem value="14:00">14:00</SelectItem>
-                  <SelectItem value="14:30">14:30</SelectItem>
-                  <SelectItem value="15:00">15:00</SelectItem>
-                  <SelectItem value="15:30">15:30</SelectItem>
-                  <SelectItem value="16:00">16:00</SelectItem>
-                  <SelectItem value="16:30">16:30</SelectItem>
-                  <SelectItem value="17:00">17:00</SelectItem>
-                  <SelectItem value="17:30">17:30</SelectItem>
-                  <SelectItem value="18:00">18:00</SelectItem>
-                  <SelectItem value="18:30">18:30</SelectItem>
-                  <SelectItem value="19:00">19:00</SelectItem>
-                  <SelectItem value="19:30">19:30</SelectItem>
-                  <SelectItem value="20:00">20:00</SelectItem>
-                  <SelectItem value="20:30">20:30</SelectItem>
-                  <SelectItem value="21:00">21:00</SelectItem>
-                  <SelectItem value="21:30">21:30</SelectItem>
-                  <SelectItem value="22:00">22:00</SelectItem>
+                <SelectContent className="max-h-[200px]">
+                  <ScrollArea className="h-[200px]">
+                    <SelectItem value="09:00">09:00</SelectItem>
+                    <SelectItem value="09:30">09:30</SelectItem>
+                    <SelectItem value="10:00">10:00</SelectItem>
+                    <SelectItem value="10:30">10:30</SelectItem>
+                    <SelectItem value="11:00">11:00</SelectItem>
+                    <SelectItem value="11:30">11:30</SelectItem>
+                    <SelectItem value="12:00">12:00</SelectItem>
+                    <SelectItem value="12:30">12:30</SelectItem>
+                    <SelectItem value="13:00">13:00</SelectItem>
+                    <SelectItem value="13:30">13:30</SelectItem>
+                    <SelectItem value="14:00">14:00</SelectItem>
+                    <SelectItem value="14:30">14:30</SelectItem>
+                    <SelectItem value="15:00">15:00</SelectItem>
+                    <SelectItem value="15:30">15:30</SelectItem>
+                    <SelectItem value="16:00">16:00</SelectItem>
+                    <SelectItem value="16:30">16:30</SelectItem>
+                    <SelectItem value="17:00">17:00</SelectItem>
+                    <SelectItem value="17:30">17:30</SelectItem>
+                    <SelectItem value="18:00">18:00</SelectItem>
+                    <SelectItem value="18:30">18:30</SelectItem>
+                    <SelectItem value="19:00">19:00</SelectItem>
+                    <SelectItem value="19:30">19:30</SelectItem>
+                    <SelectItem value="20:00">20:00</SelectItem>
+                    <SelectItem value="20:30">20:30</SelectItem>
+                    <SelectItem value="21:00">21:00</SelectItem>
+                    <SelectItem value="21:30">21:30</SelectItem>
+                    <SelectItem value="22:00">22:00</SelectItem>
+                  </ScrollArea>
                 </SelectContent>
               </Select>
             </div>
 
             {/* 終了時間 */}
             <div className="space-y-2">
-              <Label htmlFor="endTime">終了時間</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="endTime">終了時間</Label>
+                {formData.scenario && formData.scenario !== '未定' && (
+                  <span className="text-xs text-muted-foreground">
+                    (シナリオ時間: {(() => {
+                      const scenario = availableScenarios.find(s => s.title === formData.scenario);
+                      return scenario ? `${scenario.duration / 60}時間` : '';
+                    })()})
+                  </span>
+                )}
+              </div>
               <Select
                 value={formData.endTime}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, endTime: value }))}
@@ -1440,47 +1498,49 @@ export function ScheduleManager() {
                 <SelectTrigger id="endTime" className="border border-gray-300">
                   <SelectValue placeholder="終了時間を選択" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10:00">10:00</SelectItem>
-                  <SelectItem value="10:30">10:30</SelectItem>
-                  <SelectItem value="11:00">11:00</SelectItem>
-                  <SelectItem value="11:30">11:30</SelectItem>
-                  <SelectItem value="12:00">12:00</SelectItem>
-                  <SelectItem value="12:30">12:30</SelectItem>
-                  <SelectItem value="13:00">13:00</SelectItem>
-                  <SelectItem value="13:30">13:30</SelectItem>
-                  <SelectItem value="14:00">14:00</SelectItem>
-                  <SelectItem value="14:30">14:30</SelectItem>
-                  <SelectItem value="15:00">15:00</SelectItem>
-                  <SelectItem value="15:30">15:30</SelectItem>
-                  <SelectItem value="16:00">16:00</SelectItem>
-                  <SelectItem value="16:30">16:30</SelectItem>
-                  <SelectItem value="17:00">17:00</SelectItem>
-                  <SelectItem value="17:30">17:30</SelectItem>
-                  <SelectItem value="18:00">18:00</SelectItem>
-                  <SelectItem value="18:30">18:30</SelectItem>
-                  <SelectItem value="19:00">19:00</SelectItem>
-                  <SelectItem value="19:30">19:30</SelectItem>
-                  <SelectItem value="20:00">20:00</SelectItem>
-                  <SelectItem value="20:30">20:30</SelectItem>
-                  <SelectItem value="21:00">21:00</SelectItem>
-                  <SelectItem value="21:30">21:30</SelectItem>
-                  <SelectItem value="22:00">22:00</SelectItem>
-                  <SelectItem value="22:30">22:30</SelectItem>
-                  <SelectItem value="23:00">23:00</SelectItem>
-                  <SelectItem value="23:30">23:30</SelectItem>
-                  <SelectItem value="00:00">00:00</SelectItem>
-                  <SelectItem value="00:30">00:30</SelectItem>
-                  <SelectItem value="01:00">01:00</SelectItem>
-                  <SelectItem value="01:30">01:30</SelectItem>
-                  <SelectItem value="02:00">02:00</SelectItem>
+                <SelectContent className="max-h-[200px]">
+                  <ScrollArea className="h-[200px]">
+                    <SelectItem value="10:00">10:00</SelectItem>
+                    <SelectItem value="10:30">10:30</SelectItem>
+                    <SelectItem value="11:00">11:00</SelectItem>
+                    <SelectItem value="11:30">11:30</SelectItem>
+                    <SelectItem value="12:00">12:00</SelectItem>
+                    <SelectItem value="12:30">12:30</SelectItem>
+                    <SelectItem value="13:00">13:00</SelectItem>
+                    <SelectItem value="13:30">13:30</SelectItem>
+                    <SelectItem value="14:00">14:00</SelectItem>
+                    <SelectItem value="14:30">14:30</SelectItem>
+                    <SelectItem value="15:00">15:00</SelectItem>
+                    <SelectItem value="15:30">15:30</SelectItem>
+                    <SelectItem value="16:00">16:00</SelectItem>
+                    <SelectItem value="16:30">16:30</SelectItem>
+                    <SelectItem value="17:00">17:00</SelectItem>
+                    <SelectItem value="17:30">17:30</SelectItem>
+                    <SelectItem value="18:00">18:00</SelectItem>
+                    <SelectItem value="18:30">18:30</SelectItem>
+                    <SelectItem value="19:00">19:00</SelectItem>
+                    <SelectItem value="19:30">19:30</SelectItem>
+                    <SelectItem value="20:00">20:00</SelectItem>
+                    <SelectItem value="20:30">20:30</SelectItem>
+                    <SelectItem value="21:00">21:00</SelectItem>
+                    <SelectItem value="21:30">21:30</SelectItem>
+                    <SelectItem value="22:00">22:00</SelectItem>
+                    <SelectItem value="22:30">22:30</SelectItem>
+                    <SelectItem value="23:00">23:00</SelectItem>
+                    <SelectItem value="23:30">23:30</SelectItem>
+                    <SelectItem value="00:00">00:00</SelectItem>
+                    <SelectItem value="00:30">00:30</SelectItem>
+                    <SelectItem value="01:00">01:00</SelectItem>
+                    <SelectItem value="01:30">01:30</SelectItem>
+                    <SelectItem value="02:00">02:00</SelectItem>
+                  </ScrollArea>
                 </SelectContent>
               </Select>
               {formData.scenario && formData.startTime && formData.endTime && 
                isEndTimeModified(formData.startTime, formData.endTime, formData.scenario, availableScenarios) && (
                 <div className="flex items-center gap-1 text-amber-600 text-sm">
                   <AlertTriangle className="w-4 h-4" />
-                  <span>標準公演時間と異なります</span>
+                  <span>シナリオの標準時間と異なります（手動調整可能）</span>
                 </div>
               )}
             </div>
