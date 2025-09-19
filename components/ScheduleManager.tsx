@@ -37,6 +37,7 @@ interface ScheduleEvent {
   venue: string;
   scenario: string;
   gms: string[];
+  observers?: string[];
   startTime: string;
   endTime: string;
   category: EventCategory;
@@ -463,6 +464,7 @@ export function ScheduleManager() {
   const [formData, setFormData] = useState({
     scenario: '',
     gms: [] as string[],
+    observers: [] as string[],
     startTime: '',
     endTime: '',
     category: 'オープン公演' as EventCategory,
@@ -616,6 +618,7 @@ export function ScheduleManager() {
     setFormData({
       scenario: '',
       gms: [],
+      observers: [],
       startTime: defaultStartTime,
       endTime: defaultStartTime,
       category: 'オープン公演',
@@ -631,6 +634,7 @@ export function ScheduleManager() {
     setFormData({
       scenario: event.scenario || '',
       gms: event.gms || [],
+      observers: event.observers || [],
       startTime: event.startTime || '19:00',
       endTime: event.endTime || '21:00',
       category: event.category || 'オープン公演',
@@ -670,6 +674,7 @@ export function ScheduleManager() {
       ...editingEvent,
       scenario: formData.scenario,
       gms: formData.gms,
+      observers: formData.observers,
       startTime: formData.startTime,
       endTime: formData.endTime,
       category: formData.category,
@@ -802,6 +807,7 @@ export function ScheduleManager() {
     setFormData({
       scenario: '',
       gms: [],
+      observers: [],
       startTime: '19:00',
       endTime: '21:00',
       category: 'オープン公演',
@@ -1232,6 +1238,69 @@ export function ScheduleManager() {
                             setFormData(prev => ({ ...prev, gms: prev.gms.filter(g => g !== gm) }));
                           }}
                           className="hover:bg-blue-200 rounded-full p-0.5"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 見学者選択 */}
+            <div className="space-y-2">
+              <Label>見学者</Label>
+              <Select
+                value=""
+                onValueChange={(value) => {
+                  if (value) {
+                    if (formData.observers.includes(value)) {
+                      // 既に選択済みの場合は削除
+                      setFormData(prev => ({ ...prev, observers: prev.observers.filter(o => o !== value) }));
+                    } else {
+                      // 未選択の場合は追加
+                      setFormData(prev => ({ ...prev, observers: [...prev.observers, value] }));
+                    }
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="見学者を選択してください" />
+                </SelectTrigger>
+                <SelectContent>
+                  {staff
+                    .filter(staffMember => staffMember.status === 'active')
+                    .map(staffMember => {
+                      const isSelected = formData.observers.includes(staffMember.name);
+                      return (
+                        <SelectItem key={staffMember.id} value={staffMember.name}>
+                          <div className="flex items-center gap-2">
+                            {isSelected && <span className="text-green-600">✓</span>}
+                            <span className={isSelected ? 'text-green-600 font-medium' : ''}>
+                              {staffMember.name}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                </SelectContent>
+              </Select>
+              
+              {/* 選択された見学者一覧 */}
+              {formData.observers.length > 0 && (
+                <div className="space-y-1">
+                  <Label className="text-sm text-muted-foreground">選択された見学者:</Label>
+                  <div className="flex flex-wrap gap-1">
+                    {formData.observers.map((observer, index) => (
+                      <div key={index} className="flex items-center gap-1 bg-green-100 text-green-800 px-2 py-1 rounded-md text-sm">
+                        <span>{observer}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, observers: prev.observers.filter(o => o !== observer) }));
+                          }}
+                          className="hover:bg-green-200 rounded-full p-0.5"
                         >
                           <X className="w-3 h-3" />
                         </button>
