@@ -58,6 +58,16 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, staffNa
   const { scenarios } = useScenarios();
   const { events } = useSchedule();
   
+  // Supabaseからスタッフ情報を直接取得
+  const {
+    data: staffData,
+    loading: staffLoading
+  } = useSupabaseData<any>({
+    table: 'staff',
+    realtime: true,
+    filter: { column: 'id', operator: 'eq', value: staffId }
+  });
+  
   const [schedules, setSchedules] = useState<DaySchedule[]>([]);
   // 給与記録はSupabaseから取得（現在は使用していないためコメントアウト）
   // const {
@@ -91,8 +101,23 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, staffNa
   const [editingScenario, setEditingScenario] = useState<StaffScenario | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  // 現在のスタッフ情報を取得
-  const currentStaff = staff.find(s => s.id === staffId);
+  // 現在のスタッフ情報を取得（Supabaseから直接取得したデータを優先）
+  const currentStaff = staffData?.[0] || staff.find(s => s.id === staffId);
+  
+  // スタッフ名を動的に取得（Supabaseのデータを最優先）
+  const displayStaffName = currentStaff?.name || staffName || '不明';
+  
+  // デバッグ情報（開発時のみ）
+  if (process.env.NODE_ENV === 'development') {
+    console.log('StaffDashboard Debug:', {
+      staffId,
+      staffName,
+      currentStaff,
+      displayStaffName,
+      staffData,
+      staffLength: staff.length
+    });
+  }
 
   // 今月の日付を生成
   const generateCurrentMonthDates = useCallback(() => {
@@ -148,11 +173,12 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, staffNa
   // 今月の公演スケジュールを取得
   const currentMonthEvents = useMemo(() => {
     const currentMonth = dayjs().format('YYYY-MM');
+    const staffName = currentStaff?.name || displayStaffName; // Supabaseのstaff.nameを優先
     return events.filter(event => 
       dayjs(event.date).format('YYYY-MM') === currentMonth &&
-      event.gms.includes(staffName)
+      event.gms?.includes(staffName)
     );
-  }, [events, staffName]);
+  }, [events, displayStaffName, currentStaff?.name]);
 
   // スタッフの給与記録をフィルタリング（現在は使用していないため空配列を返す）
   const staffSalaryRecords = useMemo(() => {
@@ -177,12 +203,22 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, staffNa
       const currentMonth = dayjs().format('YYYY-MM');
       const submittedAt = new Date().toISOString();
       
+      // デバッグ情報（開発時のみ）
+      if (process.env.NODE_ENV === 'development') {
+        console.log('スケジュール提出時のスタッフ情報:', {
+          staffId,
+          currentStaffName: currentStaff?.name,
+          displayStaffName,
+          finalStaffName: currentStaff?.name || displayStaffName
+        });
+      }
+      
       // 出勤可能時間が設定されている日のみをフィルタリング
       const recordsToUpsert = schedules
         .filter(schedule => Object.values(schedule.timeSlots).some(Boolean))
         .map(schedule => ({
           staff_id: staffId,
-          staff_name: staffName,
+          staff_name: currentStaff?.name || displayStaffName, // Supabaseのstaff.nameを優先
           date: schedule.date,
           morning: schedule.timeSlots.morning,
           afternoon: schedule.timeSlots.afternoon,
@@ -294,12 +330,24 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, staffNa
   // 今月の公演数を計算
   const eventCount = currentMonthEvents.length;
 
+  // ローディング状態
+  if (staffLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-muted-foreground">スタッフ情報を読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">{staffName}のダッシュボード</h1>
+          <h1 className="text-3xl font-bold">{displayStaffName}のダッシュボード</h1>
           <p className="text-muted-foreground">
             {dayjs().format('YYYY年MM月')}のスケジュール管理
           </p>
@@ -333,7 +381,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, staffNa
                 今月の公演スケジュール
               </CardTitle>
               <CardDescription>
-                {staffName}が担当する今月の公演一覧です。
+                {displayStaffName}が担当する今月の公演一覧です。
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -377,7 +425,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, staffNa
                 利用可能シナリオ
               </CardTitle>
               <CardDescription>
-                {staffName}が担当可能なシナリオの一覧です。
+                {displayStaffName}が担当可能なシナリオの一覧です。
               </CardDescription>
             </CardHeader>
             <CardContent>
