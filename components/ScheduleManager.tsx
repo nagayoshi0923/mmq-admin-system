@@ -1353,27 +1353,13 @@ export function ScheduleManager() {
                   </Button>
                 )}
               </div>
-              <div className="flex justify-between">
-                <div>
-                  {/* 既存イベントの場合のみ削除ボタンを表示 */}
-                  {editingEvent && !editingEvent.id.startsWith('new-') && (
-                    <Button 
-                      onClick={() => openDeleteDialog(editingEvent)}
-                      className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white border-red-600 hover:border-red-700"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      削除
-                    </Button>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={closeDialog}>
-                    キャンセル
-                  </Button>
-                  <Button onClick={saveEvent}>
-                    保存
-                  </Button>
-                </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={closeDialog}>
+                  キャンセル
+                </Button>
+                <Button onClick={saveEvent}>
+                  保存
+                </Button>
               </div>
             </div>
             </TabsContent>
