@@ -8,10 +8,56 @@ import { Textarea } from './ui/textarea';
 import { Checkbox } from './ui/checkbox';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { X, Plus, Eye, EyeOff } from 'lucide-react';
+import { X, Plus, Eye, EyeOff, ChevronDown } from 'lucide-react';
 import { useScenarios } from '../contexts/ScenarioContext';
 import { Staff } from '../contexts/StaffContext';
 import { ItemEditHistory } from './ItemEditHistory';
+
+const MultiSelectDropdown = ({ 
+  isOpen, 
+  onClose, 
+  children, 
+  triggerRef 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  children: React.ReactNode;
+  triggerRef: React.RefObject<HTMLButtonElement>;
+}) => {
+  const contentRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        contentRef.current &&
+        !contentRef.current.contains(event.target as Node) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(event.target as Node)
+      ) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose, triggerRef]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      ref={contentRef}
+      className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-y-auto"
+    >
+      {children}
+    </div>
+  );
+};
 
 interface StaffDialogProps {
   staff?: Staff;
@@ -52,6 +98,8 @@ const StaffDialog = memo(function StaffDialog({ staff, onSave, trigger }: StaffD
   const [passwordInput, setPasswordInput] = useState('');
   const [showPasswordInput, setShowPasswordInput] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
+  const roleDropdownRef = React.useRef<HTMLButtonElement>(null);
 
   // フォームデータ更新のハンドラーをメモ化
   const updateFormData = useCallback((field: keyof Staff, value: any) => {
@@ -199,23 +247,52 @@ const StaffDialog = memo(function StaffDialog({ staff, onSave, trigger }: StaffD
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="role">役割</Label>
-                <div className="space-y-2">
-                  {roleOptions.map((roleOption) => (
-                    <div key={roleOption} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={roleOption}
-                        checked={formData.role.includes(roleOption)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setFormData(prev => ({ ...prev, role: [...prev.role, roleOption] }));
-                          } else {
+                <div className="relative">
+                  <Button
+                    ref={roleDropdownRef}
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-between border border-slate-200"
+                    onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
+                  >
+                    <span>
+                      {formData.role.length === 0 
+                        ? '役割を選択してください' 
+                        : formData.role.join(', ')
+                      }
+                    </span>
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                  <MultiSelectDropdown
+                    isOpen={roleDropdownOpen}
+                    onClose={() => setRoleDropdownOpen(false)}
+                    triggerRef={roleDropdownRef}
+                  >
+                    {roleOptions.map((roleOption) => (
+                      <div
+                        key={roleOption}
+                        className="flex items-center space-x-2 p-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => {
+                          if (formData.role.includes(roleOption)) {
                             setFormData(prev => ({ ...prev, role: prev.role.filter(r => r !== roleOption) }));
+                          } else {
+                            setFormData(prev => ({ ...prev, role: [...prev.role, roleOption] }));
                           }
                         }}
-                      />
-                      <Label htmlFor={roleOption}>{roleOption}</Label>
-                    </div>
-                  ))}
+                      >
+                        <div className={`w-4 h-4 border rounded flex items-center justify-center ${
+                          formData.role.includes(roleOption) 
+                            ? 'bg-blue-500 border-blue-500' 
+                            : 'border-gray-300'
+                        }`}>
+                          {formData.role.includes(roleOption) && (
+                            <div className="w-2 h-2 bg-white rounded-sm" />
+                          )}
+                        </div>
+                        <span className="text-sm">{roleOption}</span>
+                      </div>
+                    ))}
+                  </MultiSelectDropdown>
                 </div>
               </div>
               <div>
