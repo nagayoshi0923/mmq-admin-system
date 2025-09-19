@@ -7,22 +7,16 @@ import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Checkbox } from './ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 // 最適化されたアイコンインポート
 import Clock from 'lucide-react/dist/esm/icons/clock';
 import Users from 'lucide-react/dist/esm/icons/users';
 import Plus from 'lucide-react/dist/esm/icons/plus';
 import BookOpen from 'lucide-react/dist/esm/icons/book-open';
-import Pencil from 'lucide-react/dist/esm/icons/pencil';
-import Eye from 'lucide-react/dist/esm/icons/eye';
-import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
 import ArrowUpDown from 'lucide-react/dist/esm/icons/arrow-up-down';
 import ArrowUp from 'lucide-react/dist/esm/icons/arrow-up';
 import ArrowDown from 'lucide-react/dist/esm/icons/arrow-down';
 import GripVertical from 'lucide-react/dist/esm/icons/grip-vertical';
 import TestTube from 'lucide-react/dist/esm/icons/test-tube';
-import X from 'lucide-react/dist/esm/icons/x';
-import Check from 'lucide-react/dist/esm/icons/check';
 import Package from 'lucide-react/dist/esm/icons/package';
 import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
 import Calendar from 'lucide-react/dist/esm/icons/calendar';
@@ -135,9 +129,11 @@ interface DraggableScenarioRowProps {
   scenario: Scenario;
   moveRow: (dragIndex: number, hoverIndex: number) => void;
   children: React.ReactNode;
+  setSelectedScenario: (scenario: Scenario) => void;
+  setIsEditDialogOpen: (open: boolean) => void;
 }
 
-function DraggableScenarioRow({ index, scenario, moveRow, children }: DraggableScenarioRowProps) {
+function DraggableScenarioRow({ index, scenario, moveRow, children, setSelectedScenario, setIsEditDialogOpen }: DraggableScenarioRowProps) {
   const ref = React.useRef<HTMLTableRowElement>(null);
   
   const [{ isDragging }, drag, dragPreview] = useDrag({
@@ -176,7 +172,13 @@ function DraggableScenarioRow({ index, scenario, moveRow, children }: DraggableS
       className={isDragging ? 'cursor-grabbing' : ''}
     >
       <TableCell className="w-8">
-        <div className="cursor-grab hover:text-muted-foreground" style={{ touchAction: 'none' }}>
+        <div 
+          className="cursor-pointer hover:text-blue-600" 
+          onClick={() => {
+            setSelectedScenario(scenario);
+            setIsEditDialogOpen(true);
+          }}
+        >
           <GripVertical className="w-4 h-4" />
         </div>
       </TableCell>
@@ -433,7 +435,7 @@ export const ScenarioManager = React.memo(() => {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-2">
-                  <Pencil className="w-5 h-5 text-purple-500" />
+                  <BookOpen className="w-5 h-5 text-purple-500" />
                   <div>
                     <p className="text-sm text-muted-foreground">作者数</p>
                     <p className="text-lg">{uniqueAuthors.length}</p>
@@ -477,7 +479,7 @@ export const ScenarioManager = React.memo(() => {
                       onClick={() => handleSort('licenseAmount')}
                     >
                       <div className="flex items-center gap-2">
-                        ライセンス料
+                        ライセンス
                         {getSortIcon('licenseAmount')}
                       </div>
                     </TableHead>
@@ -486,7 +488,7 @@ export const ScenarioManager = React.memo(() => {
                       onClick={() => handleSort('playCount')}
                     >
                       <div className="flex items-center gap-2">
-                        公演回数
+                        公演数
                         {getSortIcon('playCount')}
                       </div>
                     </TableHead>
@@ -495,7 +497,7 @@ export const ScenarioManager = React.memo(() => {
                       onClick={() => handleSort('releaseDate')}
                     >
                       <div className="flex items-center gap-2">
-                        リリース日
+                        公開日
                         {getSortIcon('releaseDate')}
                       </div>
                     </TableHead>
@@ -504,7 +506,7 @@ export const ScenarioManager = React.memo(() => {
                       onClick={() => handleSort('playerCount')}
                     >
                       <div className="flex items-center gap-2">
-                        プレイ人数
+                        人数
                         {getSortIcon('playerCount')}
                       </div>
                     </TableHead>
@@ -519,7 +521,6 @@ export const ScenarioManager = React.memo(() => {
                     </TableHead>
                     <TableHead>対応GM</TableHead>
                     <TableHead>キット</TableHead>
-                    <TableHead className="w-20">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -539,48 +540,58 @@ export const ScenarioManager = React.memo(() => {
                         index={index}
                         scenario={scenario}
                         moveRow={moveRow}
+                        setSelectedScenario={setSelectedScenario}
+                        setIsEditDialogOpen={setIsEditDialogOpen}
                       >
                         {/* タイトル */}
                         <TableCell>
                           <div className="max-w-xs">
-                            <p className="text-xs truncate">{scenario.title}</p>
+                            <p 
+                              className="text-sm truncate cursor-pointer hover:text-blue-600 hover:underline"
+                              onClick={() => {
+                                setViewScenario(scenario);
+                                setIsViewDialogOpen(true);
+                              }}
+                            >
+                              {scenario.title}
+                            </p>
                           </div>
                         </TableCell>
 
                         {/* 作者名 */}
                         <TableCell>
                           <div className="w-[80px]">
-                            <span className="text-xs truncate block">{scenario.author}</span>
+                            <span className="text-sm truncate block">{scenario.author}</span>
                           </div>
                         </TableCell>
 
-                        {/* ライセンス料 */}
+                        {/* ライセンス */}
                         <TableCell>
                           <div className="w-[80px]">
-                            <span className="text-xs text-green-600">
+                            <span className="text-sm text-green-600">
                               {formatLicenseAmount(scenario.licenseAmount || 0)}
                             </span>
                           </div>
                         </TableCell>
 
-                        {/* 公演回数 */}
+                        {/* 公演数 */}
                         <TableCell>
-                          <span className="text-xs">{scenario.playCount}回</span>
+                          <span className="text-sm">{scenario.playCount}回</span>
                         </TableCell>
 
-                        {/* リリース日 */}
+                        {/* 公開日 */}
                         <TableCell>
-                          <span className="text-xs">
+                          <span className="text-sm">
                             {scenario.releaseDate ? new Date(scenario.releaseDate).toLocaleDateString('ja-JP') : '未設定'}
                           </span>
                         </TableCell>
 
 
-                        {/* プレイ人数 */}
+                        {/* 人数 */}
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <Users className="w-3 h-3" />
-                            <span className="text-xs">{formatPlayerCount(scenario.playerCount)}</span>
+                            <span className="text-sm">{formatPlayerCount(scenario.playerCount)}</span>
                           </div>
                         </TableCell>
 
@@ -588,7 +599,7 @@ export const ScenarioManager = React.memo(() => {
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
-                            <span className="text-xs">{formatDuration(scenario.duration)}</span>
+                            <span className="text-sm">{formatDuration(scenario.duration)}</span>
                           </div>
                         </TableCell>
 
@@ -603,7 +614,7 @@ export const ScenarioManager = React.memo(() => {
                                 </Badge>
                               ))
                             ) : (
-                              <span className="text-muted-foreground text-xs">未設定</span>
+                              <span className="text-muted-foreground text-sm">未設定</span>
                             )}
                           </div>
                         </TableCell>
@@ -615,13 +626,13 @@ export const ScenarioManager = React.memo(() => {
                               <TooltipTrigger>
                                 <div className="flex items-center gap-1">
                                   <Package className="w-3 h-3 text-blue-500" />
-                                  <span className="text-xs">{kitInfo.totalKits}</span>
+                                  <span className="text-sm">{kitInfo.totalKits}</span>
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent>
                                 <div className="space-y-1">
                                   {kitInfo.kitsByStore.map((entry) => (
-                                    <div key={entry.storeId} className="text-xs">
+                                    <div key={entry.storeId} className="text-sm">
                                       {entry.storeName}: {entry.kits.length}キット
                                     </div>
                                   ))}
@@ -629,82 +640,10 @@ export const ScenarioManager = React.memo(() => {
                               </TooltipContent>
                             </Tooltip>
                           ) : (
-                            <span className="text-muted-foreground text-xs">なし</span>
+                            <span className="text-muted-foreground text-sm">なし</span>
                           )}
                         </TableCell>
 
-                        {/* 操作 */}
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0"
-                                  onClick={() => {
-                                    setViewScenario(scenario);
-                                    setIsViewDialogOpen(true);
-                                  }}
-                                >
-                                  <Eye className="w-4 h-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>詳細を表示</TooltipContent>
-                            </Tooltip>
-
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0"
-                                  onClick={() => {
-                                    setSelectedScenario(scenario);
-                                    setIsEditDialogOpen(true);
-                                  }}
-                                >
-                                  <Pencil className="w-4 h-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>編集</TooltipContent>
-                            </Tooltip>
-
-                            <AlertDialog>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <AlertDialogTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-8 w-8 p-0 hover:bg-destructive/10"
-                                    >
-                                      <Trash2 className="w-4 h-4 text-destructive" />
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                </TooltipTrigger>
-                                <TooltipContent>削除</TooltipContent>
-                              </Tooltip>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>シナリオを削除しますか？</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    「{scenario.title}」を削除します。この操作は元に戻せません。
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>キャンセル</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleDeleteScenario(scenario)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    削除
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </TableCell>
                       </DraggableScenarioRow>
                     );
                   })}
@@ -719,7 +658,7 @@ export const ScenarioManager = React.memo(() => {
               <DialogHeader>
                 <DialogTitle>{viewScenario?.title}</DialogTitle>
                 <DialogDescription>
-                  作者: {viewScenario?.author} | ライセンス料: {viewScenario ? formatLicenseAmount(viewScenario.licenseAmount || 0) : ''}
+                  作者: {viewScenario?.author} | ライセンス: {viewScenario ? formatLicenseAmount(viewScenario.licenseAmount || 0) : ''}
                 </DialogDescription>
               </DialogHeader>
               {viewScenario && (
@@ -733,9 +672,9 @@ export const ScenarioManager = React.memo(() => {
                       <h4 className="font-medium mb-2">基本情報</h4>
                       <div className="space-y-1 text-sm">
                         <p>難易度: {difficultyLabels[viewScenario.difficulty]}</p>
-                        <p>プレイ人数: {formatPlayerCount(viewScenario.playerCount)}</p>
+                        <p>人数: {formatPlayerCount(viewScenario.playerCount)}</p>
                         <p>所要時間: {formatDuration(viewScenario.duration)}</p>
-                        <p>プレイ回数: {viewScenario.playCount}回</p>
+                        <p>公演数: {viewScenario.playCount}回</p>
                         <p>評価: {viewScenario.rating}/5.0</p>
                       </div>
                     </div>
@@ -759,7 +698,7 @@ export const ScenarioManager = React.memo(() => {
                       <h4 className="font-medium mb-2">必要なプロップス</h4>
                       <div className="flex flex-wrap gap-1">
                         {viewScenario.requiredProps.map((prop, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
+                          <Badge key={index} variant="secondary" className="text-sm">
                             {prop}
                           </Badge>
                         ))}
