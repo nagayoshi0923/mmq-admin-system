@@ -30,53 +30,8 @@ import { useEditHistory, EditHistoryEntry } from '../contexts/EditHistoryContext
 import { useScenarios } from '../contexts/ScenarioContext';
 import { useSchedule } from '../contexts/ScheduleContext';
 import { useStaff } from '../contexts/StaffContext';
+import MultiSelectDropdown, { MultiSelectTrigger, MultiSelectItem } from './ui/multi-select-dropdown';
 
-// 複数選択用のカスタムドロップダウン
-const MultiSelectDropdown = ({ 
-  isOpen, 
-  onClose, 
-  children, 
-  triggerRef 
-}: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  children: React.ReactNode;
-  triggerRef: React.RefObject<HTMLButtonElement>;
-}) => {
-  const contentRef = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        contentRef.current &&
-        !contentRef.current.contains(event.target as Node) &&
-        triggerRef.current &&
-        !triggerRef.current.contains(event.target as Node)
-      ) {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen, onClose, triggerRef]);
-
-  if (!isOpen) return null;
-
-  return (
-    <div
-      ref={contentRef}
-      className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-y-auto"
-    >
-      {children}
-    </div>
-  );
-};
 
 type EventCategory = 'オープン公演' | '貸切公演' | 'GMテスト' | 'テストプレイ' | '出張公演';
 
@@ -1282,46 +1237,37 @@ export function ScheduleManager() {
             <div className="space-y-2">
               <Label>担当GM</Label>
               <div className="relative">
-                <Button
+                <MultiSelectTrigger
                   ref={gmTriggerRef}
-                  variant="outline"
-                  className="w-full justify-between border border-slate-200"
                   onClick={() => setGmDropdownOpen(!gmDropdownOpen)}
-                >
-                  <span>GMを選択してください</span>
-                  <ChevronDown className="w-4 h-4" />
-                </Button>
+                  selectedItems={formData.gms}
+                  placeholder="GMを選択してください"
+                />
                 
                 <MultiSelectDropdown
                   isOpen={gmDropdownOpen}
                   onClose={() => setGmDropdownOpen(false)}
                   triggerRef={gmTriggerRef}
+                  selectedItems={formData.gms}
                 >
-                  <div className="p-1">
-                    {staff
-                      .filter(staffMember => staffMember.status === 'active')
-                      .map(staffMember => {
-                        const isSelected = formData.gms.includes(staffMember.name);
-                        return (
-                          <div
-                            key={staffMember.id}
-                            className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-100 cursor-pointer rounded-sm"
-                            onClick={() => {
-                              if (formData.gms.includes(staffMember.name)) {
-                                setFormData(prev => ({ ...prev, gms: prev.gms.filter(g => g !== staffMember.name) }));
-                              } else {
-                                setFormData(prev => ({ ...prev, gms: [...prev.gms, staffMember.name] }));
-                              }
-                            }}
-                          >
-                            {isSelected && <span className="text-blue-600">✓</span>}
-                            <span className={isSelected ? 'text-blue-600 font-medium' : ''}>
-                              {staffMember.name}
-                            </span>
-                          </div>
-                        );
-                      })}
-                  </div>
+                  {staff
+                    .filter(staffMember => staffMember.status === 'active')
+                    .map(staffMember => (
+                      <MultiSelectItem
+                        key={staffMember.id}
+                        value={staffMember.name}
+                        checked={formData.gms.includes(staffMember.name)}
+                        onToggle={(value) => {
+                          if (formData.gms.includes(value)) {
+                            setFormData(prev => ({ ...prev, gms: prev.gms.filter(g => g !== value) }));
+                          } else {
+                            setFormData(prev => ({ ...prev, gms: [...prev.gms, value] }));
+                          }
+                        }}
+                      >
+                        {staffMember.name}
+                      </MultiSelectItem>
+                    ))}
                 </MultiSelectDropdown>
               </div>
               
@@ -1353,46 +1299,37 @@ export function ScheduleManager() {
             <div className="space-y-2">
               <Label>見学者</Label>
               <div className="relative">
-                <Button
+                <MultiSelectTrigger
                   ref={observerTriggerRef}
-                  variant="outline"
-                  className="w-full justify-between border border-slate-200"
                   onClick={() => setObserverDropdownOpen(!observerDropdownOpen)}
-                >
-                  <span>見学者を選択してください</span>
-                  <ChevronDown className="w-4 h-4" />
-                </Button>
+                  selectedItems={formData.observers}
+                  placeholder="見学者を選択してください"
+                />
                 
                 <MultiSelectDropdown
                   isOpen={observerDropdownOpen}
                   onClose={() => setObserverDropdownOpen(false)}
                   triggerRef={observerTriggerRef}
+                  selectedItems={formData.observers}
                 >
-                  <div className="p-1">
-                    {staff
-                      .filter(staffMember => staffMember.status === 'active')
-                      .map(staffMember => {
-                        const isSelected = formData.observers.includes(staffMember.name);
-                        return (
-                          <div
-                            key={staffMember.id}
-                            className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-100 cursor-pointer rounded-sm"
-                            onClick={() => {
-                              if (formData.observers.includes(staffMember.name)) {
-                                setFormData(prev => ({ ...prev, observers: prev.observers.filter(o => o !== staffMember.name) }));
-                              } else {
-                                setFormData(prev => ({ ...prev, observers: [...prev.observers, staffMember.name] }));
-                              }
-                            }}
-                          >
-                            {isSelected && <span className="text-green-600">✓</span>}
-                            <span className={isSelected ? 'text-green-600 font-medium' : ''}>
-                              {staffMember.name}
-                            </span>
-                          </div>
-                        );
-                      })}
-                  </div>
+                  {staff
+                    .filter(staffMember => staffMember.status === 'active')
+                    .map(staffMember => (
+                      <MultiSelectItem
+                        key={staffMember.id}
+                        value={staffMember.name}
+                        checked={formData.observers.includes(staffMember.name)}
+                        onToggle={(value) => {
+                          if (formData.observers.includes(value)) {
+                            setFormData(prev => ({ ...prev, observers: prev.observers.filter(o => o !== value) }));
+                          } else {
+                            setFormData(prev => ({ ...prev, observers: [...prev.observers, value] }));
+                          }
+                        }}
+                      >
+                        {staffMember.name}
+                      </MultiSelectItem>
+                    ))}
                 </MultiSelectDropdown>
               </div>
               
