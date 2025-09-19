@@ -54,7 +54,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       if (!isSupabaseConfigured()) {
         setIsConnected(false);
         setError('Supabase環境変数が設定されていません。SUPABASE_SETUP.mdを参照してください。');
-        console.warn('⚠️ Supabase環境変数未設定 - ローカルストレージのみで動作します');
+        // Supabase環境変数未設定 - ローカルストレージのみで動作
         setIsLoading(false);
         return;
       }
@@ -64,8 +64,8 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       if (result.success) {
         setIsConnected(true);
         setError(null);
-        console.log('✅ Supabase接続成功');
-        console.log('データ移行機能は無効化されています。新規データのみSupabaseに保存されます。');
+        // Supabase接続成功
+        // データ移行機能は無効化されています。新規データのみSupabaseに保存されます。
       } else {
         setIsConnected(false);
         setError(result.error || 'Supabase接続に失敗しました');
@@ -85,22 +85,22 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     setError(null);
 
     try {
-      console.log('🚀 Supabaseデータ移行を開始...');
+      // Supabaseデータ移行を開始
       
       const result = await SupabaseMigration.migrateAllData();
       
       if (result.success) {
         setMigrationStatus(SupabaseMigration.getMigrationStatus());
         setError(null);
-        console.log('✅ 全データの移行が完了しました！');
+        // 全データの移行が完了
         
         // 移行完了の通知
         const totalCount = Object.values(result.results).reduce((sum, r) => sum + r.count, 0);
-        console.log(`📊 移行されたデータ: 合計${totalCount}件`);
-        console.log('- スタッフ:', result.results.staff.count, '件');
-        console.log('- シナリオ:', result.results.scenarios.count, '件');
-        console.log('- 店舗:', result.results.stores.count, '件');
-        console.log('- 編集履歴:', result.results.editHistory.count, '件');
+        // 移行されたデータ: 合計${totalCount}件
+        // スタッフ: ${result.results.staff.count}件
+        // シナリオ: ${result.results.scenarios.count}件
+        // 店舗: ${result.results.stores.count}件
+        // 編集履歴: ${result.results.editHistory.count}件
         
       } else {
         const failedMigrations = Object.entries(result.results)

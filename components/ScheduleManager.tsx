@@ -259,7 +259,6 @@ const convertDateFromISO = (isoDateStr: string): string => {
 const convertSupabaseEventToScheduleEvent = (supabaseEvent: any): ScheduleEvent => {
   // 必須フィールドの安全チェック
   if (!supabaseEvent || !supabaseEvent.id || !supabaseEvent.date) {
-    console.warn('Invalid supabase event data:', supabaseEvent);
     return {
       id: 'invalid-' + Date.now(),
       date: '1/1',
@@ -614,8 +613,6 @@ export function ScheduleManager() {
 
   // 選択された月のスケジュールを取得（ローカル + Supabase統合）
   const currentMonthSchedule = useMemo(() => {
-    console.log('🔄 Calculating currentMonthSchedule with safeSupabaseEvents:', safeSupabaseEvents.length);
-    
     // Supabaseイベントのみを使用（ローカルストレージは完全に無視）
     const supabaseEventsByDate: { [date: string]: ScheduleEvent[] } = {};
     safeSupabaseEvents.forEach(event => {
@@ -655,7 +652,6 @@ export function ScheduleManager() {
       }
     });
     
-    console.log('✅ Final schedule calculated:', schedule.length, 'days');
     return schedule;
   }, [selectedMonth, safeSupabaseEvents]); // scheduleEventsを依存配列から削除
 
@@ -813,7 +809,7 @@ export function ScheduleManager() {
         };
         
         addSupabaseEvent(supabaseEventData).then(() => {
-          console.log('新規イベントをSupabaseに保存しました:', supabaseEventData);
+          // イベント保存完了
         }).catch(error => {
           console.error('Supabase保存エラー:', error);
         });
@@ -831,7 +827,7 @@ export function ScheduleManager() {
         };
         
         updateSupabaseEvent(updatedEvent.id, supabaseUpdates).then(() => {
-          console.log('イベントをSupabaseで更新しました:', updatedEvent.id);
+          // イベント更新完了
         }).catch(error => {
           console.error('Supabase更新エラー:', error);
         });
@@ -859,7 +855,7 @@ export function ScheduleManager() {
     // まずSupabaseから削除（リアルタイム同期のため）
     try {
       deleteSupabaseEvent(eventToDelete.id).then(() => {
-        console.log('イベントをSupabaseから削除しました:', eventToDelete.id);
+        // イベント削除完了
       }).catch(error => {
         console.error('Supabase削除エラー:', error);
       });
@@ -934,7 +930,7 @@ export function ScheduleManager() {
       };
       
       updateSupabaseEvent(eventToCancel.id, supabaseUpdates).then(() => {
-        console.log('イベントを中止しました:', eventToCancel.id);
+        // イベント中止完了
       }).catch(error => {
         console.error('Supabase中止更新エラー:', error);
       });
@@ -970,7 +966,7 @@ export function ScheduleManager() {
       };
       
       updateSupabaseEvent(event.id, supabaseUpdates).then(() => {
-        console.log('イベントの中止を解除しました:', event.id);
+        // イベント中止解除完了
       }).catch(error => {
         console.error('Supabase中止解除更新エラー:', error);
       });

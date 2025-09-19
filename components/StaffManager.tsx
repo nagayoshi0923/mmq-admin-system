@@ -394,11 +394,11 @@ export const StaffManager = React.memo(() => {
               <Button
                 variant="outline"
                 onClick={() => {
-                  console.log('=== スタッフ側連携テスト ===');
-                  console.log('現在のスタッフ数:', staff.length);
+                  // スタッフ側連携テスト
+                  // 現在のスタッフ数: staff.length
                   staff.forEach(member => {
                     if (member.role.includes('GM') || member.role.includes('マネージャー')) {
-                      console.log(`${member.name} (${member.role})の公演可能シナリオ:`, member.availableScenarios);
+                      // ${member.name} (${member.role})の公演可能シナリオ: member.availableScenarios
                     }
                   });
                 }}
