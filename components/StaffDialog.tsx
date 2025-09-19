@@ -15,7 +15,7 @@ import { ItemEditHistory } from './ItemEditHistory';
 
 interface StaffDialogProps {
   staff?: Staff;
-  onSave: (staff: Staff) => void;
+  onSave: (staff: Staff) => Promise<void>;
   trigger: React.ReactNode;
 }
 
@@ -51,6 +51,7 @@ const StaffDialog = memo(function StaffDialog({ staff, onSave, trigger }: StaffD
   const [isContactVisible, setIsContactVisible] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [showPasswordInput, setShowPasswordInput] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // フォームデータ更新のハンドラーをメモ化
   const updateFormData = useCallback((field: keyof Staff, value: any) => {
@@ -71,7 +72,19 @@ const StaffDialog = memo(function StaffDialog({ staff, onSave, trigger }: StaffD
       if (staff) {
         setFormData({
           ...staff,
-          availableScenarios: staff.availableScenarios || [] // 安全なデフォルト値
+          role: Array.isArray(staff.role) ? staff.role : 
+                typeof staff.role === 'string' ? 
+                  ((staff.role as string).startsWith('[') ? 
+                    (() => { try { return JSON.parse(staff.role as string); } catch { return [staff.role as string]; } })() : 
+                    [staff.role as string]) : ['GM'],
+          stores: Array.isArray(staff.stores) ? staff.stores : 
+                  typeof staff.stores === 'string' ? 
+                    ((staff.stores as string).startsWith('[') ? 
+                      (() => { try { return JSON.parse(staff.stores as string); } catch { return [staff.stores as string]; } })() : 
+                      [staff.stores as string]) : [],
+          availableScenarios: staff.availableScenarios || [], // 安全なデフォルト値
+          availability: staff.availability || [], // 安全なデフォルト値
+          experience: typeof staff.experience === 'number' ? staff.experience : 0 // 安全なデフォルト値
         });
       } else {
         setFormData({
@@ -102,10 +115,22 @@ const StaffDialog = memo(function StaffDialog({ staff, onSave, trigger }: StaffD
     }
   }, [staff, open]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
-    setOpen(false);
+    if (isSaving) return; // 重複保存を防止
+    
+    setIsSaving(true);
+    try {
+      console.log('スタッフ保存開始:', formData);
+      await onSave(formData);
+      console.log('スタッフ保存完了');
+      setOpen(false);
+    } catch (error) {
+      console.error('スタッフ保存中にエラーが発生しました:', error);
+      alert('保存中にエラーが発生しました。もう一度お試しください。');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const toggleArrayItem = (array: string[], item: string) => {
@@ -362,8 +387,8 @@ const StaffDialog = memo(function StaffDialog({ staff, onSave, trigger }: StaffD
                 <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                   キャンセル
                 </Button>
-                <Button type="submit">
-                  {staff ? '更新' : '追加'}
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving ? '保存中...' : (staff ? '更新' : '追加')}
                 </Button>
               </div>
             </form>

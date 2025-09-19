@@ -105,7 +105,7 @@ export function isValidStaff(value: unknown): value is StaffTypeGuard {
     typeof (staff.contact as any).email === 'string' &&
     isArray(staff.availability) &&
     staff.availability.every(a => typeof a === 'string') &&
-    isValidNumber(staff.experience) &&
+    (typeof staff.experience === 'number' || staff.experience === undefined) &&
     isArray(staff.specialScenarios) &&
     staff.specialScenarios.every(s => typeof s === 'string') &&
     (staff.status === 'active' || staff.status === 'inactive' || staff.status === 'on-leave')

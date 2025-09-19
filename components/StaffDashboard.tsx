@@ -61,11 +61,12 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, staffNa
   // Supabaseからスタッフ情報を直接取得
   const {
     data: staffData,
-    loading: staffLoading
+    loading: staffLoading,
+    refetch: refetchStaff
   } = useSupabaseData<any>({
     table: 'staff',
     realtime: true,
-    filter: { column: 'id', operator: 'eq', value: staffId }
+    filter: { column: 'id', operator: 'eq', value: staffId } as any
   });
   
   const [schedules, setSchedules] = useState<DaySchedule[]>([]);
@@ -118,6 +119,13 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, staffNa
       staffLength: staff.length
     });
   }
+
+  // スタッフ情報が更新されたときに再取得
+  useEffect(() => {
+    if (staffId) {
+      refetchStaff();
+    }
+  }, [staffId, refetchStaff]);
 
   // 今月の日付を生成
   const generateCurrentMonthDates = useCallback(() => {
@@ -392,7 +400,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, staffNa
                       <div>
                         <div className="font-medium">{event.scenario}</div>
                         <div className="text-sm text-muted-foreground">
-                          {dayjs(event.date).format('MM/DD (ddd)')} {event.startTime} - {event.endTime}
+                          {dayjs(event.date).format('MM/DD (ddd)')} {event.start_time} - {event.end_time}
                         </div>
                         <div className="text-sm text-muted-foreground">
                           {event.venue} | {event.category}
@@ -471,7 +479,12 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, staffNa
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleEditScenario(scenario)}
+                          onClick={() => handleEditScenario({
+                            id: scenario.id || '',
+                            title: scenario.title,
+                            difficulty: scenario.difficulty?.toString() || '',
+                            notes: scenario.notes || ''
+                          })}
                         >
                           <Edit className="w-4 h-4" />
                         </Button>

@@ -221,10 +221,28 @@ export const StaffManager = React.memo(() => {
   });
   
   // スタッフ保存関数（useCallbackで最適化）
-  const handleSaveStaff = useCallback((staffData: Staff) => {
+  const handleSaveStaff = useCallback(async (staffData: Staff) => {
+    console.log('handleSaveStaff called with:', staffData);
+    
     // 型安全性を確保
     if (!isValidStaff(staffData)) {
       console.error('Invalid staff data:', staffData);
+      console.error('Staff data validation failed. Checking individual fields:');
+      console.error('id:', staffData.id, 'isNonEmptyString:', typeof staffData.id === 'string' && staffData.id.length > 0);
+      console.error('name:', staffData.name, 'isNonEmptyString:', typeof staffData.name === 'string' && staffData.name.length > 0);
+      console.error('lineName:', staffData.lineName, 'isString:', typeof staffData.lineName === 'string');
+      console.error('xAccount:', staffData.xAccount, 'isString:', typeof staffData.xAccount === 'string');
+      console.error('role:', staffData.role, 'isArray:', Array.isArray(staffData.role));
+      console.error('stores:', staffData.stores, 'isArray:', Array.isArray(staffData.stores));
+      console.error('ngDays:', staffData.ngDays, 'isArray:', Array.isArray(staffData.ngDays));
+      console.error('wantToLearn:', staffData.wantToLearn, 'isArray:', Array.isArray(staffData.wantToLearn));
+      console.error('availableScenarios:', staffData.availableScenarios, 'isArray:', Array.isArray(staffData.availableScenarios));
+      console.error('notes:', staffData.notes, 'isString:', typeof staffData.notes === 'string');
+      console.error('contact:', staffData.contact, 'isObject:', typeof staffData.contact === 'object' && staffData.contact !== null);
+      console.error('availability:', staffData.availability, 'isArray:', Array.isArray(staffData.availability));
+      console.error('experience:', staffData.experience, 'isNumber:', typeof staffData.experience === 'number');
+      console.error('specialScenarios:', staffData.specialScenarios, 'isArray:', Array.isArray(staffData.specialScenarios));
+      console.error('status:', staffData.status, 'isValidStatus:', ['active', 'inactive', 'on-leave'].includes(staffData.status));
       return;
     }
 
@@ -240,38 +258,54 @@ export const StaffManager = React.memo(() => {
     
     const existingIndex = staff.findIndex(s => s.id === safeStaffData.id);
     
-    if (existingIndex >= 0) {
-      // 更新
-      updateStaff(safeStaffData);
-      
-      // 編集履歴に追加
-      addEditEntry({
-        user: 'ユーザー', // 実際のアプリではログインユーザー名を使用
-        action: 'update',
-        target: `${safeStaffData.name} - 情報更新`,
-        summary: `${safeStaffData.name}の情報を更新しました`,
-        category: 'staff',
-        changes: [
-          { field: '全般', newValue: '情報が更新されました' }
-        ]
-      });
-    } else {
-      // 新規追加
-      addStaff(safeStaffData);
-      
-      // 編集履歴に追加
-      addEditEntry({
-        user: 'ユーザー',
-        action: 'create',
-        target: `${safeStaffData.name} - 新規スタッフ`,
-        summary: `新規スタッフを追加：${safeStaffData.name}`,
-        category: 'staff',
-        changes: [
-          { field: '名前', newValue: safeStaffData.name },
-          { field: '役割', newValue: Array.isArray(safeStaffData.role) ? safeStaffData.role.join(', ') : safeStaffData.role || '未設定' },
-          { field: '勤務店舗', newValue: Array.isArray(safeStaffData.stores) ? safeStaffData.stores.join(', ') : safeStaffData.stores || '未設定' }
-        ]
-      });
+    try {
+      if (existingIndex >= 0) {
+        // 更新
+        console.log('Updating existing staff:', safeStaffData);
+        const result = await updateStaff(safeStaffData);
+        console.log('Update result:', result);
+        if (result.success) {
+          // 編集履歴に追加
+          addEditEntry({
+            user: 'ユーザー', // 実際のアプリではログインユーザー名を使用
+            action: 'update',
+            target: `${safeStaffData.name} - 情報更新`,
+            summary: `${safeStaffData.name}の情報を更新しました`,
+            category: 'staff',
+            changes: [
+              { field: '全般', newValue: '情報が更新されました' }
+            ]
+          });
+          console.log('スタッフ情報が正常に更新されました:', safeStaffData.name);
+        } else {
+          console.error('スタッフ情報の更新に失敗しました:', result.error);
+        }
+      } else {
+        // 新規追加
+        console.log('Adding new staff:', safeStaffData);
+        const result = await addStaff(safeStaffData);
+        console.log('Add result:', result);
+        if (result.success) {
+          // 編集履歴に追加
+          addEditEntry({
+            user: 'ユーザー',
+            action: 'create',
+            target: `${safeStaffData.name} - 新規スタッフ`,
+            summary: `新規スタッフを追加：${safeStaffData.name}`,
+            category: 'staff',
+            changes: [
+              { field: '名前', newValue: safeStaffData.name },
+              { field: '役割', newValue: Array.isArray(safeStaffData.role) ? safeStaffData.role.join(', ') : safeStaffData.role || '未設定' },
+              { field: '勤務店舗', newValue: Array.isArray(safeStaffData.stores) ? safeStaffData.stores.join(', ') : safeStaffData.stores || '未設定' }
+            ]
+          });
+          console.log('新規スタッフが正常に追加されました:', safeStaffData.name);
+        } else {
+          console.error('新規スタッフの追加に失敗しました:', result.error);
+        }
+      }
+    } catch (error) {
+      console.error('スタッフ保存中にエラーが発生しました:', error);
     }
   }, [staff, updateStaff, addStaff, addEditEntry]);
 
@@ -834,7 +868,7 @@ export const StaffManager = React.memo(() => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {['GM', 'サポート', 'マネージャー', '社長', '企画', '事務'].map(role => {
+                      {(['GM', 'サポート', 'マネージャー', '社長', '企画', '事務'] as const).map(role => {
                         const count = staff.filter(s => s.role.includes(role)).length;
                         const percentage = staff.length > 0 ? Math.round(count / staff.length * 100) : 0;
                         return (

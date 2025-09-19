@@ -80,19 +80,48 @@ export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
       name: dbStaff.name || '',
       lineName: dbStaff.line_name || '',
       xAccount: dbStaff.x_account || '',
-      role: dbStaff.role || [],
-      stores: dbStaff.stores || [],
-      ngDays: dbStaff.ng_days || [],
-      wantToLearn: dbStaff.want_to_learn || [],
-      availableScenarios: dbStaff.available_scenarios || [],
+      role: Array.isArray(dbStaff.role) ? dbStaff.role : 
+            typeof dbStaff.role === 'string' ? 
+              (dbStaff.role.startsWith('[') ? 
+                (() => { try { return JSON.parse(dbStaff.role); } catch { return [dbStaff.role]; } })() : 
+                [dbStaff.role]) : [],
+      stores: Array.isArray(dbStaff.stores) ? dbStaff.stores : 
+              typeof dbStaff.stores === 'string' ? 
+                (dbStaff.stores.startsWith('[') ? 
+                  (() => { try { return JSON.parse(dbStaff.stores); } catch { return [dbStaff.stores]; } })() : 
+                  [dbStaff.stores]) : [],
+      ngDays: Array.isArray(dbStaff.ng_days) ? dbStaff.ng_days : 
+              typeof dbStaff.ng_days === 'string' ? 
+                (dbStaff.ng_days.startsWith('[') ? 
+                  (() => { try { return JSON.parse(dbStaff.ng_days); } catch { return [dbStaff.ng_days]; } })() : 
+                  [dbStaff.ng_days]) : [],
+      wantToLearn: Array.isArray(dbStaff.want_to_learn) ? dbStaff.want_to_learn : 
+                   typeof dbStaff.want_to_learn === 'string' ? 
+                     (dbStaff.want_to_learn.startsWith('[') ? 
+                       (() => { try { return JSON.parse(dbStaff.want_to_learn); } catch { return [dbStaff.want_to_learn]; } })() : 
+                       [dbStaff.want_to_learn]) : [],
+      availableScenarios: Array.isArray(dbStaff.available_scenarios) ? dbStaff.available_scenarios : 
+                         typeof dbStaff.available_scenarios === 'string' ? 
+                           (dbStaff.available_scenarios.startsWith('[') ? 
+                             (() => { try { return JSON.parse(dbStaff.available_scenarios); } catch { return [dbStaff.available_scenarios]; } })() : 
+                             [dbStaff.available_scenarios]) : [],
       notes: dbStaff.notes || '',
       contact: {
         phone: dbStaff.phone || '',
         email: dbStaff.email || ''
       },
-      availability: dbStaff.availability || [],
+      availability: Array.isArray(dbStaff.availability) ? dbStaff.availability : 
+                   typeof dbStaff.availability === 'string' ? 
+                     (dbStaff.availability.startsWith('[') ? 
+                       (() => { try { return JSON.parse(dbStaff.availability); } catch { return [dbStaff.availability]; } })() : 
+                       [dbStaff.availability]) : 
+                   dbStaff.availability || [],
       experience: dbStaff.experience || 0,
-      specialScenarios: dbStaff.special_scenarios || [],
+      specialScenarios: Array.isArray(dbStaff.special_scenarios) ? dbStaff.special_scenarios : 
+                       typeof dbStaff.special_scenarios === 'string' ? 
+                         (dbStaff.special_scenarios.startsWith('[') ? 
+                           (() => { try { return JSON.parse(dbStaff.special_scenarios); } catch { return [dbStaff.special_scenarios]; } })() : 
+                           [dbStaff.special_scenarios]) : [],
       status: dbStaff.status || 'active'
     })) : [];
   }, [rawStaff]);
@@ -182,6 +211,8 @@ export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
 
   const updateStaff = useCallback(async (updatedStaff: Staff) => {
     try {
+      console.log('StaffContext updateStaff called with:', updatedStaff);
+      
       // アプリケーションのフィールド名をデータベースのフィールド名に変換
       const dbStaffData = {
         name: updatedStaff.name,
@@ -201,12 +232,18 @@ export const StaffProvider: React.FC<StaffProviderProps> = ({ children }) => {
         status: updatedStaff.status
       };
       
+      console.log('Updating Supabase with data:', dbStaffData);
       const { data, error: updateError } = await update(updatedStaff.id, dbStaffData);
+      console.log('Supabase update result:', { data, error: updateError });
+      
       if (updateError) {
+        console.error('Supabase update error:', updateError);
         return { success: false, error: updateError };
       }
+      console.log('Staff update successful');
       return { success: true };
     } catch (err: any) {
+      console.error('Staff update exception:', err);
       return { success: false, error: err.message };
     }
   }, [update]);
