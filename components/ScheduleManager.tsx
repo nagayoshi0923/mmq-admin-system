@@ -450,6 +450,10 @@ export function ScheduleManager() {
     open: false, 
     event: null 
   });
+  const [uncancelDialog, setUncancelDialog] = useState<{ open: boolean; event: ScheduleEvent | null }>({ 
+    open: false, 
+    event: null 
+  });
   
   // ローカルストレージは完全に無効化（Supabaseのみ使用）
   // const [scheduleEvents, setScheduleEvents] = useState<{ [key: string]: DaySchedule[] }>(calendarData);
@@ -817,6 +821,11 @@ export function ScheduleManager() {
     setCancelDialog({ open: true, event });
   };
 
+  // 中止解除確認ダイアログを開く
+  const openUncancelDialog = (event: ScheduleEvent) => {
+    setUncancelDialog({ open: true, event });
+  };
+
   // 公演を中止
   const cancelEvent = () => {
     if (!cancelDialog.event) return;
@@ -854,7 +863,11 @@ export function ScheduleManager() {
   };
 
   // 公演の中止を解除
-  const uncancelEvent = (event: ScheduleEvent) => {
+  const uncancelEvent = () => {
+    if (!uncancelDialog.event) return;
+
+    const event = uncancelDialog.event;
+    
     // Supabaseでイベントの中止状態を解除
     try {
       const supabaseUpdates = {
@@ -881,6 +894,8 @@ export function ScheduleManager() {
         { field: 'ステータス', oldValue: '中止', newValue: '開催' }
       ]
     });
+
+    setUncancelDialog({ open: false, event: null });
   };
 
   return (
@@ -1079,7 +1094,7 @@ export function ScheduleManager() {
                                             className="absolute bottom-1 right-1 h-6 w-6 p-0 hover:bg-green-100 hover:text-green-600"
                                             onClick={(e) => {
                                               e.stopPropagation();
-                                              uncancelEvent(event);
+                                              openUncancelDialog(event);
                                             }}
                                           >
                                             <Plus className="w-3 h-3" />
@@ -1443,6 +1458,33 @@ export function ScheduleManager() {
           <AlertDialogCancel>キャンセル</AlertDialogCancel>
           <AlertDialogAction onClick={cancelEvent} className="bg-red-600 hover:bg-red-700">
             中止する
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    {/* 中止解除確認ダイアログ */}
+    <AlertDialog open={uncancelDialog.open} onOpenChange={(open) => setUncancelDialog({ ...uncancelDialog, open })}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>公演の中止解除確認</AlertDialogTitle>
+          <AlertDialogDescription>
+            以下の公演の中止を解除しますか？公演が再開されます。
+            <br />
+            <br />
+            <strong>日時:</strong> {uncancelDialog.event?.date} {uncancelDialog.event?.startTime}-{uncancelDialog.event?.endTime}
+            <br />
+            <strong>会場:</strong> {uncancelDialog.event?.venue}
+            <br />
+            <strong>シナリオ:</strong> {uncancelDialog.event?.scenario}
+            <br />
+            <strong>GM:</strong> {uncancelDialog.event?.gms.join(', ')}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>キャンセル</AlertDialogCancel>
+          <AlertDialogAction onClick={uncancelEvent} className="bg-green-600 hover:bg-green-700">
+            中止を解除する
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
