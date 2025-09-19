@@ -1182,28 +1182,64 @@ export function ScheduleManager() {
             {/* GM選択 */}
             <div className="space-y-2">
               <Label>担当GM</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {staff
-                  .filter(staffMember => staffMember.status === 'active')
-                  .map(staffMember => (
-                    <div key={staffMember.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`gm-${staffMember.name}`}
-                        checked={formData.gms.includes(staffMember.name)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setFormData(prev => ({ ...prev, gms: [...prev.gms, staffMember.name] }));
-                          } else {
-                            setFormData(prev => ({ ...prev, gms: prev.gms.filter(g => g !== staffMember.name) }));
-                          }
-                        }}
-                      />
-                      <Label htmlFor={`gm-${staffMember.name}`} className="text-sm">
-                        {staffMember.name}
-                      </Label>
-                    </div>
-                  ))}
-              </div>
+              <Select
+                value=""
+                onValueChange={(value) => {
+                  if (value) {
+                    if (formData.gms.includes(value)) {
+                      // 既に選択済みの場合は削除
+                      setFormData(prev => ({ ...prev, gms: prev.gms.filter(g => g !== value) }));
+                    } else {
+                      // 未選択の場合は追加
+                      setFormData(prev => ({ ...prev, gms: [...prev.gms, value] }));
+                    }
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="GMを選択してください" />
+                </SelectTrigger>
+                <SelectContent>
+                  {staff
+                    .filter(staffMember => staffMember.status === 'active')
+                    .map(staffMember => {
+                      const isSelected = formData.gms.includes(staffMember.name);
+                      return (
+                        <SelectItem key={staffMember.id} value={staffMember.name}>
+                          <div className="flex items-center gap-2">
+                            {isSelected && <span className="text-blue-600">✓</span>}
+                            <span className={isSelected ? 'text-blue-600 font-medium' : ''}>
+                              {staffMember.name}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                </SelectContent>
+              </Select>
+              
+              {/* 選択されたGM一覧 */}
+              {formData.gms.length > 0 && (
+                <div className="space-y-1">
+                  <Label className="text-sm text-muted-foreground">選択されたGM:</Label>
+                  <div className="flex flex-wrap gap-1">
+                    {formData.gms.map((gm, index) => (
+                      <div key={index} className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-sm">
+                        <span>{gm}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, gms: prev.gms.filter(g => g !== gm) }));
+                          }}
+                          className="hover:bg-blue-200 rounded-full p-0.5"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 開始時間 */}
