@@ -932,7 +932,7 @@ export function ScheduleManager() {
                                         key={event.id}
                                         className={`p-2 border rounded-md hover:shadow-sm transition-shadow text-xs relative ${
                                           event.isCancelled 
-                                            ? 'bg-gray-100 border-gray-300 opacity-75' 
+                                            ? 'bg-gray-100 border-slate-200 opacity-75' 
                                             : categoryColors[event.category] || 'bg-gray-50 border-gray-200'
                                         } ${
                                           isIncomplete ? 'border-yellow-400 border-2' : ''
@@ -1028,7 +1028,7 @@ export function ScheduleManager() {
                               ) : (
                                 <Button
                                   variant="ghost"
-                                  className="w-full h-full min-h-[60px] border-2 border-dashed border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                                  className="w-full h-full min-h-[60px] border-2 border-dashed border-slate-200 hover:border-slate-300 hover:bg-gray-50"
                                   onClick={() => openEventDialog(day.date, venue, timeSlot)}
                                 >
                                   <Plus className="w-4 h-4 mr-1" />

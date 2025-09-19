@@ -1171,7 +1171,7 @@ export function ScheduleManager() {
             <div className="space-y-2">
               <Label htmlFor="scenario">シナリオ</Label>
               <Select value={formData.scenario || 'unspecified'} onValueChange={handleScenarioChange}>
-                <SelectTrigger>
+                <SelectTrigger className="border border-slate-200">
                   <SelectValue placeholder="シナリオを選択" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1202,7 +1202,7 @@ export function ScheduleManager() {
                   }
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger className="border border-slate-200">
                   <SelectValue placeholder="GMを選択してください" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1265,7 +1265,7 @@ export function ScheduleManager() {
                   }
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger className="border border-slate-200">
                   <SelectValue placeholder="見学者を選択してください" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1325,7 +1325,7 @@ export function ScheduleManager() {
                   }
                 }}
               >
-                <SelectTrigger id="startTime">
+                <SelectTrigger id="startTime" className="border border-gray-300">
                   <SelectValue placeholder="開始時間を選択" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1367,7 +1367,7 @@ export function ScheduleManager() {
                 value={formData.endTime}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, endTime: value }))}
               >
-                <SelectTrigger id="endTime">
+                <SelectTrigger id="endTime" className="border border-gray-300">
                   <SelectValue placeholder="終了時間を選択" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1419,7 +1419,7 @@ export function ScheduleManager() {
             <div className="space-y-2">
               <Label htmlFor="category">公演カテゴリ</Label>
               <Select value={formData.category} onValueChange={(value: EventCategory) => setFormData(prev => ({ ...prev, category: value }))}>
-                <SelectTrigger>
+                <SelectTrigger className="border border-slate-200">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1439,6 +1439,7 @@ export function ScheduleManager() {
                   value={formData.reservationInfo}
                   onChange={(e) => setFormData(prev => ({ ...prev, reservationInfo: e.target.value }))}
                   placeholder="予約者名や企業名など"
+                  className="border border-slate-200"
                 />
               </div>
             )}
@@ -1452,6 +1453,7 @@ export function ScheduleManager() {
                 onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                 placeholder="特記事項や注意点など"
                 rows={3}
+                className="border border-gray-300"
               />
             </div>
 
