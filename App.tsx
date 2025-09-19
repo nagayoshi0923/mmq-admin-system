@@ -216,7 +216,11 @@ export default function App() {
                 <TabsContent value="staff-dashboard">
                   <Suspense fallback={<LoadingSpinner />}>
                     {staffId ? (
-                      <StaffDashboard staffId={staffId} staffName="スタッフ" />
+                      <StaffDashboard 
+                        staffId={staffId} 
+                        staffName="スタッフ" 
+                        onBack={() => setActiveTab('staff')}
+                      />
                     ) : (
                       <div className="text-center py-8 text-muted-foreground">
                         スタッフが選択されていません

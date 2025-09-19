@@ -11,7 +11,7 @@ interface MultiSelectGridItem {
 interface MultiSelectGridProps {
   items: MultiSelectGridItem[];
   selectedItems: string[];
-  onToggle: (itemId: string) => void;
+  onToggle: (itemTitle: string) => void;
   className?: string;
   gridCols?: number;
   maxHeight?: string;

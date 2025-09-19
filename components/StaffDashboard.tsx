@@ -8,6 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from './ui/breadcrumb';
+import MultiSelectGrid from './ui/multi-select-grid';
 import { 
   Calendar, 
   Clock, 
@@ -45,6 +47,7 @@ interface StaffScenario {
 interface StaffDashboardProps {
   staffId: string;
   staffName: string;
+  onBack?: () => void;
 }
 
 const timeSlots = [
@@ -53,7 +56,7 @@ const timeSlots = [
   { id: 'evening', label: '夜公演', time: '19:00-21:00' }
 ];
 
-export const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, staffName }) => {
+export const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, staffName, onBack }) => {
   const { staff, updateStaff } = useStaff();
   const { scenarios } = useScenarios();
   const { events } = useSchedule();
@@ -94,11 +97,6 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, staffNa
     orderBy: { column: 'date', ascending: true }
   });
 
-  const [newScenario, setNewScenario] = useState<Omit<StaffScenario, 'id'>>({
-    title: '',
-    difficulty: '',
-    notes: ''
-  });
   const [editingScenario, setEditingScenario] = useState<StaffScenario | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -273,25 +271,6 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, staffNa
     }
   };
 
-  // シナリオ追加
-  const handleAddScenario = () => {
-    if (newScenario.title) {
-      const scenario: StaffScenario = {
-        id: Date.now().toString(),
-        ...newScenario
-      };
-
-      if (currentStaff) {
-        const updatedStaff = {
-          ...currentStaff,
-          availableScenarios: [...(currentStaff.availableScenarios || []), scenario.title]
-        };
-        updateStaff(updatedStaff);
-      }
-
-      setNewScenario({ title: '', difficulty: '', notes: '' });
-    }
-  };
 
   // シナリオ編集開始
   const handleEditScenario = (scenario: StaffScenario) => {
@@ -352,6 +331,22 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, staffNa
 
   return (
     <div className="space-y-6">
+      {/* パンくずリスト */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink 
+              onClick={onBack}
+              className="cursor-pointer hover:text-foreground"
+            >
+              スタッフ管理
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbPage>{displayStaffName}のダッシュボード</BreadcrumbPage>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       {/* ヘッダー */}
       <div className="flex items-center justify-between">
         <div>
@@ -437,75 +432,29 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, staffNa
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {/* シナリオ追加フォーム */}
-                <div className="flex items-center space-x-2">
-                  <Input
-                    placeholder="シナリオタイトル"
-                    value={newScenario.title}
-                    onChange={(e) => setNewScenario(prev => ({ ...prev, title: e.target.value }))}
-                    className="flex-1 border border-slate-200"
-                  />
-                  <Select
-                    value={newScenario.difficulty}
-                    onValueChange={(value) => setNewScenario(prev => ({ ...prev, difficulty: value }))}
-                  >
-                    <SelectTrigger className="w-32 border border-slate-200">
-                      <SelectValue placeholder="難易度" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="easy">簡単</SelectItem>
-                      <SelectItem value="medium">普通</SelectItem>
-                      <SelectItem value="hard">難しい</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button onClick={handleAddScenario} size="sm">
-                    <Plus className="w-4 h-4 mr-1" />
-                    追加
-                  </Button>
-                </div>
-
-                {/* シナリオ一覧 */}
-                <div className="space-y-2">
-                  {availableScenarios.map((scenario, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex-1">
-                        <div className="font-medium">{scenario.title}</div>
-                        <div className="text-sm text-muted-foreground">
-                          難易度: {scenario.difficulty} | プレイ人数: {scenario.playerCount.min}-{scenario.playerCount.max}人 | 所要時間: {scenario.duration}分
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditScenario({
-                            id: scenario.id || '',
-                            title: scenario.title,
-                            difficulty: scenario.difficulty?.toString() || '',
-                            notes: scenario.notes || ''
-                          })}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteScenario(scenario.title)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {availableScenarios.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    利用可能なシナリオがありません
-                  </div>
-                )}
-              </div>
+              <MultiSelectGrid
+                items={scenarios.map(scenario => ({ id: scenario.id, title: scenario.title }))}
+                selectedItems={currentStaff?.availableScenarios || []}
+                onToggle={(scenarioTitle) => {
+                  if (currentStaff?.availableScenarios?.includes(scenarioTitle)) {
+                    handleDeleteScenario(scenarioTitle);
+                  } else {
+                    // シナリオを直接追加
+                    if (currentStaff) {
+                      const updatedStaff = {
+                        ...currentStaff,
+                        availableScenarios: [...(currentStaff.availableScenarios || []), scenarioTitle]
+                      };
+                      updateStaff(updatedStaff);
+                    }
+                  }
+                }}
+                gridCols={2}
+                maxHeight="max-h-60"
+                showCount={true}
+                showBadges={true}
+                emptyMessage="利用可能なシナリオがありません"
+              />
             </CardContent>
           </Card>
         </TabsContent>
