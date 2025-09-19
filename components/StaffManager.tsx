@@ -17,13 +17,18 @@ import TestTube from 'lucide-react/dist/esm/icons/test-tube';
 import Phone from 'lucide-react/dist/esm/icons/phone';
 import Mail from 'lucide-react/dist/esm/icons/mail';
 import Plus from 'lucide-react/dist/esm/icons/plus';
+import Pencil from 'lucide-react/dist/esm/icons/pencil';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
 import User from 'lucide-react/dist/esm/icons/user';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { ScrollArea } from './ui/scroll-area';
 
 import { useStaff, Staff } from '../contexts/StaffContext';
 import { setStaffUpdateFunction } from '../contexts/ScenarioContext';
-import { isNotNullish, safeGetArray, safeToString } from '../utils/typeGuards';
+import { isValidStaff, isNotNullish, safeGetArray, safeToString } from '../utils/typeGuards';
+import { StaffDialog } from './StaffDialog';
+import { useEditHistory } from '../contexts/EditHistoryContext';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { Avatar, AvatarFallback } from './ui/avatar';
@@ -149,7 +154,8 @@ function DraggableRow({ index, member, moveRow, children }: DraggableRowProps) {
 }
 
 export const StaffManager = React.memo(() => {
-  const { staff, addScenarioToStaff, removeScenarioFromStaff } = useStaff();
+  const { staff, addStaff, updateStaff, removeStaff, addScenarioToStaff, removeScenarioFromStaff } = useStaff();
+  const { addEditEntry } = useEditHistory();
   
   // ソート状態の管理
   const [sortField, setSortField] = useState<keyof Staff | null>(null);
@@ -212,6 +218,78 @@ export const StaffManager = React.memo(() => {
     };
   });
   
+  // スタッフ保存関数（useCallbackで最適化）
+  const handleSaveStaff = useCallback((staffData: Staff) => {
+    // 型安全性を確保
+    if (!isValidStaff(staffData)) {
+      console.error('Invalid staff data:', staffData);
+      return;
+    }
+
+    // データの安全性を確保
+    const safeStaffData: Staff = {
+      ...staffData,
+      name: safeToString(staffData.name),
+      role: safeGetArray(staffData.role, (item): item is 'GM' | 'サポート' | 'マネージャー' | '社長' | '企画' | '事務' => 
+        typeof item === 'string' && ['GM', 'サポート', 'マネージャー', '社長', '企画', '事務'].includes(item)),
+      stores: safeGetArray(staffData.stores, (item): item is string => typeof item === 'string'),
+      availableScenarios: safeGetArray(staffData.availableScenarios, (item): item is string => typeof item === 'string', [])
+    };
+    
+    const existingIndex = staff.findIndex(s => s.id === safeStaffData.id);
+    
+    if (existingIndex >= 0) {
+      // 更新
+      updateStaff(safeStaffData);
+      
+      // 編集履歴に追加
+      addEditEntry({
+        user: 'ユーザー', // 実際のアプリではログインユーザー名を使用
+        action: 'update',
+        target: `${safeStaffData.name} - 情報更新`,
+        summary: `${safeStaffData.name}の情報を更新しました`,
+        category: 'staff',
+        changes: [
+          { field: '全般', newValue: '情報が更新されました' }
+        ]
+      });
+    } else {
+      // 新規追加
+      addStaff(safeStaffData);
+      
+      // 編集履歴に追加
+      addEditEntry({
+        user: 'ユーザー',
+        action: 'create',
+        target: `${safeStaffData.name} - 新規スタッフ`,
+        summary: `新規スタッフを追加：${safeStaffData.name}`,
+        category: 'staff',
+        changes: [
+          { field: '名前', newValue: safeStaffData.name },
+          { field: '役割', newValue: safeStaffData.role.join(', ') },
+          { field: '勤務店舗', newValue: safeStaffData.stores.join(', ') }
+        ]
+      });
+    }
+  }, [staff, updateStaff, addStaff, addEditEntry]);
+
+  // スタッフ削除関数（useCallbackで最適化）
+  const handleDeleteStaff = useCallback((staffData: Staff) => {
+    removeStaff(staffData.id);
+    
+    // 編集履歴に追加
+    addEditEntry({
+      user: 'ユーザー',
+      action: 'delete',
+      target: `${staffData.name} - スタッフ削除`,
+      summary: `スタッフを削除：${staffData.name}`,
+      category: 'staff',
+      changes: [
+        { field: '名前', oldValue: staffData.name, newValue: '削除済み' },
+        { field: '役割', oldValue: staffData.role.join(', '), newValue: '削除済み' }
+      ]
+    });
+  }, [removeStaff, addEditEntry]);
 
   const getTimeSlotLabel = (timeSlot: string) => {
     const labels = {
@@ -328,10 +406,15 @@ export const StaffManager = React.memo(() => {
                 <TestTube className="w-4 h-4 mr-2" />
                 連携テスト
               </Button>
-              <Button disabled title="スタッフの編集はスタッフダッシュボードで行ってください">
-                <Plus className="w-4 h-4 mr-2" />
-                スタッフ追加（無効化）
-              </Button>
+              <StaffDialog 
+                onSave={handleSaveStaff}
+                trigger={
+                  <Button>
+                    <Plus className="w-4 h-4 mr-2" />
+                    スタッフ追加
+                  </Button>
+                }
+              />
             </div>
           </div>
 
@@ -457,6 +540,7 @@ export const StaffManager = React.memo(() => {
                             {getSortIcon('status')}
                           </div>
                         </TableHead>
+                        <TableHead>操作</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -626,6 +710,39 @@ export const StaffManager = React.memo(() => {
                               >
                                 <Phone className="w-4 h-4" />
                               </Button>
+                              <StaffDialog 
+                                staff={member}
+                                onSave={handleSaveStaff}
+                                trigger={
+                                  <Button variant="ghost" size="sm" title="編集">
+                                    <Pencil className="w-4 h-4" />
+                                  </Button>
+                                }
+                              />
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="sm" title="削除">
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>スタッフを削除しますか？</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      「{member.name}」を削除します。この操作は取り消せません。
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDeleteStaff(member)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      削除
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </TableCell>
                         </DraggableRow>

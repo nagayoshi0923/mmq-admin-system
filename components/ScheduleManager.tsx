@@ -1437,7 +1437,7 @@ export function ScheduleManager() {
                   });
                 }}
               >
-                <SelectTrigger id="startTime" className="border border-gray-300">
+                <SelectTrigger id="startTime" className="border border-slate-200">
                   <SelectValue placeholder="開始時間を選択" />
                 </SelectTrigger>
                 <SelectContent className="max-h-[200px]">
@@ -1491,7 +1491,7 @@ export function ScheduleManager() {
                 value={formData.endTime}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, endTime: value }))}
               >
-                <SelectTrigger id="endTime" className="border border-gray-300">
+                <SelectTrigger id="endTime" className="border border-slate-200">
                   <SelectValue placeholder="終了時間を選択" />
                 </SelectTrigger>
                 <SelectContent className="max-h-[200px]">
@@ -1579,7 +1579,7 @@ export function ScheduleManager() {
                 onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                 placeholder="特記事項や注意点など"
                 rows={3}
-                className="border border-gray-300"
+                className="border border-slate-200"
               />
             </div>
 

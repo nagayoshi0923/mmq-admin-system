@@ -210,6 +210,7 @@ export function StoreDialog({ store, onSave, trigger, open, onOpenChange }: Stor
               value={formData.name || ''}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               placeholder="店舗名を入力"
+              className="border border-slate-200"
             />
             {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
           </div>
@@ -221,6 +222,7 @@ export function StoreDialog({ store, onSave, trigger, open, onOpenChange }: Stor
               value={formData.managerName || ''}
               onChange={(e) => setFormData(prev => ({ ...prev, managerName: e.target.value }))}
               placeholder="管理者名を入力"
+              className="border border-slate-200"
             />
             {errors.managerName && <p className="text-sm text-destructive">{errors.managerName}</p>}
           </div>
@@ -233,6 +235,7 @@ export function StoreDialog({ store, onSave, trigger, open, onOpenChange }: Stor
             value={formData.address || ''}
             onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
             placeholder="住所を入力"
+            className="border border-slate-200"
           />
           {errors.address && <p className="text-sm text-destructive">{errors.address}</p>}
         </div>
@@ -245,6 +248,7 @@ export function StoreDialog({ store, onSave, trigger, open, onOpenChange }: Stor
               value={formData.phoneNumber || ''}
               onChange={(e) => setFormData(prev => ({ ...prev, phoneNumber: e.target.value }))}
               placeholder="電話番号を入力"
+              className="border border-slate-200"
             />
             {errors.phoneNumber && <p className="text-sm text-destructive">{errors.phoneNumber}</p>}
           </div>
@@ -257,6 +261,7 @@ export function StoreDialog({ store, onSave, trigger, open, onOpenChange }: Stor
               value={formData.email || ''}
               onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
               placeholder="メールアドレスを入力"
+              className="border border-slate-200"
             />
             {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
           </div>
@@ -270,6 +275,7 @@ export function StoreDialog({ store, onSave, trigger, open, onOpenChange }: Stor
               type="date"
               value={formData.openingDate || ''}
               onChange={(e) => setFormData(prev => ({ ...prev, openingDate: e.target.value }))}
+              className="border border-slate-200"
             />
             {errors.openingDate && <p className="text-sm text-destructive">{errors.openingDate}</p>}
           </div>
@@ -277,7 +283,7 @@ export function StoreDialog({ store, onSave, trigger, open, onOpenChange }: Stor
           <div className="space-y-2">
             <Label htmlFor="status">ステータス</Label>
             <Select value={formData.status} onValueChange={(value: any) => setFormData(prev => ({ ...prev, status: value }))}>
-              <SelectTrigger>
+              <SelectTrigger className="border border-slate-200">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -297,6 +303,7 @@ export function StoreDialog({ store, onSave, trigger, open, onOpenChange }: Stor
               value={formData.capacity || ''}
               onChange={(e) => setFormData(prev => ({ ...prev, capacity: parseInt(e.target.value) || 0 }))}
               placeholder="収容人数"
+              className="border border-slate-200"
             />
             {errors.capacity && <p className="text-sm text-destructive">{errors.capacity}</p>}
           </div>
@@ -311,6 +318,7 @@ export function StoreDialog({ store, onSave, trigger, open, onOpenChange }: Stor
             value={formData.rooms || ''}
             onChange={(e) => setFormData(prev => ({ ...prev, rooms: parseInt(e.target.value) || 0 }))}
             placeholder="部屋数"
+            className="border border-slate-200"
           />
           {errors.rooms && <p className="text-sm text-destructive">{errors.rooms}</p>}
         </div>
@@ -322,7 +330,7 @@ export function StoreDialog({ store, onSave, trigger, open, onOpenChange }: Stor
             value={formData.notes || ''}
             onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
             placeholder="備考やメモを入力"
-            className="min-h-20"
+            className="min-h-20 border border-slate-200"
           />
         </div>
 

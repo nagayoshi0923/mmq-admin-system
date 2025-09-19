@@ -156,6 +156,7 @@ const StaffDialog = memo(function StaffDialog({ staff, onSave, trigger }: StaffD
                   id="name"
                   value={formData.name}
                   onChange={handleNameChange}
+                  className="border border-slate-200"
                   required
                 />
               </div>
@@ -165,6 +166,7 @@ const StaffDialog = memo(function StaffDialog({ staff, onSave, trigger }: StaffD
                   id="xAccount"
                   value={formData.xAccount}
                   onChange={handleXAccountChange}
+                  className="border border-slate-200"
                 />
               </div>
             </div>
@@ -194,7 +196,7 @@ const StaffDialog = memo(function StaffDialog({ staff, onSave, trigger }: StaffD
               <div>
                 <Label htmlFor="status">ステータス</Label>
                 <Select value={formData.status} onValueChange={(value: any) => setFormData(prev => ({ ...prev, status: value }))}>
-                  <SelectTrigger>
+                  <SelectTrigger className="border border-slate-200">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -231,7 +233,7 @@ const StaffDialog = memo(function StaffDialog({ staff, onSave, trigger }: StaffD
                   placeholder="パスワードを入力"
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
-                  className="max-w-48"
+                  className="max-w-48 border border-slate-200"
                 />
                 <Button type="button" onClick={handlePasswordCheck}>
                   確認
@@ -250,6 +252,7 @@ const StaffDialog = memo(function StaffDialog({ staff, onSave, trigger }: StaffD
                       ...prev, 
                       contact: { ...prev.contact, phone: e.target.value }
                     }))}
+                    className="border border-slate-200"
                   />
                 </div>
                 <div>
@@ -262,6 +265,7 @@ const StaffDialog = memo(function StaffDialog({ staff, onSave, trigger }: StaffD
                       ...prev, 
                       contact: { ...prev.contact, email: e.target.value }
                     }))}
+                    className="border border-slate-200"
                   />
                 </div>
               </div>
@@ -350,6 +354,7 @@ const StaffDialog = memo(function StaffDialog({ staff, onSave, trigger }: StaffD
               value={formData.notes}
               onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
               placeholder="備考・特記事項があれば入力してください"
+              className="border border-slate-200"
             />
           </div>
 

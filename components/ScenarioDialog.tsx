@@ -234,6 +234,7 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, trigger,
                   value={formData.title}
                   onChange={handleTitleChange}
                   placeholder="タイトルを入力"
+                  className="border border-slate-200"
                   required
                 />
               </div>
@@ -243,6 +244,7 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, trigger,
                   id="author"
                   value={formData.author}
                   onChange={handleAuthorChange}
+                  className="border border-slate-200"
                   required
                 />
               </div>
@@ -255,6 +257,7 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, trigger,
                   step="100"
                   value={formData.licenseAmount}
                   onChange={handleLicenseAmountChange}
+                  className="border border-slate-200"
                   required
                 />
               </div>
@@ -268,6 +271,7 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, trigger,
                 onChange={handleDescriptionChange}
                 placeholder="シナリオの説明、あらすじ、特徴などを入力してください"
                 rows={3}
+                className="border border-slate-200"
               />
             </div>
 
@@ -282,6 +286,7 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, trigger,
                   step="30"
                   value={formData.duration}
                   onChange={(e) => setFormData(prev => ({ ...prev, duration: parseInt(e.target.value) || 240 }))}
+                  className="border border-slate-200"
                   required
                 />
               </div>
@@ -291,7 +296,7 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, trigger,
                   value={formData.difficulty.toString()} 
                   onValueChange={(value) => setFormData(prev => ({ ...prev, difficulty: parseInt(value) }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="border border-slate-200">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -309,7 +314,7 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, trigger,
                   value={formData.status} 
                   onValueChange={(value: any) => setFormData(prev => ({ ...prev, status: value }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="border border-slate-200">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -336,6 +341,7 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, trigger,
                     ...prev, 
                     playerCount: { ...prev.playerCount, min: parseInt(e.target.value) || 1 }
                   }))}
+                  className="border border-slate-200"
                   required
                 />
               </div>
@@ -351,6 +357,7 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, trigger,
                     ...prev, 
                     playerCount: { ...prev.playerCount, max: parseInt(e.target.value) || 6 }
                   }))}
+                  className="border border-slate-200"
                   required
                 />
               </div>
@@ -364,6 +371,7 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, trigger,
                   step="0.1"
                   value={formData.rating}
                   onChange={(e) => setFormData(prev => ({ ...prev, rating: parseFloat(e.target.value) || 4.0 }))}
+                  className="border border-slate-200"
                 />
               </div>
             </div>
@@ -412,6 +420,7 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, trigger,
                 value={newProp}
                 onChange={(e) => setNewProp(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addProp())}
+                className="border border-slate-200"
               />
               <Button type="button" onClick={addProp}>
                 <Plus className="w-4 h-4" />
@@ -442,6 +451,7 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, trigger,
                 value={newGenre}
                 onChange={(e) => setNewGenre(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addGenre())}
+                className="border border-slate-200"
               />
               <Button type="button" onClick={addGenre}>
                 <Plus className="w-4 h-4" />
@@ -473,6 +483,7 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, trigger,
                 onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                 placeholder="GM向けの注意事項、特記事項などを入力してください"
                 rows={3}
+                className="border border-slate-200"
               />
             </div>
           </div>
