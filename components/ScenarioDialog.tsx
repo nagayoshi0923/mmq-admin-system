@@ -13,24 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { ItemEditHistory } from './ItemEditHistory';
 import { useEditHistory } from '../contexts/EditHistoryContext';
 import { useStaff } from '../contexts/StaffContext';
-
-interface Scenario {
-  id: string;
-  title: string;
-  description: string;
-  author: string;
-  licenseAmount: number; // ライセンス料（円）
-  duration: number;
-  playerCount: { min: number; max: number };
-  difficulty: number;
-  availableGMs: string[]; // 対応可能GM
-  rating: number;
-  playCount: number;
-  status: 'available' | 'maintenance' | 'retired';
-  requiredProps: string[];
-  genre: string[]; // 追加: ジャンル
-  notes?: string;
-}
+import { Scenario } from '../contexts/ScenarioContext';
 
 interface ScenarioDialogProps {
   scenario?: Scenario;
@@ -64,13 +47,21 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, onDelete
     licenseAmount: 2500,
     duration: 240,
     playerCount: { min: 3, max: 6 },
-    difficulty: 3,
+    difficulty: 3 as 1 | 2 | 3 | 4 | 5,
     availableGMs: [],
     rating: 4.0,
     playCount: 0,
     status: 'available',
     requiredProps: [],
     genre: [],
+    productionCost: 0,
+    depreciation: 0,
+    revenue: 0,
+    gmFee: 0,
+    miscellaneousExpenses: 0,
+    licenseRateOverride: 0,
+    hasPreReading: false,
+    releaseDate: '',
     notes: ''
   });
 
@@ -111,7 +102,15 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, onDelete
         ...scenario,
         availableGMs: scenario.availableGMs || [],
         notes: scenario.notes || '',
-        licenseAmount: scenario.licenseAmount || 2500
+        licenseAmount: scenario.licenseAmount || 2500,
+        productionCost: scenario.productionCost || 0,
+        depreciation: scenario.depreciation || 0,
+        revenue: scenario.revenue || 0,
+        gmFee: scenario.gmFee || 0,
+        miscellaneousExpenses: scenario.miscellaneousExpenses || 0,
+        licenseRateOverride: scenario.licenseRateOverride || 0,
+        hasPreReading: scenario.hasPreReading || false,
+        releaseDate: scenario.releaseDate || ''
       });
     } else {
       setFormData({
@@ -122,13 +121,21 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, onDelete
         licenseAmount: 2500,
         duration: 240,
         playerCount: { min: 3, max: 6 },
-        difficulty: 3,
+        difficulty: 3 as 1 | 2 | 3 | 4 | 5,
         availableGMs: [],
         rating: 4.0,
         playCount: 0,
         status: 'available',
         requiredProps: [],
         genre: [],
+        productionCost: 0,
+        depreciation: 0,
+        revenue: 0,
+        gmFee: 0,
+        miscellaneousExpenses: 0,
+        licenseRateOverride: 0,
+        hasPreReading: false,
+        releaseDate: '',
         notes: ''
       });
     }
@@ -263,6 +270,79 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, onDelete
                   required
                 />
               </div>
+              <div>
+                <Label htmlFor="productionCost">制作費（円）</Label>
+                <Input
+                  id="productionCost"
+                  type="number"
+                  min="0"
+                  step="100"
+                  value={formData.productionCost || 0}
+                  onChange={(e) => updateFormData('productionCost', parseInt(e.target.value) || 0)}
+                  className="border border-slate-200"
+                />
+              </div>
+              <div>
+                <Label htmlFor="depreciation">減価償却（円）</Label>
+                <Input
+                  id="depreciation"
+                  type="number"
+                  min="0"
+                  step="100"
+                  value={formData.depreciation || 0}
+                  onChange={(e) => updateFormData('depreciation', parseInt(e.target.value) || 0)}
+                  className="border border-slate-200"
+                />
+              </div>
+              <div>
+                <Label htmlFor="revenue">売上（円）</Label>
+                <Input
+                  id="revenue"
+                  type="number"
+                  min="0"
+                  step="100"
+                  value={formData.revenue || 0}
+                  onChange={(e) => updateFormData('revenue', parseInt(e.target.value) || 0)}
+                  className="border border-slate-200"
+                />
+              </div>
+              <div>
+                <Label htmlFor="gmFee">GM代（円）</Label>
+                <Input
+                  id="gmFee"
+                  type="number"
+                  min="0"
+                  step="100"
+                  value={formData.gmFee || 0}
+                  onChange={(e) => updateFormData('gmFee', parseInt(e.target.value) || 0)}
+                  className="border border-slate-200"
+                />
+              </div>
+              <div>
+                <Label htmlFor="miscellaneousExpenses">雑費（円）</Label>
+                <Input
+                  id="miscellaneousExpenses"
+                  type="number"
+                  min="0"
+                  step="100"
+                  value={formData.miscellaneousExpenses || 0}
+                  onChange={(e) => updateFormData('miscellaneousExpenses', parseInt(e.target.value) || 0)}
+                  className="border border-slate-200"
+                />
+              </div>
+              <div>
+                <Label htmlFor="licenseRateOverride">ライセンス率例外（%）</Label>
+                <Input
+                  id="licenseRateOverride"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={formData.licenseRateOverride || 0}
+                  onChange={(e) => updateFormData('licenseRateOverride', parseFloat(e.target.value) || 0)}
+                  className="border border-slate-200"
+                />
+              </div>
             </div>
 
             <div>
@@ -296,7 +376,7 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, onDelete
                 <Label htmlFor="difficulty">難易度（1-5）</Label>
                 <Select 
                   value={formData.difficulty.toString()} 
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, difficulty: parseInt(value) }))}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, difficulty: parseInt(value) as 1 | 2 | 3 | 4 | 5 }))}
                 >
                   <SelectTrigger className="border border-slate-200">
                     <SelectValue />

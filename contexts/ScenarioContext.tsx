@@ -34,6 +34,12 @@ export interface Scenario {
   notes?: string;
   hasPreReading: boolean; // 事前読み込みの有無
   releaseDate?: string; // リリース日（YYYY-MM-DD形式）
+  productionCost?: number; // 制作費（円）
+  depreciation?: number; // 減価償却（円）
+  revenue?: number; // 売上（円）
+  gmFee?: number; // GM代（円）
+  miscellaneousExpenses?: number; // 雑費（円）
+  licenseRateOverride?: number; // ライセンス率の例外（%）
 }
 
 // モックデータは削除済み - Supabaseからのデータを使用

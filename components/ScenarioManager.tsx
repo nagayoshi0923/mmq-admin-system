@@ -18,6 +18,7 @@ import ArrowUpDown from 'lucide-react/dist/esm/icons/arrow-up-down';
 import ArrowUp from 'lucide-react/dist/esm/icons/arrow-up';
 import ArrowDown from 'lucide-react/dist/esm/icons/arrow-down';
 import GripVertical from 'lucide-react/dist/esm/icons/grip-vertical';
+import Star from 'lucide-react/dist/esm/icons/star';
 import TestTube from 'lucide-react/dist/esm/icons/test-tube';
 import Package from 'lucide-react/dist/esm/icons/package';
 import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
@@ -38,6 +39,7 @@ import { ScenarioDialog } from './ScenarioDialog';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 
 const difficultyLabels = {
   1: '初心者',
@@ -46,6 +48,12 @@ const difficultyLabels = {
   4: '難しい',
   5: '上級者'
 };
+
+const statusOptions = [
+  { value: 'available', label: '公演中' },
+  { value: 'maintenance', label: 'メンテナンス' },
+  { value: 'retired', label: '公演終了' }
+];
 
 const difficultyColors = {
   1: 'bg-green-100 text-green-800',
@@ -211,6 +219,7 @@ export const ScenarioManager = React.memo(() => {
   const [viewScenario, setViewScenario] = useState<Scenario | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('basic');
 
   // ソート状態の管理
   const [sortField, setSortField] = useState<keyof Scenario | null>(null);
@@ -452,6 +461,13 @@ export const ScenarioManager = React.memo(() => {
               <CardTitle>シナリオ一覧</CardTitle>
             </CardHeader>
             <CardContent>
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="basic">基本情報</TabsTrigger>
+                  <TabsTrigger value="management">管理情報</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="basic">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -468,34 +484,34 @@ export const ScenarioManager = React.memo(() => {
                       </div>
                     </TableHead>
                     <TableHead 
-                      className="cursor-pointer select-none hover:bg-muted/50 w-[80px]"
+                          className="cursor-pointer select-none hover:bg-muted/50 w-[100px]"
                       onClick={() => handleSort('author')}
                     >
                       <div className="flex items-center gap-2">
-                        作者名
+                            作者
                         {getSortIcon('author')}
                       </div>
                     </TableHead>
                     <TableHead 
-                      className="cursor-pointer select-none hover:bg-muted/50"
+                          className="cursor-pointer select-none hover:bg-muted/50 w-[100px]"
                       onClick={() => handleSort('releaseDate')}
                     >
                       <div className="flex items-center gap-2">
-                        公開日
+                            公開日
                         {getSortIcon('releaseDate')}
                       </div>
                     </TableHead>
                     <TableHead 
-                      className="cursor-pointer select-none hover:bg-muted/50"
+                          className="cursor-pointer select-none hover:bg-muted/50 w-[100px]"
                       onClick={() => handleSort('playerCount')}
                     >
                       <div className="flex items-center gap-2">
-                        人数
+                            人数
                         {getSortIcon('playerCount')}
                       </div>
                     </TableHead>
                     <TableHead 
-                      className="cursor-pointer select-none hover:bg-muted/50"
+                          className="cursor-pointer select-none hover:bg-muted/50 w-[100px]"
                       onClick={() => handleSort('duration')}
                     >
                       <div className="flex items-center gap-2">
@@ -503,17 +519,8 @@ export const ScenarioManager = React.memo(() => {
                         {getSortIcon('duration')}
                       </div>
                     </TableHead>
-                    <TableHead>キット</TableHead>
-                    <TableHead>対応GM</TableHead>
-                    <TableHead 
-                      className="cursor-pointer select-none hover:bg-muted/50 w-[80px]"
-                      onClick={() => handleSort('licenseAmount')}
-                    >
-                      <div className="flex items-center gap-2">
-                        ライセンス
-                        {getSortIcon('licenseAmount')}
-                      </div>
-                    </TableHead>
+                        <TableHead className="w-[100px]">キット</TableHead>
+                        <TableHead className="w-[200px]">対応GM</TableHead>
                     <TableHead className="w-20">操作</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -553,49 +560,49 @@ export const ScenarioManager = React.memo(() => {
                         </TableCell>
 
                         {/* 作者名 */}
-                        <TableCell>
-                          <div className="w-[80px]">
-                            <span className="text-sm truncate block">{scenario.author}</span>
+                            <TableCell className="w-[100px]">
+                              <div className="w-[100px]">
+                                <span className="text-sm truncate block">{scenario.author}</span>
                           </div>
                         </TableCell>
 
-                        {/* 公開日 */}
-                        <TableCell>
-                          <span className="text-sm">
+                            {/* 公開日 */}
+                            <TableCell className="w-[100px]">
+                              <span className="text-sm">
                             {scenario.releaseDate ? new Date(scenario.releaseDate).toLocaleDateString('ja-JP') : '未設定'}
                           </span>
                         </TableCell>
 
-                        {/* 人数 */}
-                        <TableCell>
-                          <div className="flex items-center gap-1">
+                            {/* 人数 */}
+                            <TableCell className="w-[100px]">
+                          <div className="flex items-center gap-1 justify-end">
                             <Users className="w-3 h-3" />
-                            <span className="text-sm">{formatPlayerCount(scenario.playerCount)}</span>
+                                <span className="text-sm">{formatPlayerCount(scenario.playerCount)}</span>
                           </div>
                         </TableCell>
 
                         {/* 所要時間 */}
-                        <TableCell>
-                          <div className="flex items-center gap-1">
+                            <TableCell className="w-[100px]">
+                          <div className="flex items-center gap-1 justify-end">
                             <Clock className="w-3 h-3" />
-                            <span className="text-sm">{formatDuration(scenario.duration)}</span>
+                                <span className="text-sm">{formatDuration(scenario.duration)}</span>
                           </div>
                         </TableCell>
 
                         {/* キット */}
-                        <TableCell>
+                            <TableCell className="w-[100px]">
                           {kitInfo.totalKits > 0 ? (
                             <Tooltip>
                               <TooltipTrigger>
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1 justify-end">
                                   <Package className="w-3 h-3 text-blue-500" />
-                                  <span className="text-sm">{kitInfo.totalKits}</span>
+                                      <span className="text-sm">{kitInfo.totalKits}</span>
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent>
                                 <div className="space-y-1">
                                   {kitInfo.kitsByStore.map((entry) => (
-                                    <div key={entry.storeId} className="text-sm">
+                                        <div key={entry.storeId} className="text-sm">
                                       {entry.storeName}: {entry.kits.length}キット
                                     </div>
                                   ))}
@@ -603,32 +610,23 @@ export const ScenarioManager = React.memo(() => {
                               </TooltipContent>
                             </Tooltip>
                           ) : (
-                            <span className="text-muted-foreground text-sm">なし</span>
+                                <span className="text-muted-foreground text-sm">なし</span>
                           )}
                         </TableCell>
 
-                        {/* 対応GM */}
-                        <TableCell className="max-w-xs">
-                          <div className="flex flex-wrap gap-1">
-                            {scenario.availableGMs && scenario.availableGMs.length > 0 ? (
-                              scenario.availableGMs.map((gm) => (
-                                <Badge key={gm} variant="outline" className="text-xs">
-                                  {gm}
-                                </Badge>
-                              ))
-                            ) : (
-                              <span className="text-muted-foreground text-sm">未設定</span>
-                            )}
-                          </div>
-                        </TableCell>
-
-                        {/* ライセンス */}
-                        <TableCell>
-                          <div className="w-[80px]">
-                            <span className="text-sm text-green-600">
-                              {formatLicenseAmount(scenario.licenseAmount || 0)}
-                            </span>
-                          </div>
+                            {/* 対応GM */}
+                            <TableCell className="w-[200px]">
+                              <div className="flex flex-wrap gap-1">
+                                {scenario.availableGMs && scenario.availableGMs.length > 0 ? (
+                                  scenario.availableGMs.map((gm) => (
+                                    <Badge key={gm} variant="outline" className="text-xs">
+                                      {gm}
+                                    </Badge>
+                                  ))
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">未設定</span>
+                                )}
+                              </div>
                         </TableCell>
 
                         {/* 操作 */}
@@ -656,8 +654,192 @@ export const ScenarioManager = React.memo(() => {
                       </DraggableScenarioRow>
                     );
                   })}
+                    </TableBody>
+                  </Table>
+                </TabsContent>
+
+
+                <TabsContent value="management">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-8">
+                          <GripVertical className="w-4 h-4 opacity-50" />
+                        </TableHead>
+                        <TableHead>タイトル</TableHead>
+                        <TableHead 
+                          className="cursor-pointer select-none hover:bg-muted/50 w-[100px]"
+                          onClick={() => handleSort('playCount')}
+                        >
+                          <div className="flex items-center gap-2">
+                            公演数
+                            {getSortIcon('playCount')}
+                          </div>
+                        </TableHead>
+                        <TableHead className="w-[100px]">売上</TableHead>
+                        <TableHead className="w-[100px]">GM代</TableHead>
+                        <TableHead className="w-[100px]">雑費</TableHead>
+                        <TableHead className="w-[100px]">償却/回</TableHead>
+                        <TableHead className="w-[100px]">粗利</TableHead>
+                        <TableHead className="w-[100px]">売上累計</TableHead>
+                        <TableHead className="w-[100px]">コスト累計</TableHead>
+                        <TableHead className="w-[100px]">未償却残高</TableHead>
+                        <TableHead className="w-[100px]">最終純利益</TableHead>
+                        <TableHead className="w-20">操作</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sortedScenarios.map((scenario, index) => {
+                        const moveRow = (dragIndex: number, hoverIndex: number) => {
+                          const newScenarios = [...sortedScenarios];
+                          const draggedScenario = newScenarios[dragIndex];
+                          newScenarios.splice(dragIndex, 1);
+                          newScenarios.splice(hoverIndex, 0, draggedScenario);
+                          updateScenarios(newScenarios);
+                        };
+
+                        return (
+                          <DraggableScenarioRow
+                            key={scenario.id}
+                            index={index}
+                            scenario={scenario}
+                            moveRow={moveRow}
+                            setSelectedScenario={setSelectedScenario}
+                            setIsEditDialogOpen={setIsEditDialogOpen}
+                          >
+                            {/* タイトル */}
+                            <TableCell>
+                              <div className="max-w-xs">
+                                <p 
+                                  className="text-sm truncate cursor-pointer hover:text-blue-600 hover:underline"
+                                  onClick={() => {
+                                    setViewScenario(scenario);
+                                    setIsViewDialogOpen(true);
+                                  }}
+                                >
+                                  {scenario.title}
+                                </p>
+                              </div>
+                            </TableCell>
+
+                            {/* 公演数 */}
+                            <TableCell className="w-[100px]">
+                              <div className="w-[100px] text-right">
+                                <span className="text-sm">
+                                  {scenario.playCount}回
+                                </span>
+                              </div>
+                            </TableCell>
+
+                            {/* 売上 */}
+                            <TableCell className="w-[100px]">
+                              <div className="w-[100px] text-right">
+                                <span className="text-sm text-green-600">
+                                  {formatLicenseAmount(scenario.revenue || 0)}
+                                </span>
+                              </div>
+                            </TableCell>
+
+                            {/* GM代 */}
+                            <TableCell className="w-[100px]">
+                              <div className="w-[100px] text-right">
+                                <span className="text-sm text-red-600">
+                                  {formatLicenseAmount(scenario.gmFee || 0)}
+                                </span>
+                              </div>
+                            </TableCell>
+
+                            {/* 雑費 */}
+                            <TableCell className="w-[100px]">
+                              <div className="w-[100px] text-right">
+                                <span className="text-sm text-red-600">
+                                  {formatLicenseAmount(scenario.miscellaneousExpenses || 0)}
+                                </span>
+                              </div>
+                            </TableCell>
+
+                            {/* 償却/回 */}
+                            <TableCell className="w-[100px]">
+                              <div className="w-[100px] text-right">
+                                <span className="text-sm text-red-600">
+                                  {formatLicenseAmount((scenario.depreciation || 0) / Math.max(scenario.playCount, 1))}
+                                </span>
+                              </div>
+                            </TableCell>
+
+                            {/* 粗利 */}
+                            <TableCell className="w-[100px]">
+                              <div className="w-[100px] text-right">
+                                <span className="text-sm text-blue-600 font-medium">
+                                  {formatLicenseAmount((scenario.revenue || 0) - (scenario.gmFee || 0) - (scenario.miscellaneousExpenses || 0))}
+                                </span>
+                              </div>
+                            </TableCell>
+
+                            {/* 売上累計 */}
+                            <TableCell className="w-[100px]">
+                              <div className="w-[100px] text-right">
+                                <span className="text-sm text-green-600 font-medium">
+                                  {formatLicenseAmount((scenario.revenue || 0) * scenario.playCount)}
+                                </span>
+                              </div>
+                            </TableCell>
+
+                            {/* コスト累計 */}
+                            <TableCell className="w-[100px]">
+                              <div className="w-[100px] text-right">
+                                <span className="text-sm text-red-600 font-medium">
+                                  {formatLicenseAmount(((scenario.gmFee || 0) + (scenario.miscellaneousExpenses || 0)) * scenario.playCount + (scenario.productionCost || 0))}
+                                </span>
+                              </div>
+                            </TableCell>
+
+                            {/* 未償却残高 */}
+                            <TableCell className="w-[100px]">
+                              <div className="w-[100px] text-right">
+                                <span className="text-sm text-red-600 font-medium">
+                                  {formatLicenseAmount((scenario.productionCost || 0) - (scenario.depreciation || 0))}
+                                </span>
+                              </div>
+                            </TableCell>
+
+                            {/* 最終純利益 */}
+                            <TableCell className="w-[100px]">
+                              <div className="w-[100px] text-right">
+                                <span className="text-sm text-blue-600 font-medium">
+                                  {formatLicenseAmount(((scenario.revenue || 0) * scenario.playCount) - ((scenario.gmFee || 0) + (scenario.miscellaneousExpenses || 0)) * scenario.playCount - (scenario.productionCost || 0))}
+                                </span>
+                              </div>
+                            </TableCell>
+
+                            {/* 操作 */}
+                            <TableCell>
+                              <div className="flex gap-1">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => {
+                                    setSelectedScenario(scenario);
+                                    setIsEditDialogOpen(true);
+                                  }}
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>編集</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TableCell>
+                      </DraggableScenarioRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
 
