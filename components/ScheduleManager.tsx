@@ -235,6 +235,7 @@ const convertSupabaseEventToScheduleEvent = (supabaseEvent: any): ScheduleEvent 
     date: convertDateFromISO(supabaseEvent.date),
     venue: supabaseEvent.venue || '',
     scenario: supabaseEvent.scenario || '',
+    scenarioId: supabaseEvent.scenario_id || '', // scenario_idを追加
     gms: Array.isArray(supabaseEvent.gms) ? supabaseEvent.gms : [],
     startTime: supabaseEvent.start_time || '00:00',
     endTime: supabaseEvent.end_time || '00:00',
@@ -765,6 +766,7 @@ export function ScheduleManager() {
           date: convertDateToISO(updatedEvent.date),
           venue: updatedEvent.venue,
           scenario: updatedEvent.scenario,
+          scenario_id: updatedEvent.scenarioId || null, // scenario_idを追加
           gms: updatedEvent.gms,
           start_time: updatedEvent.startTime,
           end_time: updatedEvent.endTime,
@@ -783,6 +785,7 @@ export function ScheduleManager() {
         // 既存イベントの更新
         const supabaseUpdates = {
           scenario: updatedEvent.scenario,
+          scenario_id: updatedEvent.scenarioId || null, // scenario_idを追加
           gms: updatedEvent.gms,
           start_time: updatedEvent.startTime,
           end_time: updatedEvent.endTime,
