@@ -209,11 +209,13 @@ export const ScenarioManager = React.memo(() => {
   // 公演回数はデータベースで管理するため、useScheduleは不要
   
   // Supabaseからのリアルタイムデータ取得
-  const { 
+  const {
     data: supabaseScenarios, 
     loading: supabaseLoading, 
     error: supabaseError,
     refetch: refetchSupabaseData,
+    insert: addScenario,
+    update: updateScenario,
     delete: deleteScenario
   } = useSupabaseData<Scenario>({
     table: 'scenarios',
@@ -233,12 +235,16 @@ export const ScenarioManager = React.memo(() => {
 
   // シナリオ保存関数
   const handleSaveScenario = async (scenarioData: Scenario) => {
+    console.log('handleSaveScenario呼び出し:', scenarioData);
     const existingScenario = scenarios.find(s => s.id === scenarioData.id);
+    console.log('既存シナリオ:', existingScenario);
     
     try {
       if (existingScenario) {
         // 更新
+        console.log('シナリオ更新開始');
         const result = await updateScenario(scenarioData);
+        console.log('シナリオ更新結果:', result);
         if (result.error) {
           console.error('シナリオ更新エラー:', result.error);
           return;
@@ -257,7 +263,9 @@ export const ScenarioManager = React.memo(() => {
         });
       } else {
         // 新規追加
+        console.log('シナリオ新規追加開始');
         const result = await addScenario(scenarioData);
+        console.log('シナリオ新規追加結果:', result);
         if (result.error) {
           console.error('シナリオ追加エラー:', result.error);
           return;

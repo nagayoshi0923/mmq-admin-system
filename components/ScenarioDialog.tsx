@@ -147,6 +147,8 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('シナリオ保存開始:', formData);
+    
     // 編集履歴に追加
     const isNewScenario = !scenario;
     addEditEntry({
@@ -165,7 +167,9 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
       ]
     });
     
+    console.log('onSave呼び出し前:', formData);
     onSave(formData);
+    console.log('onSave呼び出し後');
     setOpen(false);
   };
 
