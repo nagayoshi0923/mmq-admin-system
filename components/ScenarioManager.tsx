@@ -239,33 +239,14 @@ export const ScenarioManager = React.memo(() => {
     const existingScenario = scenarios.find(s => s.id === scenarioData.id);
     console.log('既存シナリオ:', existingScenario);
     
-    // 日付フィールドの空文字列をnullに変換し、存在しないカラムを除外
+    // 最小限のカラムのみで保存（テーブルに存在するカラムのみ）
     const cleanedData = {
       id: scenarioData.id,
       title: scenarioData.title,
-      description: scenarioData.description,
-      author: scenarioData.author,
-      licenseAmount: scenarioData.licenseAmount,
-      duration: scenarioData.duration,
-      playerCount: scenarioData.playerCount,
-      difficulty: scenarioData.difficulty,
-      rating: scenarioData.rating,
-      playCount: scenarioData.playCount,
-      status: scenarioData.status,
-      notes: scenarioData.notes,
-      releaseDate: scenarioData.releaseDate && scenarioData.releaseDate.trim() !== '' ? scenarioData.releaseDate : null,
-      participationFee: scenarioData.participationFee || 0
-      // 以下のカラムはテーブルに存在しないため一時的に除外
-      // availableGMs: scenarioData.availableGMs,
-      // requiredProps: scenarioData.requiredProps,
-      // genre: scenarioData.genre,
-      // hasPreReading: scenarioData.hasPreReading,
-      // productionCost: scenarioData.productionCost,
-      // depreciation: scenarioData.depreciation,
-      // revenue: scenarioData.revenue,
-      // gmFee: scenarioData.gmFee,
-      // miscellaneousExpenses: scenarioData.miscellaneousExpenses,
-      // licenseRateOverride: scenarioData.licenseRateOverride
+      description: scenarioData.description || '',
+      author: scenarioData.author || '',
+      duration: scenarioData.duration || 0
+      // 他のカラムは一時的に除外（テーブルに存在しない可能性があるため）
     };
     
     try {
