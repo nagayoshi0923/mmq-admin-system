@@ -244,8 +244,8 @@ const convertSupabaseEventToScheduleEvent = (supabaseEvent: any): ScheduleEvent 
     scenario: supabaseEvent.scenario || '',
     scenarioId: supabaseEvent.scenario_id || '', // scenario_idを追加
     gms: Array.isArray(supabaseEvent.gms) ? supabaseEvent.gms : [],
-    startTime: supabaseEvent.start_time || '00:00',
-    endTime: supabaseEvent.end_time || '00:00',
+    startTime: formatTimeDisplay(supabaseEvent.start_time || '00:00'),
+    endTime: formatTimeDisplay(supabaseEvent.end_time || '00:00'),
     category: supabaseEvent.category || 'オープン公演',
     reservationInfo: supabaseEvent.reservation_info || '',
     notes: supabaseEvent.notes || '',
@@ -1398,8 +1398,8 @@ export function ScheduleManager() {
                 }}
               >
                 <SelectTrigger id="startTime" className="border border-slate-200">
-                  <SelectValue placeholder={formData.startTime ? undefined : "開始時間を選択"}>
-                    {formData.startTime || "開始時間を選択"}
+                  <SelectValue placeholder="開始時間を選択">
+                    {formData.startTime ? formatTimeDisplay(formData.startTime) : "開始時間を選択"}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="max-h-[200px]">
@@ -1454,8 +1454,8 @@ export function ScheduleManager() {
                 onValueChange={(value) => setFormData(prev => ({ ...prev, endTime: value }))}
               >
                 <SelectTrigger id="endTime" className="border border-slate-200">
-                  <SelectValue placeholder={formData.endTime ? undefined : "終了時間を選択"}>
-                    {formData.endTime || "終了時間を選択"}
+                  <SelectValue placeholder="終了時間を選択">
+                    {formData.endTime ? formatTimeDisplay(formData.endTime) : "終了時間を選択"}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="max-h-[200px]">
