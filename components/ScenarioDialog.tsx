@@ -62,7 +62,8 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, onDelete
     licenseRateOverride: 0,
     hasPreReading: false,
     releaseDate: '',
-    notes: ''
+    notes: '',
+    participationFee: 0
   });
 
   const [newProp, setNewProp] = useState('');
@@ -268,6 +269,21 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, onDelete
                   onChange={handleLicenseAmountChange}
                   className="border border-slate-200"
                   required
+                />
+              </div>
+              <div>
+                <Label htmlFor="participationFee">参加費（円）</Label>
+                <Input
+                  id="participationFee"
+                  type="number"
+                  min="0"
+                  step="100"
+                  value={formData.participationFee || ''}
+                  onChange={(e) => setFormData(prev => ({ 
+                    ...prev, 
+                    participationFee: e.target.value ? parseInt(e.target.value) : undefined 
+                  }))}
+                  className="border border-slate-200"
                 />
               </div>
               <div>

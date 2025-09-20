@@ -534,6 +534,15 @@ export const ScenarioManager = React.memo(() => {
                         {getSortIcon('duration')}
                       </div>
                     </TableHead>
+                    <TableHead 
+                          className="cursor-pointer select-none hover:bg-muted/50 w-[100px]"
+                      onClick={() => handleSort('participationFee')}
+                    >
+                      <div className="flex items-center gap-2">
+                            参加費
+                        {getSortIcon('participationFee')}
+                      </div>
+                    </TableHead>
                         <TableHead className="w-[100px]">キット</TableHead>
                         <TableHead className="w-[200px]">対応GM</TableHead>
                     <TableHead className="w-20">操作</TableHead>
@@ -601,6 +610,15 @@ export const ScenarioManager = React.memo(() => {
                           <div className="flex items-center gap-1 justify-end">
                             <Clock className="w-3 h-3" />
                                 <span className="text-sm">{formatDuration(scenario.duration)}</span>
+                          </div>
+                        </TableCell>
+
+                        {/* 参加費 */}
+                        <TableCell className="w-[100px]">
+                          <div className="flex items-center gap-1 justify-end">
+                            <span className="text-sm">
+                              {scenario.participationFee ? `¥${scenario.participationFee.toLocaleString()}` : '未設定'}
+                            </span>
                           </div>
                         </TableCell>
 

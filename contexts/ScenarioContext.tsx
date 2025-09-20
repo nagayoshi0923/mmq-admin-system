@@ -40,6 +40,7 @@ export interface Scenario {
   gmFee?: number; // GM代（円）
   miscellaneousExpenses?: number; // 雑費（円）
   licenseRateOverride?: number; // ライセンス率の例外（%）
+  participationFee?: number; // 参加費（円）
 }
 
 // モックデータは削除済み - Supabaseからのデータを使用
