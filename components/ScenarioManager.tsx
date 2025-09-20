@@ -34,7 +34,7 @@ import { useStaff } from '../contexts/StaffContext';
 import { useStores } from '../contexts/StoreContext';
 import { useSupabaseData } from '../hooks/useSupabaseData';
 import { useSupabase } from '../contexts/SupabaseContext';
-import { useSchedule } from '../contexts/ScheduleContext';
+// useScheduleは不要になったため削除
 import { SupabaseSyncIndicator } from './SupabaseSyncIndicator';
 import { ScenarioDialog } from './ScenarioDialog';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
@@ -126,24 +126,8 @@ const formatDate = (dateString?: string): string => {
   }
 };
 
-// 公演回数を計算する関数
-const calculatePlayCount = (scenarioId: string, scheduleEvents: any[]): number => {
-  if (!scheduleEvents || !Array.isArray(scheduleEvents)) return 0;
-  
-  const matchingEvents = scheduleEvents.filter(event => {
-    // キャンセルされていないイベントのみカウント
-    if (event.is_cancelled || event.isCancelled) return false;
-    
-    // シナリオIDまたはシナリオタイトルでマッチング
-    const matchesById = event.scenarioId === scenarioId;
-    const matchesByTitle = event.scenario === scenarioId;
-    
-    return matchesById || matchesByTitle;
-  });
-  
-  console.log(`シナリオID: ${scenarioId}, マッチしたイベント数: ${matchingEvents.length}`, matchingEvents);
-  return matchingEvents.length;
-};
+// 公演回数はデータベースのplay_countカラムから取得するため、
+// フロントエンドでの計算は不要になりました
 
 const ItemType = 'SCENARIO_ROW';
 
@@ -222,7 +206,7 @@ export const ScenarioManager = React.memo(() => {
   const { stores, getKitsByScenario } = useStores();
   const { addEditEntry } = useEditHistory();
   const { isConnected } = useSupabase();
-  const { events: scheduleEvents } = useSchedule();
+  // 公演回数はデータベースで管理するため、useScheduleは不要
   
   // Supabaseからのリアルタイムデータ取得
   const { 
@@ -335,18 +319,15 @@ export const ScenarioManager = React.memo(() => {
     }
   };
 
-  // 公演回数を計算したシナリオリスト
+  // シナリオリスト（データベースのplay_countカラムを直接使用）
   const scenariosWithPlayCount = useMemo(() => {
     if (!Array.isArray(scenarios)) return [];
     
-    console.log('scheduleEvents:', scheduleEvents);
-    console.log('scenarios:', scenarios);
-    
     return scenarios.map(scenario => ({
       ...scenario,
-      playCount: calculatePlayCount(scenario.id, scheduleEvents)
+      playCount: scenario.playCount || 0 // データベースのplay_countカラムを使用
     }));
-  }, [scenarios, scheduleEvents]);
+  }, [scenarios]);
 
   // ソートされたシナリオリスト（安全な配列処理）
   const sortedScenarios = Array.isArray(scenariosWithPlayCount) ? [...scenariosWithPlayCount].sort((a, b) => {
