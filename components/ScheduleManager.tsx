@@ -1234,7 +1234,9 @@ export function ScheduleManager() {
               <Label htmlFor="scenario">シナリオ</Label>
               <Select value={formData.scenario || ''} onValueChange={handleScenarioChange}>
                 <SelectTrigger className="border border-slate-200">
-                  <SelectValue placeholder="シナリオを選択" />
+                  <SelectValue placeholder={formData.scenario ? undefined : "シナリオを選択"}>
+                    {formData.scenario || "シナリオを選択"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="unspecified">未定</SelectItem>
@@ -1389,7 +1391,9 @@ export function ScheduleManager() {
                 }}
               >
                 <SelectTrigger id="startTime" className="border border-slate-200">
-                  <SelectValue placeholder="開始時間を選択" />
+                  <SelectValue placeholder={formData.startTime ? undefined : "開始時間を選択"}>
+                    {formData.startTime || "開始時間を選択"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="max-h-[200px]">
                   <ScrollArea className="h-[200px]">
@@ -1443,7 +1447,9 @@ export function ScheduleManager() {
                 onValueChange={(value) => setFormData(prev => ({ ...prev, endTime: value }))}
               >
                 <SelectTrigger id="endTime" className="border border-slate-200">
-                  <SelectValue placeholder="終了時間を選択" />
+                  <SelectValue placeholder={formData.endTime ? undefined : "終了時間を選択"}>
+                    {formData.endTime || "終了時間を選択"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="max-h-[200px]">
                   <ScrollArea className="h-[200px]">
@@ -1497,7 +1503,9 @@ export function ScheduleManager() {
               <Label htmlFor="category">公演カテゴリ</Label>
               <Select value={formData.category || ''} onValueChange={(value: EventCategory) => setFormData(prev => ({ ...prev, category: value }))}>
                 <SelectTrigger className="border border-slate-200">
-                  <SelectValue placeholder="カテゴリを選択" />
+                  <SelectValue placeholder={formData.category ? undefined : "カテゴリを選択"}>
+                    {formData.category || "カテゴリを選択"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {eventCategories.map(category => (
