@@ -958,7 +958,12 @@ export const ScenarioManager = React.memo(() => {
                 }
               }}
               open={isEditDialogOpen}
-              onOpenChange={setIsEditDialogOpen}
+              onOpenChange={(open) => {
+                setIsEditDialogOpen(open);
+                if (!open) {
+                  setSelectedScenario(null);
+                }
+              }}
             />
           )}
         </div>

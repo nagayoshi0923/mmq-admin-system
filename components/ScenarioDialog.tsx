@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, memo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 import { Button } from './ui/button';
@@ -32,7 +32,7 @@ const statusOptions = [
   { value: 'retired', label: '公演終了' }
 ];
 
-const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, onDelete, trigger, open: externalOpen, onOpenChange }: ScenarioDialogProps) {
+const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, trigger, open: externalOpen, onOpenChange }: ScenarioDialogProps) {
   const { addEditEntry } = useEditHistory();
   const { staff } = useStaff();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -111,7 +111,8 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, onDelete
         miscellaneousExpenses: scenario.miscellaneousExpenses || 0,
         licenseRateOverride: scenario.licenseRateOverride || 0,
         hasPreReading: scenario.hasPreReading || false,
-        releaseDate: scenario.releaseDate || ''
+        releaseDate: scenario.releaseDate || '',
+        participationFee: scenario.participationFee || 0
       });
     } else {
       setFormData({
@@ -137,10 +138,11 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, onDelete
         licenseRateOverride: 0,
         hasPreReading: false,
         releaseDate: '',
-        notes: ''
+        notes: '',
+        participationFee: 0
       });
     }
-  }, [scenario, open]);
+  }, [scenario]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -650,6 +652,6 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, onDelete
       </DialogContent>
     </Dialog>
   );
-});
+};
 
 export { ScenarioDialog };
