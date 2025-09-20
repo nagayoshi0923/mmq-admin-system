@@ -185,6 +185,13 @@ const minutesToTime = (minutes: number): string => {
   return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
 };
 
+// 時間の表示フォーマット（秒を削除）
+const formatTimeDisplay = (time: string): string => {
+  if (!time) return '';
+  // 秒の部分を削除（HH:MM:SS -> HH:MM）
+  return time.split(':').slice(0, 2).join(':');
+};
+
 // 日付を"9/1"形式から"2025-09-01"形式に変換
 const convertDateToISO = (dateStr: string, year: number = 2025): string => {
   // 既にISO形式の場合はそのまま返す
@@ -747,7 +754,7 @@ export function ScheduleManager() {
       action: isNewEvent ? 'create' : 'update',
       target: `${updatedEvent.date} ${updatedEvent.venue} - ${updatedEvent.scenario}`,
       summary: isNewEvent 
-        ? `新規公演を追加：${updatedEvent.scenario}（${updatedEvent.startTime}-${updatedEvent.endTime}）${updatedEvent.gms.join(', ')}` 
+        ? `新規公演を追加：${updatedEvent.scenario}（${formatTimeDisplay(updatedEvent.startTime)}-${formatTimeDisplay(updatedEvent.endTime)}）${updatedEvent.gms.join(', ')}` 
         : `公演情報を更新：${updatedEvent.scenario}`,
       category: 'schedule',
       changes: [
@@ -843,7 +850,7 @@ export function ScheduleManager() {
       user: 'ま sui',
       action: 'delete',
       target: `${eventToDelete.date} ${eventToDelete.venue} - ${eventToDelete.scenario}`,
-      summary: `公演を削除：${eventToDelete.scenario}（${eventToDelete.startTime}-${eventToDelete.endTime}）`,
+      summary: `公演を削除：${eventToDelete.scenario}（${formatTimeDisplay(eventToDelete.startTime)}-${formatTimeDisplay(eventToDelete.endTime)}）`,
       category: 'schedule',
       changes: [
         { field: 'シナリオ', oldValue: eventToDelete.scenario, newValue: '' },
@@ -912,7 +919,7 @@ export function ScheduleManager() {
       user: 'ま sui',
       action: 'update',
       target: `${eventToCancel.date} ${eventToCancel.venue} - ${eventToCancel.scenario}`,
-      summary: `公演を中止：${eventToCancel.scenario}（${eventToCancel.startTime}-${eventToCancel.endTime}）`,
+      summary: `公演を中止：${eventToCancel.scenario}（${formatTimeDisplay(eventToCancel.startTime)}-${formatTimeDisplay(eventToCancel.endTime)}）`,
       category: 'schedule',
       changes: [
         { field: 'ステータス', oldValue: '開催', newValue: '中止' }
@@ -948,7 +955,7 @@ export function ScheduleManager() {
       user: 'ま sui',
       action: 'update',
       target: `${event.date} ${event.venue} - ${event.scenario}`,
-      summary: `公演の中止を解除：${event.scenario}（${event.startTime}-${event.endTime}）`,
+      summary: `公演の中止を解除：${event.scenario}（${formatTimeDisplay(event.startTime)}-${formatTimeDisplay(event.endTime)}）`,
       category: 'schedule',
       changes: [
         { field: 'ステータス', oldValue: '中止', newValue: '開催' }
@@ -1100,7 +1107,7 @@ export function ScheduleManager() {
                                         >
                                           <div className="flex items-center justify-between mb-1">
                                             <span className={`font-mono text-xs ${event.isCancelled ? 'line-through text-gray-500' : ''}`}>
-                                              {event.startTime}-{event.endTime}
+                                              {formatTimeDisplay(event.startTime)}-{formatTimeDisplay(event.endTime)}
                                             </span>
                                             <div className="flex items-center gap-1">
                                               {event.isCancelled && (
@@ -1592,7 +1599,7 @@ export function ScheduleManager() {
             <div className="p-3 border rounded-lg bg-muted/30">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-sm font-mono">
-                  {deleteDialog.event.startTime}-{deleteDialog.event.endTime}
+                  {formatTimeDisplay(deleteDialog.event.startTime)}-{formatTimeDisplay(deleteDialog.event.endTime)}
                 </span>
                 <Badge className={categoryBadgeColors[deleteDialog.event.category]}>
                   {deleteDialog.event.category}
