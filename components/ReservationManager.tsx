@@ -921,7 +921,7 @@ export function ReservationManager() {
                     <span>対象日: {targetDate}</span>
                     <span>データソース: {apiStatus.connected ? '実API' : 'モック'}</span>
                     {apiStatus.lastSync && (
-                      <span>最終取得: {new Date(apiStatus.lastSync).toLocaleTimeString('ja-JP')}</span>
+                      <span>最終取得: {new Date(apiStatus.lastSync).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
                     )}
                   </div>
                 </div>
@@ -958,7 +958,7 @@ export function ReservationManager() {
                           <div>
                             <div>{new Date(reservation.希望の予約日時).toLocaleDateString('ja-JP')}</div>
                             <div className="text-sm text-muted-foreground">
-                              {new Date(reservation.希望の予約日時).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(reservation.希望の予約日時).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false })}
                             </div>
                           </div>
                         </div>

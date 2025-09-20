@@ -1636,7 +1636,7 @@ export function ScheduleManager() {
             以下の公演を中止しますか？この操作は後から取り消すことができます。
             <br />
             <br />
-            <strong>日時:</strong> {cancelDialog.event?.date} {cancelDialog.event?.startTime}-{cancelDialog.event?.endTime}
+            <strong>日時:</strong> {cancelDialog.event?.date} {formatTimeDisplay(cancelDialog.event?.startTime || '')}-{formatTimeDisplay(cancelDialog.event?.endTime || '')}
             <br />
             <strong>会場:</strong> {cancelDialog.event?.venue}
             <br />
@@ -1663,7 +1663,7 @@ export function ScheduleManager() {
             以下の公演の中止を解除しますか？公演が再開されます。
             <br />
             <br />
-            <strong>日時:</strong> {uncancelDialog.event?.date} {uncancelDialog.event?.startTime}-{uncancelDialog.event?.endTime}
+            <strong>日時:</strong> {uncancelDialog.event?.date} {formatTimeDisplay(uncancelDialog.event?.startTime || '')}-{formatTimeDisplay(uncancelDialog.event?.endTime || '')}
             <br />
             <strong>会場:</strong> {uncancelDialog.event?.venue}
             <br />

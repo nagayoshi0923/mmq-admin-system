@@ -395,7 +395,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ staffId, staffNa
                       <div>
                         <div className="font-medium">{event.scenario}</div>
                         <div className="text-sm text-muted-foreground">
-                          {dayjs(event.date).format('MM/DD (ddd)')} {event.start_time} - {event.end_time}
+                          {dayjs(event.date).format('MM/DD (ddd)')} {event.start_time?.split(':').slice(0, 2).join(':')} - {event.end_time?.split(':').slice(0, 2).join(':')}
                         </div>
                         <div className="text-sm text-muted-foreground">
                           {event.venue} | {event.category}
