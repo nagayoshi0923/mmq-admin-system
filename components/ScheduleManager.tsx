@@ -1229,7 +1229,7 @@ export function ScheduleManager() {
             {/* シナリオ選択 */}
             <div className="space-y-2">
               <Label htmlFor="scenario">シナリオ</Label>
-              <Select value={formData.scenario || 'unspecified'} onValueChange={handleScenarioChange}>
+              <Select value={formData.scenario || undefined} onValueChange={handleScenarioChange}>
                 <SelectTrigger className="border border-slate-200">
                   <SelectValue placeholder="シナリオを選択" />
                 </SelectTrigger>
@@ -1372,7 +1372,7 @@ export function ScheduleManager() {
             <div className="space-y-2">
               <Label htmlFor="startTime">開始時間</Label>
               <Select
-                value={formData.startTime}
+                value={formData.startTime || undefined}
                 onValueChange={(value) => {
                   setFormData(prev => {
                     const newFormData = { ...prev, startTime: value };
@@ -1436,7 +1436,7 @@ export function ScheduleManager() {
                 )}
               </div>
               <Select
-                value={formData.endTime}
+                value={formData.endTime || undefined}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, endTime: value }))}
               >
                 <SelectTrigger id="endTime" className="border border-slate-200">
@@ -1492,9 +1492,9 @@ export function ScheduleManager() {
             {/* カテゴリ */}
             <div className="space-y-2">
               <Label htmlFor="category">公演カテゴリ</Label>
-              <Select value={formData.category} onValueChange={(value: EventCategory) => setFormData(prev => ({ ...prev, category: value }))}>
+              <Select value={formData.category || undefined} onValueChange={(value: EventCategory) => setFormData(prev => ({ ...prev, category: value }))}>
                 <SelectTrigger className="border border-slate-200">
-                  <SelectValue />
+                  <SelectValue placeholder="カテゴリを選択" />
                 </SelectTrigger>
                 <SelectContent>
                   {eventCategories.map(category => (
