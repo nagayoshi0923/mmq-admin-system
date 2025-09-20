@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, memo } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -7,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Textarea } from './ui/textarea';
 import { Checkbox } from './ui/checkbox';
 import { Badge } from './ui/badge';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, Trash2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { ItemEditHistory } from './ItemEditHistory';
 import { useEditHistory } from '../contexts/EditHistoryContext';
@@ -34,6 +35,7 @@ interface Scenario {
 interface ScenarioDialogProps {
   scenario?: Scenario;
   onSave: (scenario: Scenario) => void;
+  onDelete?: (scenarioId: string) => void;
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -47,7 +49,7 @@ const statusOptions = [
   { value: 'retired', label: '公演終了' }
 ];
 
-const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, trigger, open: externalOpen, onOpenChange }: ScenarioDialogProps) {
+const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, onDelete, trigger, open: externalOpen, onOpenChange }: ScenarioDialogProps) {
   const { addEditEntry } = useEditHistory();
   const { staff } = useStaff();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -488,13 +490,53 @@ const ScenarioDialog = memo(function ScenarioDialog({ scenario, onSave, trigger,
             </div>
           </div>
 
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                  キャンセル
-                </Button>
-                <Button type="submit">
-                  {scenario ? '更新' : '追加'}
-                </Button>
+              <div className="flex justify-between">
+                <div>
+                  {scenario && onDelete && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button type="button" variant="destructive" size="sm">
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          削除
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>シナリオを削除しますか？</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            「{scenario.title}」を削除します。この操作は元に戻せません。
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={async () => {
+                              if (onDelete) {
+                                await onDelete(scenario.id);
+                              }
+                              if (onOpenChange) {
+                                onOpenChange(false);
+                              } else {
+                                setOpen(false);
+                              }
+                            }}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            削除
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                    キャンセル
+                  </Button>
+                  <Button type="submit">
+                    {scenario ? '更新' : '追加'}
+                  </Button>
+                </div>
               </div>
             </form>
           </TabsContent>

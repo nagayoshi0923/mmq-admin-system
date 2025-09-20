@@ -7,11 +7,13 @@ import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Checkbox } from './ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 // 最適化されたアイコンインポート
 import Clock from 'lucide-react/dist/esm/icons/clock';
 import Users from 'lucide-react/dist/esm/icons/users';
 import Plus from 'lucide-react/dist/esm/icons/plus';
 import BookOpen from 'lucide-react/dist/esm/icons/book-open';
+import Pencil from 'lucide-react/dist/esm/icons/pencil';
 import ArrowUpDown from 'lucide-react/dist/esm/icons/arrow-up-down';
 import ArrowUp from 'lucide-react/dist/esm/icons/arrow-up';
 import ArrowDown from 'lucide-react/dist/esm/icons/arrow-down';
@@ -24,7 +26,6 @@ import Cloud from 'lucide-react/dist/esm/icons/cloud';
 import CloudOff from 'lucide-react/dist/esm/icons/cloud-off';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 import { useEditHistory } from '../contexts/EditHistoryContext';
 import { useScenarios, Scenario } from '../contexts/ScenarioContext';
@@ -199,7 +200,8 @@ export const ScenarioManager = React.memo(() => {
     data: supabaseScenarios, 
     loading: supabaseLoading, 
     error: supabaseError,
-    refetch: refetchSupabaseData 
+    refetch: refetchSupabaseData,
+    delete: deleteScenario
   } = useSupabaseData<Scenario>({
     table: 'scenarios',
     realtime: true,
@@ -475,24 +477,6 @@ export const ScenarioManager = React.memo(() => {
                       </div>
                     </TableHead>
                     <TableHead 
-                      className="cursor-pointer select-none hover:bg-muted/50 w-[80px]"
-                      onClick={() => handleSort('licenseAmount')}
-                    >
-                      <div className="flex items-center gap-2">
-                        ライセンス
-                        {getSortIcon('licenseAmount')}
-                      </div>
-                    </TableHead>
-                    <TableHead 
-                      className="cursor-pointer select-none hover:bg-muted/50"
-                      onClick={() => handleSort('playCount')}
-                    >
-                      <div className="flex items-center gap-2">
-                        公演数
-                        {getSortIcon('playCount')}
-                      </div>
-                    </TableHead>
-                    <TableHead 
                       className="cursor-pointer select-none hover:bg-muted/50"
                       onClick={() => handleSort('releaseDate')}
                     >
@@ -519,8 +503,18 @@ export const ScenarioManager = React.memo(() => {
                         {getSortIcon('duration')}
                       </div>
                     </TableHead>
-                    <TableHead>対応GM</TableHead>
                     <TableHead>キット</TableHead>
+                    <TableHead>対応GM</TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50 w-[80px]"
+                      onClick={() => handleSort('licenseAmount')}
+                    >
+                      <div className="flex items-center gap-2">
+                        ライセンス
+                        {getSortIcon('licenseAmount')}
+                      </div>
+                    </TableHead>
+                    <TableHead className="w-20">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -565,27 +559,12 @@ export const ScenarioManager = React.memo(() => {
                           </div>
                         </TableCell>
 
-                        {/* ライセンス */}
-                        <TableCell>
-                          <div className="w-[80px]">
-                            <span className="text-sm text-green-600">
-                              {formatLicenseAmount(scenario.licenseAmount || 0)}
-                            </span>
-                          </div>
-                        </TableCell>
-
-                        {/* 公演数 */}
-                        <TableCell>
-                          <span className="text-sm">{scenario.playCount}回</span>
-                        </TableCell>
-
                         {/* 公開日 */}
                         <TableCell>
                           <span className="text-sm">
                             {scenario.releaseDate ? new Date(scenario.releaseDate).toLocaleDateString('ja-JP') : '未設定'}
                           </span>
                         </TableCell>
-
 
                         {/* 人数 */}
                         <TableCell>
@@ -600,22 +579,6 @@ export const ScenarioManager = React.memo(() => {
                           <div className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             <span className="text-sm">{formatDuration(scenario.duration)}</span>
-                          </div>
-                        </TableCell>
-
-
-                        {/* 対応GM */}
-                        <TableCell className="max-w-xs">
-                          <div className="flex flex-wrap gap-1">
-                            {scenario.availableGMs && scenario.availableGMs.length > 0 ? (
-                              scenario.availableGMs.map((gm) => (
-                                <Badge key={gm} variant="outline" className="text-xs">
-                                  {gm}
-                                </Badge>
-                              ))
-                            ) : (
-                              <span className="text-muted-foreground text-sm">未設定</span>
-                            )}
                           </div>
                         </TableCell>
 
@@ -642,6 +605,52 @@ export const ScenarioManager = React.memo(() => {
                           ) : (
                             <span className="text-muted-foreground text-sm">なし</span>
                           )}
+                        </TableCell>
+
+                        {/* 対応GM */}
+                        <TableCell className="max-w-xs">
+                          <div className="flex flex-wrap gap-1">
+                            {scenario.availableGMs && scenario.availableGMs.length > 0 ? (
+                              scenario.availableGMs.map((gm) => (
+                                <Badge key={gm} variant="outline" className="text-xs">
+                                  {gm}
+                                </Badge>
+                              ))
+                            ) : (
+                              <span className="text-muted-foreground text-sm">未設定</span>
+                            )}
+                          </div>
+                        </TableCell>
+
+                        {/* ライセンス */}
+                        <TableCell>
+                          <div className="w-[80px]">
+                            <span className="text-sm text-green-600">
+                              {formatLicenseAmount(scenario.licenseAmount || 0)}
+                            </span>
+                          </div>
+                        </TableCell>
+
+                        {/* 操作 */}
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => {
+                                    setSelectedScenario(scenario);
+                                    setIsEditDialogOpen(true);
+                                  }}
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>編集</TooltipContent>
+                            </Tooltip>
+                          </div>
                         </TableCell>
 
                       </DraggableScenarioRow>
@@ -715,6 +724,24 @@ export const ScenarioManager = React.memo(() => {
             <ScenarioDialog
               scenario={selectedScenario}
               onSave={handleSaveScenario}
+              onDelete={async (scenarioId: string) => {
+                console.log('シナリオ削除開始:', scenarioId);
+                try {
+                  const result = await deleteScenario(scenarioId);
+                  if (result.error) {
+                    console.error('シナリオ削除エラー:', result.error);
+                    alert('シナリオの削除に失敗しました: ' + result.error);
+                  } else {
+                    console.log('シナリオ削除成功');
+                    // 編集ダイアログを閉じる
+                    setIsEditDialogOpen(false);
+                    setSelectedScenario(null);
+                  }
+                } catch (error) {
+                  console.error('シナリオ削除エラー:', error);
+                  alert('シナリオの削除に失敗しました');
+                }
+              }}
               open={isEditDialogOpen}
               onOpenChange={setIsEditDialogOpen}
             />
