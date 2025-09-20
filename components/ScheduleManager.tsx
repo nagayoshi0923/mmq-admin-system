@@ -1249,7 +1249,7 @@ export function ScheduleManager() {
                   <SelectItem value="unspecified">未定</SelectItem>
                   {availableScenarios.map(scenario => (
                     <SelectItem key={scenario.id} value={scenario.title}>
-                      {scenario.title} ({scenario.duration / 60}時間)
+                      {scenario.title} ({Math.floor(scenario.duration / 60)}時間{scenario.duration % 60 > 0 ? `${scenario.duration % 60}分` : ''})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1444,7 +1444,10 @@ export function ScheduleManager() {
                   <span className="text-xs text-muted-foreground">
                     (シナリオ時間: {(() => {
                       const scenario = availableScenarios.find(s => s.title === formData.scenario);
-                      return scenario ? `${scenario.duration / 60}時間` : '';
+                      if (!scenario) return '';
+                      const hours = Math.floor(scenario.duration / 60);
+                      const minutes = scenario.duration % 60;
+                      return `${hours}時間${minutes > 0 ? `${minutes}分` : ''}`;
                     })()})
                   </span>
                 )}
