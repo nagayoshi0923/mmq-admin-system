@@ -1,23 +1,35 @@
--- データベースセットアップ完全版
+-- データ型の不一致を修正するSQL
 -- このファイルをSupabaseのSQL Editorで実行してください
 
--- 1. schedule_eventsテーブルにscenario_idカラムを追加
+-- 1. 既存のscenario_idカラムを削除（データがある場合は注意）
 DO $$ 
 BEGIN
-    -- scenario_idカラムが存在しない場合は追加
-    IF NOT EXISTS (
+    IF EXISTS (
         SELECT 1 FROM information_schema.columns 
         WHERE table_name = 'schedule_events' 
         AND column_name = 'scenario_id'
     ) THEN
-        ALTER TABLE schedule_events ADD COLUMN scenario_id TEXT;
-        RAISE NOTICE 'scenario_id column added to schedule_events table';
-    ELSE
-        RAISE NOTICE 'scenario_id column already exists in schedule_events table';
+        ALTER TABLE schedule_events DROP COLUMN scenario_id;
+        RAISE NOTICE 'scenario_id column dropped from schedule_events table';
     END IF;
 END $$;
 
--- 2. scenariosテーブルにplay_countカラムを追加（存在しない場合）
+-- 2. scenario_idカラムをUUID型で再作成
+ALTER TABLE schedule_events ADD COLUMN scenario_id UUID REFERENCES scenarios(id);
+
+-- 3. 既存データのscenario_idを更新（シナリオタイトルからマッチング）
+UPDATE schedule_events 
+SET scenario_id = (
+    SELECT s.id 
+    FROM scenarios s 
+    WHERE s.title = schedule_events.scenario
+    LIMIT 1
+)
+WHERE scenario_id IS NULL 
+AND scenario IS NOT NULL 
+AND scenario != '';
+
+-- 4. scenariosテーブルにplay_countカラムを追加（存在しない場合）
 DO $$ 
 BEGIN
     IF NOT EXISTS (
@@ -32,24 +44,12 @@ BEGIN
     END IF;
 END $$;
 
--- 3. 既存データのscenario_idを更新（シナリオタイトルからマッチング）
-UPDATE schedule_events 
-SET scenario_id = (
-    SELECT s.id::TEXT 
-    FROM scenarios s 
-    WHERE s.title = schedule_events.scenario
-    LIMIT 1
-)
-WHERE scenario_id IS NULL 
-AND scenario IS NOT NULL 
-AND scenario != '';
-
--- 4. 既存データの公演数を初期化
+-- 5. 既存データの公演数を初期化
 UPDATE scenarios 
 SET play_count = (
     SELECT COUNT(*) 
     FROM schedule_events 
-    WHERE scenario_id = scenarios.id::TEXT
+    WHERE scenario_id = scenarios.id
     AND (is_cancelled = false OR is_cancelled IS NULL)
 );
 
@@ -60,19 +60,19 @@ SET play_count = (
     FROM schedule_events 
     WHERE scenario = scenarios.title
     AND (is_cancelled = false OR is_cancelled IS NULL)
-    AND (scenario_id IS NULL OR scenario_id = '')
+    AND scenario_id IS NULL
 )
 WHERE play_count = 0;
 
--- 5. 既存のトリガーと関数を削除（存在する場合）
+-- 6. 既存のトリガーと関数を削除（存在する場合）
 DROP TRIGGER IF EXISTS update_scenario_play_count_trigger ON schedule_events;
 DROP FUNCTION IF EXISTS update_scenario_play_count();
 
--- 6. シナリオの公演数を更新する関数を作成
+-- 7. シナリオの公演数を更新する関数を作成（UUID型対応）
 CREATE OR REPLACE FUNCTION update_scenario_play_count()
 RETURNS TRIGGER AS $$
 DECLARE
-    target_scenario_id TEXT;
+    target_scenario_id UUID;
     target_scenario_title TEXT;
 BEGIN
     -- 対象のシナリオIDとタイトルを決定
@@ -89,7 +89,7 @@ BEGIN
             WHERE scenario_id = target_scenario_id
             AND (is_cancelled = false OR is_cancelled IS NULL)
         )
-        WHERE id::TEXT = target_scenario_id;
+        WHERE id = target_scenario_id;
         
         RAISE NOTICE 'Updated play_count for scenario_id: %', target_scenario_id;
     END IF;
@@ -102,7 +102,7 @@ BEGIN
             FROM schedule_events 
             WHERE scenario = target_scenario_title
             AND (is_cancelled = false OR is_cancelled IS NULL)
-            AND (scenario_id IS NULL OR scenario_id = '')
+            AND scenario_id IS NULL
         )
         WHERE title = target_scenario_title;
         
@@ -114,13 +114,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 7. トリガーを作成
+-- 8. トリガーを作成
 CREATE TRIGGER update_scenario_play_count_trigger
     AFTER INSERT OR UPDATE OR DELETE ON schedule_events
     FOR EACH ROW 
     EXECUTE FUNCTION update_scenario_play_count();
 
--- 8. 結果確認
+-- 9. 結果確認
 SELECT 
     'schedule_events' as table_name,
     COUNT(*) as total_events,
@@ -138,8 +138,8 @@ FROM scenarios;
 -- 完了メッセージ
 DO $$
 BEGIN
-    RAISE NOTICE 'Database setup completed successfully!';
-    RAISE NOTICE 'scenario_id column added to schedule_events';
+    RAISE NOTICE 'Database types fixed successfully!';
+    RAISE NOTICE 'scenario_id is now UUID type with foreign key constraint';
     RAISE NOTICE 'play_count column added to scenarios';
     RAISE NOTICE 'Play count trigger created and initialized';
 END $$;
