@@ -34,6 +34,7 @@ import { useStaff } from '../contexts/StaffContext';
 import { useStores } from '../contexts/StoreContext';
 import { useSupabaseData } from '../hooks/useSupabaseData';
 import { useSupabase } from '../contexts/SupabaseContext';
+import { useSchedule } from '../contexts/ScheduleContext';
 import { SupabaseSyncIndicator } from './SupabaseSyncIndicator';
 import { ScenarioDialog } from './ScenarioDialog';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
@@ -125,6 +126,19 @@ const formatDate = (dateString?: string): string => {
   }
 };
 
+// 公演回数を計算する関数
+const calculatePlayCount = (scenarioId: string, scheduleEvents: any[]): number => {
+  if (!scheduleEvents || !Array.isArray(scheduleEvents)) return 0;
+  
+  return scheduleEvents.filter(event => {
+    // キャンセルされていないイベントのみカウント
+    if (event.is_cancelled || event.isCancelled) return false;
+    
+    // シナリオIDまたはシナリオタイトルでマッチング
+    return event.scenarioId === scenarioId || event.scenario === scenarioId;
+  }).length;
+};
+
 const ItemType = 'SCENARIO_ROW';
 
 interface DragItem {
@@ -202,6 +216,7 @@ export const ScenarioManager = React.memo(() => {
   const { stores, getKitsByScenario } = useStores();
   const { addEditEntry } = useEditHistory();
   const { isConnected } = useSupabase();
+  const { scheduleEvents } = useSchedule();
   
   // Supabaseからのリアルタイムデータ取得
   const { 
@@ -314,8 +329,18 @@ export const ScenarioManager = React.memo(() => {
     }
   };
 
+  // 公演回数を計算したシナリオリスト
+  const scenariosWithPlayCount = useMemo(() => {
+    if (!Array.isArray(scenarios)) return [];
+    
+    return scenarios.map(scenario => ({
+      ...scenario,
+      playCount: calculatePlayCount(scenario.id, scheduleEvents)
+    }));
+  }, [scenarios, scheduleEvents]);
+
   // ソートされたシナリオリスト（安全な配列処理）
-  const sortedScenarios = Array.isArray(scenarios) ? [...scenarios].sort((a, b) => {
+  const sortedScenarios = Array.isArray(scenariosWithPlayCount) ? [...scenariosWithPlayCount].sort((a, b) => {
     if (!sortField) return 0;
     
     let aValue = a[sortField];
@@ -672,15 +697,15 @@ export const ScenarioManager = React.memo(() => {
                           onClick={() => handleSort('playCount')}
                         >
                           <div className="flex items-center gap-2">
-                            公演数
+                            累計公演数
                             {getSortIcon('playCount')}
                           </div>
                         </TableHead>
-                        <TableHead className="w-[100px]">売上</TableHead>
-                        <TableHead className="w-[100px]">GM代</TableHead>
-                        <TableHead className="w-[100px]">雑費</TableHead>
+                        <TableHead className="w-[100px]">売上/回</TableHead>
+                        <TableHead className="w-[100px]">GM代/回</TableHead>
+                        <TableHead className="w-[100px]">雑費/回</TableHead>
                         <TableHead className="w-[100px]">償却/回</TableHead>
-                        <TableHead className="w-[100px]">粗利</TableHead>
+                        <TableHead className="w-[100px]">粗利/回</TableHead>
                         <TableHead className="w-[100px]">売上累計</TableHead>
                         <TableHead className="w-[100px]">コスト累計</TableHead>
                         <TableHead className="w-[100px]">未償却残高</TableHead>
@@ -722,7 +747,7 @@ export const ScenarioManager = React.memo(() => {
                               </div>
                             </TableCell>
 
-                            {/* 公演数 */}
+                            {/* 累計公演数 */}
                             <TableCell className="w-[100px]">
                               <div className="w-[100px] text-right">
                                 <span className="text-sm">
@@ -731,7 +756,7 @@ export const ScenarioManager = React.memo(() => {
                               </div>
                             </TableCell>
 
-                            {/* 売上 */}
+                            {/* 売上/回 */}
                             <TableCell className="w-[100px]">
                               <div className="w-[100px] text-right">
                                 <span className="text-sm text-green-600">
@@ -740,7 +765,7 @@ export const ScenarioManager = React.memo(() => {
                               </div>
                             </TableCell>
 
-                            {/* GM代 */}
+                            {/* GM代/回 */}
                             <TableCell className="w-[100px]">
                               <div className="w-[100px] text-right">
                                 <span className="text-sm text-red-600">
@@ -749,7 +774,7 @@ export const ScenarioManager = React.memo(() => {
                               </div>
                             </TableCell>
 
-                            {/* 雑費 */}
+                            {/* 雑費/回 */}
                             <TableCell className="w-[100px]">
                               <div className="w-[100px] text-right">
                                 <span className="text-sm text-red-600">
@@ -767,7 +792,7 @@ export const ScenarioManager = React.memo(() => {
                               </div>
                             </TableCell>
 
-                            {/* 粗利 */}
+                            {/* 粗利/回 */}
                             <TableCell className="w-[100px]">
                               <div className="w-[100px] text-right">
                                 <span className="text-sm text-blue-600 font-medium">
@@ -865,7 +890,7 @@ export const ScenarioManager = React.memo(() => {
                         <p>難易度: {difficultyLabels[viewScenario.difficulty]}</p>
                         <p>人数: {formatPlayerCount(viewScenario.playerCount)}</p>
                         <p>所要時間: {formatDuration(viewScenario.duration)}</p>
-                        <p>公演数: {viewScenario.playCount}回</p>
+                        <p>累計公演数: {viewScenario.playCount}回</p>
                         <p>評価: {viewScenario.rating}/5.0</p>
                       </div>
                     </div>

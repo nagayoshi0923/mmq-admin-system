@@ -40,6 +40,7 @@ interface ScheduleEvent {
   date: string;
   venue: string;
   scenario: string;
+  scenarioId?: string; // シナリオIDを追加
   gms: string[];
   observers?: string[];
   startTime: string;
@@ -505,6 +506,7 @@ export function ScheduleManager() {
   // フォーム用の状態
   const [formData, setFormData] = useState({
     scenario: '',
+    scenarioId: '',
     gms: [] as string[],
     observers: [] as string[],
     startTime: '',
@@ -656,6 +658,7 @@ export function ScheduleManager() {
     });
     setFormData({
       scenario: '',
+      scenarioId: '',
       gms: [],
       observers: [],
       startTime: defaultStartTime,
@@ -672,6 +675,7 @@ export function ScheduleManager() {
     setEditingEvent(event);
     setFormData({
       scenario: event.scenario || '',
+      scenarioId: event.scenarioId || '',
       gms: event.gms || [],
       observers: event.observers || [],
       startTime: event.startTime || '19:00',
@@ -696,8 +700,14 @@ export function ScheduleManager() {
   // シナリオ変更時の処理（自動保存はしない）
   const handleScenarioChange = (scenarioTitle: string) => {
     const actualScenarioTitle = scenarioTitle === 'unspecified' ? '' : scenarioTitle;
+    const selectedScenario = availableScenarios.find(s => s.title === actualScenarioTitle);
+    
     setFormData(prev => {
-      const newFormData = { ...prev, scenario: actualScenarioTitle };
+      const newFormData = { 
+        ...prev, 
+        scenario: actualScenarioTitle,
+        scenarioId: selectedScenario?.id || ''
+      };
       // シナリオが選択され、開始時間が設定されている場合は終了時間を自動計算
       if (actualScenarioTitle && actualScenarioTitle !== '未定' && prev.startTime) {
         const endTime = calculateEndTimeLocal(prev.startTime, actualScenarioTitle);
@@ -714,6 +724,7 @@ export function ScheduleManager() {
     const updatedEvent: ScheduleEvent = {
       ...editingEvent,
       scenario: formData.scenario,
+      scenarioId: formData.scenarioId,
       gms: formData.gms,
       observers: formData.observers,
       startTime: formData.startTime,
