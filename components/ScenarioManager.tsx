@@ -130,13 +130,19 @@ const formatDate = (dateString?: string): string => {
 const calculatePlayCount = (scenarioId: string, scheduleEvents: any[]): number => {
   if (!scheduleEvents || !Array.isArray(scheduleEvents)) return 0;
   
-  return scheduleEvents.filter(event => {
+  const matchingEvents = scheduleEvents.filter(event => {
     // キャンセルされていないイベントのみカウント
     if (event.is_cancelled || event.isCancelled) return false;
     
     // シナリオIDまたはシナリオタイトルでマッチング
-    return event.scenarioId === scenarioId || event.scenario === scenarioId;
-  }).length;
+    const matchesById = event.scenarioId === scenarioId;
+    const matchesByTitle = event.scenario === scenarioId;
+    
+    return matchesById || matchesByTitle;
+  });
+  
+  console.log(`シナリオID: ${scenarioId}, マッチしたイベント数: ${matchingEvents.length}`, matchingEvents);
+  return matchingEvents.length;
 };
 
 const ItemType = 'SCENARIO_ROW';
@@ -216,7 +222,7 @@ export const ScenarioManager = React.memo(() => {
   const { stores, getKitsByScenario } = useStores();
   const { addEditEntry } = useEditHistory();
   const { isConnected } = useSupabase();
-  const { scheduleEvents } = useSchedule();
+  const { events: scheduleEvents } = useSchedule();
   
   // Supabaseからのリアルタイムデータ取得
   const { 
@@ -332,6 +338,9 @@ export const ScenarioManager = React.memo(() => {
   // 公演回数を計算したシナリオリスト
   const scenariosWithPlayCount = useMemo(() => {
     if (!Array.isArray(scenarios)) return [];
+    
+    console.log('scheduleEvents:', scheduleEvents);
+    console.log('scenarios:', scenarios);
     
     return scenarios.map(scenario => ({
       ...scenario,

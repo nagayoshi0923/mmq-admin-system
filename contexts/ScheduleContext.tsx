@@ -9,6 +9,7 @@ export interface ScheduleEvent {
   date: string;
   venue: string;
   scenario: string;
+  scenarioId?: string;
   gms: string[];
   start_time: string;
   end_time: string;
