@@ -214,8 +214,8 @@ export const ScenarioManager = React.memo(() => {
     loading: supabaseLoading, 
     error: supabaseError,
     refetch: refetchSupabaseData,
-    insert: addScenario,
-    update: updateScenario,
+    insert: addScenarioToSupabase,
+    update: updateScenarioInSupabase,
     delete: deleteScenario
   } = useSupabaseData<Scenario>({
     table: 'scenarios',
@@ -239,11 +239,17 @@ export const ScenarioManager = React.memo(() => {
     const existingScenario = scenarios.find(s => s.id === scenarioData.id);
     console.log('既存シナリオ:', existingScenario);
     
+    // 日付フィールドの空文字列をnullに変換
+    const cleanedData = {
+      ...scenarioData,
+      releaseDate: scenarioData.releaseDate && scenarioData.releaseDate.trim() !== '' ? scenarioData.releaseDate : null
+    };
+    
     try {
       if (existingScenario) {
         // 更新
         console.log('シナリオ更新開始');
-        const result = await updateScenario(scenarioData);
+        const result = await updateScenarioInSupabase(scenarioData.id, cleanedData);
         console.log('シナリオ更新結果:', result);
         if (result.error) {
           console.error('シナリオ更新エラー:', result.error);
@@ -264,7 +270,7 @@ export const ScenarioManager = React.memo(() => {
       } else {
         // 新規追加
         console.log('シナリオ新規追加開始');
-        const result = await addScenario(scenarioData);
+        const result = await addScenarioToSupabase(cleanedData);
         console.log('シナリオ新規追加結果:', result);
         if (result.error) {
           console.error('シナリオ追加エラー:', result.error);
