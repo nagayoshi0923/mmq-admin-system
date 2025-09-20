@@ -66,7 +66,7 @@ WHERE play_count = 0;
 
 -- 6. 既存のトリガーと関数を削除（存在する場合）
 DROP TRIGGER IF EXISTS update_scenario_play_count_trigger ON schedule_events;
-DROP FUNCTION IF EXISTS update_scenario_play_count();
+DROP FUNCTION IF EXISTS update_scenario_play_count() CASCADE;
 
 -- 7. シナリオの公演数を更新する関数を作成（UUID型対応）
 CREATE OR REPLACE FUNCTION update_scenario_play_count()
