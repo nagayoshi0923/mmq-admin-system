@@ -217,7 +217,7 @@ export const ScenarioManager = React.memo(() => {
   const [activeTab, setActiveTab] = useState('basic');
 
   // ソート状態の管理
-  const [sortField, setSortField] = useState<keyof Scenario | 'playCount' | 'roi' | 'paybackPeriod' | 'profitMargin' | 'revenuePerPlay' | 'costPerPlay' | 'totalRevenue' | 'totalCost' | 'finalProfit' | 'recoveryRate' | 'gmFee' | 'miscellaneousExpenses' | 'licenseAmount' | 'grossProfit' | 'recoverySpeed' | 'recoveryStatus' | null>(null);
+  const [sortField, setSortField] = useState<keyof Scenario | 'playCount' | 'roi' | 'paybackPeriod' | 'profitMargin' | 'revenuePerPlay' | 'costPerPlay' | 'totalRevenue' | 'totalCost' | 'finalProfit' | 'recoveryRate' | 'gmFee' | 'miscellaneousExpenses' | 'licenseAmount' | 'propsCost' | 'productionCost' | 'grossProfit' | 'recoverySpeed' | 'recoveryStatus' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // 回収期間設定（月単位）
@@ -244,6 +244,7 @@ export const ScenarioManager = React.memo(() => {
       play_count: scenarioData.playCount || 0,
       status: scenarioData.status || 'available',
       required_props: scenarioData.requiredProps || [],
+      props: scenarioData.props || [],
       genre: scenarioData.genre || [],
       production_cost: scenarioData.productionCost || 0,
       revenue: scenarioData.revenue || 0,
@@ -336,7 +337,7 @@ export const ScenarioManager = React.memo(() => {
   };
 
   // ソート処理関数
-  const handleSort = (field: keyof Scenario | 'playCount' | 'roi' | 'paybackPeriod' | 'profitMargin' | 'revenuePerPlay' | 'costPerPlay' | 'totalRevenue' | 'totalCost' | 'finalProfit' | 'recoveryRate' | 'gmFee' | 'miscellaneousExpenses' | 'licenseAmount' | 'grossProfit' | 'recoverySpeed' | 'recoveryStatus') => {
+  const handleSort = (field: keyof Scenario | 'playCount' | 'roi' | 'paybackPeriod' | 'profitMargin' | 'revenuePerPlay' | 'costPerPlay' | 'totalRevenue' | 'totalCost' | 'finalProfit' | 'recoveryRate' | 'gmFee' | 'miscellaneousExpenses' | 'licenseAmount' | 'propsCost' | 'productionCost' | 'grossProfit' | 'recoverySpeed' | 'recoveryStatus') => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -368,27 +369,39 @@ export const ScenarioManager = React.memo(() => {
     const revenuePerPlay = maxPlayers * participationFee;
     const totalRevenue = revenuePerPlay * playCount;
 
-    // コスト計算（ライセンス料も含める）
+    // 道具のコスト計算
+    const perPlayPropsCost = scenario.props ? scenario.props
+      .filter(prop => prop.costType === 'per_play')
+      .reduce((sum, prop) => sum + prop.cost, 0) : 0;
+    
+    const oneTimePropsCost = scenario.props ? scenario.props
+      .filter(prop => prop.costType === 'one_time')
+      .reduce((sum, prop) => sum + prop.cost, 0) : 0;
+
+    // 制作費に1度きりの道具コストを含める
+    const totalProductionCost = productionCost + oneTimePropsCost;
+    
+    // コスト計算（ライセンス料と毎回の道具コストも含める）
     const licenseAmount = scenario.licenseAmount || 0;
-    const costPerPlay = gmFee + miscellaneousExpenses + licenseAmount;
-    const totalCost = costPerPlay * playCount + productionCost;
+    const costPerPlay = gmFee + miscellaneousExpenses + licenseAmount + perPlayPropsCost;
+    const totalCost = costPerPlay * playCount + totalProductionCost;
 
     // 利益計算
     const finalProfit = totalRevenue - totalCost;
 
-    // ROI計算
-    const roi = productionCost > 0 ? (finalProfit / productionCost) * 100 : 0;
+    // ROI計算（制作費 + 1度きり道具コスト）
+    const roi = totalProductionCost > 0 ? (finalProfit / totalProductionCost) * 100 : 0;
 
     // 回収回数計算（1回あたりの純利益は既にライセンス料込みのcostPerPlayを使用）
     const profitPerPlay = revenuePerPlay - costPerPlay;
-    const paybackPeriod = profitPerPlay > 0 ? Math.ceil(productionCost / profitPerPlay) : Infinity;
+    const paybackPeriod = profitPerPlay > 0 ? Math.ceil(totalProductionCost / profitPerPlay) : Infinity;
     
 
     // 純利益率計算
     const profitMargin = totalRevenue > 0 ? (finalProfit / totalRevenue) * 100 : 0;
 
     // 回収率計算（総収益 ÷ 制作費 × 100）
-    const recoveryRate = productionCost > 0 ? (totalRevenue / productionCost) * 100 : 0;
+    const recoveryRate = totalProductionCost > 0 ? (totalRevenue / totalProductionCost) * 100 : 0;
 
     return {
       revenuePerPlay,
@@ -545,6 +558,7 @@ export const ScenarioManager = React.memo(() => {
       playCount: dbScenario.play_count || 0,
       status: dbScenario.status || 'available',
       requiredProps: dbScenario.required_props || [],
+      props: dbScenario.props || [],
       genre: dbScenario.genre || [],
       productionCost: dbScenario.production_cost || 0,
       revenue: dbScenario.revenue || 0,
@@ -631,6 +645,18 @@ export const ScenarioManager = React.memo(() => {
         } else if (sortField === 'licenseAmount') {
           aValue = a.licenseAmount || 0;
           bValue = b.licenseAmount || 0;
+        } else if (sortField === 'propsCost') {
+          aValue = a.props ? a.props.reduce((sum, prop) => sum + prop.cost, 0) : 0;
+          bValue = b.props ? b.props.reduce((sum, prop) => sum + prop.cost, 0) : 0;
+        } else if (sortField === 'productionCost') {
+          const aOneTimePropsCost = a.props ? a.props
+            .filter(prop => prop.costType === 'one_time')
+            .reduce((sum, prop) => sum + prop.cost, 0) : 0;
+          const bOneTimePropsCost = b.props ? b.props
+            .filter(prop => prop.costType === 'one_time')
+            .reduce((sum, prop) => sum + prop.cost, 0) : 0;
+          aValue = (a.productionCost || 0) + aOneTimePropsCost;
+          bValue = (b.productionCost || 0) + bOneTimePropsCost;
         } else if (sortField === 'grossProfit') {
           const aMetrics = calculateFinancialMetrics(a);
           const bMetrics = calculateFinancialMetrics(b);
@@ -674,7 +700,7 @@ export const ScenarioManager = React.memo(() => {
   }) : [];
 
   // ソートアイコンの表示
-  const getSortIcon = (field: keyof Scenario | 'playCount' | 'roi' | 'paybackPeriod' | 'profitMargin' | 'revenuePerPlay' | 'costPerPlay' | 'totalRevenue' | 'totalCost' | 'finalProfit' | 'recoveryRate' | 'gmFee' | 'miscellaneousExpenses' | 'licenseAmount' | 'grossProfit' | 'recoverySpeed' | 'recoveryStatus') => {
+  const getSortIcon = (field: keyof Scenario | 'playCount' | 'roi' | 'paybackPeriod' | 'profitMargin' | 'revenuePerPlay' | 'costPerPlay' | 'totalRevenue' | 'totalCost' | 'finalProfit' | 'recoveryRate' | 'gmFee' | 'miscellaneousExpenses' | 'licenseAmount' | 'propsCost' | 'productionCost' | 'grossProfit' | 'recoverySpeed' | 'recoveryStatus') => {
     // 矢印は表示しない
     return null;
   };
@@ -840,8 +866,9 @@ export const ScenarioManager = React.memo(() => {
                   <div className="bg-red-50 p-3 rounded-lg">
                     <h4 className="font-semibold text-red-700 mb-1">コスト</h4>
                     <div className="text-xs text-gray-600 space-y-0.5">
-                      <div><strong>コスト/回</strong>: GM代 + 雑費</div>
-                      <div><strong>コスト累計</strong>: (GM代 + 雑費) × 累計公演数 + 制作費</div>
+                      <div><strong>コスト/回</strong>: GM代 + 雑費 + ライセンス料 + 毎回道具コスト</div>
+                      <div><strong>制作費</strong>: 基本制作費 + 1度きり道具コスト</div>
+                      <div><strong>コスト累計</strong>: (GM代 + 雑費 + ライセンス料 + 毎回道具コスト) × 累計公演数 + 制作費</div>
                     </div>
                   </div>
                   <div className="bg-blue-50 p-3 rounded-lg">
@@ -1148,19 +1175,6 @@ export const ScenarioManager = React.memo(() => {
                           className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
                           style={{ 
                             width: '60px',
-                            borderTop: sortField === 'miscellaneousExpenses' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
-                            borderBottom: sortField === 'miscellaneousExpenses' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
-                          }}
-                          onClick={() => handleSort('miscellaneousExpenses')}
-                        >
-                          <div style={{ width: '60px', overflow: 'hidden' }}>
-                            <span className="truncate">雑費/回</span>
-                          </div>
-                        </TableHead>
-                        <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
-                          style={{ 
-                            width: '60px',
                             borderTop: sortField === 'licenseAmount' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
                             borderBottom: sortField === 'licenseAmount' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
                           }}
@@ -1168,6 +1182,32 @@ export const ScenarioManager = React.memo(() => {
                         >
                           <div style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">ライセンス</span>
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          style={{ 
+                            width: '60px',
+                            borderTop: sortField === 'propsCost' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
+                            borderBottom: sortField === 'propsCost' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
+                          }}
+                          onClick={() => handleSort('propsCost')}
+                        >
+                          <div style={{ width: '60px', overflow: 'hidden' }}>
+                            <span className="truncate">道具</span>
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          style={{ 
+                            width: '60px',
+                            borderTop: sortField === 'productionCost' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
+                            borderBottom: sortField === 'productionCost' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
+                          }}
+                          onClick={() => handleSort('productionCost')}
+                        >
+                          <div style={{ width: '60px', overflow: 'hidden' }}>
+                            <span className="truncate">制作費合計</span>
                           </div>
                         </TableHead>
                         <TableHead 
@@ -1378,14 +1418,6 @@ export const ScenarioManager = React.memo(() => {
                               </div>
                             </TableCell>
 
-                            {/* 雑費/回 */}
-                            <TableCell className="border-r border-gray-300" style={{ width: '60px' }}>
-                              <div style={{ width: '60px' }} className="text-right">
-                                <span className="text-sm text-red-600">
-                                  {formatLicenseAmount(scenario.miscellaneousExpenses || 0)}
-                                </span>
-                              </div>
-                            </TableCell>
 
                             {/* ライセンス/回 */}
                             <TableCell className="border-r border-gray-300" style={{ width: '60px' }}>
@@ -1396,11 +1428,35 @@ export const ScenarioManager = React.memo(() => {
                               </div>
                             </TableCell>
 
+                            {/* 道具コスト/回 */}
+                            <TableCell className="border-r border-gray-300" style={{ width: '60px' }}>
+                              <div style={{ width: '60px' }} className="text-right">
+                                <span className="text-sm text-purple-600">
+                                  {formatLicenseAmount(scenario.props ? scenario.props
+                                    .filter(prop => prop.costType === 'per_play')
+                                    .reduce((sum, prop) => sum + prop.cost, 0) : 0)}
+                                </span>
+                              </div>
+                            </TableCell>
+
+                            {/* 制作費合計 */}
+                            <TableCell className="border-r border-gray-300" style={{ width: '60px' }}>
+                              <div style={{ width: '60px' }} className="text-right">
+                                <span className="text-sm text-orange-600 font-medium">
+                                  {formatLicenseAmount((scenario.productionCost || 0) + (scenario.props ? scenario.props
+                                    .filter(prop => prop.costType === 'one_time')
+                                    .reduce((sum, prop) => sum + prop.cost, 0) : 0))}
+                                </span>
+                              </div>
+                            </TableCell>
+
                             {/* コスト/回 */}
                             <TableCell className="border-r border-gray-300" style={{ width: '60px' }}>
                               <div style={{ width: '60px' }} className="text-right">
                                 <span className="text-sm text-red-600">
-                                  {formatLicenseAmount((scenario.gmFee || 0) + (scenario.miscellaneousExpenses || 0))}
+                                  {formatLicenseAmount((scenario.gmFee || 0) + (scenario.miscellaneousExpenses || 0) + (scenario.licenseAmount || 0) + (scenario.props ? scenario.props
+                                    .filter(prop => prop.costType === 'per_play')
+                                    .reduce((sum, prop) => sum + prop.cost, 0) : 0))}
                                 </span>
                               </div>
                             </TableCell>
@@ -1409,7 +1465,9 @@ export const ScenarioManager = React.memo(() => {
                             <TableCell className="border-r border-gray-300" style={{ width: '60px' }}>
                               <div style={{ width: '60px' }} className="text-right">
                                 <span className="text-sm text-blue-600 font-medium">
-                                  {formatLicenseAmount(((scenario.playerCount?.max || 0) * (scenario.participationFee || 0)) - (scenario.gmFee || 0) - (scenario.miscellaneousExpenses || 0))}
+                                  {formatLicenseAmount(((scenario.playerCount?.max || 0) * (scenario.participationFee || 0)) - (scenario.gmFee || 0) - (scenario.miscellaneousExpenses || 0) - (scenario.licenseAmount || 0) - (scenario.props ? scenario.props
+                                    .filter(prop => prop.costType === 'per_play')
+                                    .reduce((sum, prop) => sum + prop.cost, 0) : 0))}
                                 </span>
                               </div>
                             </TableCell>
@@ -1427,7 +1485,11 @@ export const ScenarioManager = React.memo(() => {
                             <TableCell className="border-r border-gray-300" style={{ width: '60px' }}>
                               <div style={{ width: '60px' }} className="text-right">
                                 <span className="text-sm text-red-600 font-medium">
-                                  {formatLicenseAmount(((scenario.gmFee || 0) + (scenario.miscellaneousExpenses || 0)) * scenario.playCount + (scenario.productionCost || 0))}
+                                  {formatLicenseAmount(((scenario.gmFee || 0) + (scenario.miscellaneousExpenses || 0) + (scenario.licenseAmount || 0) + (scenario.props ? scenario.props
+                                    .filter(prop => prop.costType === 'per_play')
+                                    .reduce((sum, prop) => sum + prop.cost, 0) : 0)) * scenario.playCount + (scenario.productionCost || 0) + (scenario.props ? scenario.props
+                                    .filter(prop => prop.costType === 'one_time')
+                                    .reduce((sum, prop) => sum + prop.cost, 0) : 0))}
                                 </span>
                               </div>
                             </TableCell>
@@ -1436,7 +1498,11 @@ export const ScenarioManager = React.memo(() => {
                             <TableCell className="border-r border-gray-300" style={{ width: '60px' }}>
                               <div style={{ width: '60px' }} className="text-right">
                                 <span className="text-sm text-blue-600 font-medium">
-                                  {formatLicenseAmount(((scenario.playerCount?.max || 0) * (scenario.participationFee || 0) * scenario.playCount) - ((scenario.gmFee || 0) + (scenario.miscellaneousExpenses || 0)) * scenario.playCount - (scenario.productionCost || 0))}
+                                  {formatLicenseAmount(((scenario.playerCount?.max || 0) * (scenario.participationFee || 0) * scenario.playCount) - ((scenario.gmFee || 0) + (scenario.miscellaneousExpenses || 0) + (scenario.licenseAmount || 0) + (scenario.props ? scenario.props
+                                    .filter(prop => prop.costType === 'per_play')
+                                    .reduce((sum, prop) => sum + prop.cost, 0) : 0)) * scenario.playCount - (scenario.productionCost || 0) - (scenario.props ? scenario.props
+                                    .filter(prop => prop.costType === 'one_time')
+                                    .reduce((sum, prop) => sum + prop.cost, 0) : 0))}
                                 </span>
                               </div>
                             </TableCell>

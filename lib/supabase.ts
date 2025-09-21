@@ -95,6 +95,7 @@ export interface Database {
           play_count: number;
           status: 'available' | 'maintenance' | 'retired';
           required_props: string[];
+          props: { name: string; cost: number; costType: 'per_play' | 'one_time' }[];
           genre: string[];
           notes: string | null;
           has_pre_reading: boolean;
@@ -117,6 +118,7 @@ export interface Database {
           play_count?: number;
           status?: 'available' | 'maintenance' | 'retired';
           required_props?: string[];
+          props?: { name: string; cost: number; costType: 'per_play' | 'one_time' }[];
           genre?: string[];
           notes?: string | null;
           has_pre_reading?: boolean;
@@ -137,6 +139,7 @@ export interface Database {
           play_count?: number;
           status?: 'available' | 'maintenance' | 'retired';
           required_props?: string[];
+          props?: { name: string; cost: number; costType: 'per_play' | 'one_time' }[];
           genre?: string[];
           notes?: string | null;
           has_pre_reading?: boolean;

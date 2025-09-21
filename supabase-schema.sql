@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS scenarios (
     play_count INTEGER DEFAULT 0,
     status TEXT DEFAULT 'available' CHECK (status IN ('available', 'maintenance', 'retired')),
     required_props TEXT[] DEFAULT '{}',
+    props JSONB DEFAULT '[]',
     genre TEXT[] DEFAULT '{}',
     notes TEXT,
     has_pre_reading BOOLEAN DEFAULT false,

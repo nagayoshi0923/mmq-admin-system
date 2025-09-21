@@ -32,6 +32,22 @@ const statusOptions = [
   { value: 'retired', label: '公演終了' }
 ];
 
+// 数値フォーマット用のヘルパー関数
+const formatNumber = (value: number | string): string => {
+  if (value === '' || value === null || value === undefined) return '';
+  return Number(value).toLocaleString('ja-JP');
+};
+
+const parseNumber = (value: string): number => {
+  return parseInt(value.replace(/,/g, '')) || 0;
+};
+
+// 道具の型定義
+interface Prop {
+  name: string;
+  cost: number;
+}
+
 const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, trigger, open: externalOpen, onOpenChange }: ScenarioDialogProps) {
   const { addEditEntry } = useEditHistory();
   const { staff } = useStaff();
@@ -53,6 +69,7 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
     playCount: 0,
     status: 'available',
     requiredProps: [],
+    props: [] as Prop[],
     genre: [],
     productionCost: 0,
     revenue: 0,
@@ -66,6 +83,8 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
   });
 
   const [newProp, setNewProp] = useState('');
+  const [newPropCost, setNewPropCost] = useState('');
+  const [newPropCostType, setNewPropCostType] = useState<'per_play' | 'one_time'>('per_play');
   const [newGenre, setNewGenre] = useState('');
 
   // GM可能なスタッフを取得（GMまたはマネージャーの役割を持つアクティブなスタッフ）
@@ -106,6 +125,7 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
           licenseAmount: scenario.licenseAmount || 2500,
           playerCount: scenario.playerCount || { min: 3, max: 6 },
           requiredProps: scenario.requiredProps || [],
+          props: scenario.props || [],
           genre: scenario.genre || [],
           productionCost: scenario.productionCost || 0,
           revenue: scenario.revenue || 0,
@@ -131,6 +151,7 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
           playCount: 0,
           status: 'available',
           requiredProps: [],
+          props: [],
           genre: [],
           productionCost: 0,
           revenue: 0,
@@ -148,6 +169,19 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // 重要な変更がある場合は確認ダイアログを表示
+    if (scenario) {
+      const hasImportantChanges = 
+        formData.title !== scenario.title ||
+        formData.author !== scenario.author ||
+        formData.licenseAmount !== scenario.licenseAmount ||
+        formData.participationFee !== scenario.participationFee;
+      
+      if (hasImportantChanges && !window.confirm('重要な情報が変更されています。保存しますか？')) {
+        return;
+      }
+    }
     
     console.log('シナリオ保存開始:', formData);
     
@@ -185,19 +219,25 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
   };
 
   const addProp = () => {
-    if (newProp.trim() && !formData.requiredProps.includes(newProp.trim())) {
+    if (newProp.trim() && !formData.props.some(p => p.name === newProp.trim())) {
       setFormData(prev => ({
         ...prev,
-        requiredProps: [...prev.requiredProps, newProp.trim()]
+        props: [...prev.props, { 
+          name: newProp.trim(), 
+          cost: parseNumber(newPropCost),
+          costType: newPropCostType
+        }]
       }));
       setNewProp('');
+      setNewPropCost('');
+      setNewPropCostType('per_play');
     }
   };
 
-  const removeProp = (prop: string) => {
+  const removeProp = (propName: string) => {
     setFormData(prev => ({
       ...prev,
-      requiredProps: prev.requiredProps.filter(p => p !== prop)
+      props: prev.props.filter(p => p.name !== propName)
     }));
   };
 
@@ -234,8 +274,9 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
         </DialogHeader>
 
         <Tabs defaultValue="info" className="space-y-4">
-          <TabsList className="grid grid-cols-2 w-full">
+          <TabsList className="grid grid-cols-3 w-full">
             <TabsTrigger value="info">基本情報</TabsTrigger>
+            <TabsTrigger value="preview">プレビュー</TabsTrigger>
             <TabsTrigger value="history" disabled={!scenario}>編集履歴</TabsTrigger>
           </TabsList>
 
@@ -243,59 +284,105 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
             <form onSubmit={handleSubmit} className="space-y-6">
           {/* 基本情報 */}
           <div className="space-y-4">
-            <h3>基本情報</h3>
-            <div className="grid grid-cols-3 gap-4">
+            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">基本情報</h3>
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="title">作品名</Label>
+                <Label htmlFor="title" className="text-sm font-medium">
+                  作品名
+                </Label>
                 <Input
                   id="title"
                   value={formData.title}
                   onChange={handleTitleChange}
-                  placeholder="タイトルを入力"
-                  className="border border-slate-200"
-                  required
+                  placeholder="例: 呪いの館の謎"
+                  className="border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
-                <Label htmlFor="author">作者名</Label>
+                <Label htmlFor="author" className="text-sm font-medium">
+                  作者名
+                </Label>
                 <Input
                   id="author"
                   value={formData.author}
                   onChange={handleAuthorChange}
-                  className="border border-slate-200"
-                  required
+                  placeholder="例: 田中太郎"
+                  className="border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
-                <Label htmlFor="licenseAmount">ライセンス料（円）</Label>
-                <Input
-                  id="licenseAmount"
-                  type="number"
-                  min="0"
-                  step="100"
-                  value={formData.licenseAmount}
-                  onChange={handleLicenseAmountChange}
-                  className="border border-slate-200"
-                  required
-                />
+                <Label htmlFor="licenseAmount" className="text-sm font-medium">
+                  ライセンス料
+                </Label>
+                <div className="flex gap-2">
+                  <Select 
+                    value={formData.licenseRateOverride > 0 ? 'percentage' : 'fixed'}
+                    onValueChange={(value) => {
+                      if (value === 'percentage') {
+                        updateFormData('licenseRateOverride', 10);
+                        updateFormData('licenseAmount', 0);
+                      } else {
+                        updateFormData('licenseRateOverride', 0);
+                        updateFormData('licenseAmount', 2500);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-24 border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fixed">固定額</SelectItem>
+                      <SelectItem value="percentage">％</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {formData.licenseRateOverride > 0 ? (
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={formData.licenseRateOverride}
+                      onChange={(e) => updateFormData('licenseRateOverride', parseFloat(e.target.value) || 0)}
+                      placeholder="例: 10.0"
+                      className="flex-1 border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  ) : (
+                    <Input
+                      type="text"
+                      value={formatNumber(formData.licenseAmount)}
+                      onChange={(e) => {
+                        const value = parseNumber(e.target.value);
+                        updateFormData('licenseAmount', value);
+                      }}
+                      placeholder="例: 2,500"
+                      className="flex-1 border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  )}
+                  <span className="flex items-center text-sm text-gray-500">
+                    {formData.licenseRateOverride > 0 ? '%' : '円'}
+                  </span>
+                </div>
               </div>
               <div>
-                <Label htmlFor="participationFee">参加費（円）</Label>
+                <Label htmlFor="participationFee" className="text-sm font-medium">
+                  参加費（円）
+                </Label>
                 <Input
                   id="participationFee"
-                  type="number"
-                  min="0"
-                  step="100"
-                  value={formData.participationFee ?? ''}
-                  onChange={(e) => setFormData(prev => ({ 
-                    ...prev, 
-                    participationFee: e.target.value ? parseInt(e.target.value) : 0 
-                  }))}
-                  className="border border-slate-200"
+                  type="text"
+                  value={formatNumber(formData.participationFee || 0)}
+                  onChange={(e) => {
+                    const value = parseNumber(e.target.value);
+                    setFormData(prev => ({ ...prev, participationFee: value }));
+                  }}
+                  placeholder="例: 3,000"
+                  className="border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
-                <Label htmlFor="releaseDate">リリース日</Label>
+                <Label htmlFor="releaseDate" className="text-sm font-medium">
+                  リリース日
+                </Label>
                 <Input
                   id="releaseDate"
                   type="date"
@@ -304,140 +391,32 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
                     ...prev, 
                     releaseDate: e.target.value 
                   }))}
-                  className="border border-slate-200"
+                  className="border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
-                <Label htmlFor="productionCost">制作費（円）</Label>
-                <Input
-                  id="productionCost"
-                  type="number"
-                  min="0"
-                  step="100"
-                  value={formData.productionCost || 0}
-                  onChange={(e) => updateFormData('productionCost', parseInt(e.target.value) || 0)}
-                  className="border border-slate-200"
-                />
+                <Label htmlFor="duration" className="text-sm font-medium">
+                  所要時間
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="duration"
+                    type="number"
+                    min="1"
+                    max="12"
+                    step="0.5"
+                    value={formData.duration / 60}
+                    onChange={(e) => setFormData(prev => ({ ...prev, duration: parseFloat(e.target.value) * 60 || 240 }))}
+                    placeholder="例: 4"
+                    className="border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <span className="flex items-center text-sm text-gray-500">時間</span>
+                </div>
               </div>
               <div>
-                <Label htmlFor="revenue">売上（円）</Label>
-                <Input
-                  id="revenue"
-                  type="number"
-                  min="0"
-                  step="100"
-                  value={formData.revenue || 0}
-                  onChange={(e) => updateFormData('revenue', parseInt(e.target.value) || 0)}
-                  className="border border-slate-200"
-                />
-              </div>
-              <div>
-                <Label htmlFor="gmFee">GM代（円）</Label>
-                <Input
-                  id="gmFee"
-                  type="number"
-                  min="0"
-                  step="100"
-                  value={formData.gmFee || 0}
-                  onChange={(e) => updateFormData('gmFee', parseInt(e.target.value) || 0)}
-                  className="border border-slate-200"
-                />
-              </div>
-              <div>
-                <Label htmlFor="miscellaneousExpenses">雑費（円）</Label>
-                <Input
-                  id="miscellaneousExpenses"
-                  type="number"
-                  min="0"
-                  step="100"
-                  value={formData.miscellaneousExpenses || 0}
-                  onChange={(e) => updateFormData('miscellaneousExpenses', parseInt(e.target.value) || 0)}
-                  className="border border-slate-200"
-                />
-              </div>
-              <div>
-                <Label htmlFor="licenseRateOverride">ライセンス率例外（%）</Label>
-                <Input
-                  id="licenseRateOverride"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  value={formData.licenseRateOverride || 0}
-                  onChange={(e) => updateFormData('licenseRateOverride', parseFloat(e.target.value) || 0)}
-                  className="border border-slate-200"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="description">説明</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={handleDescriptionChange}
-                placeholder="シナリオの説明、あらすじ、特徴などを入力してください"
-                rows={3}
-                className="border border-slate-200"
-              />
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="duration">所要時間（分）</Label>
-                <Input
-                  id="duration"
-                  type="number"
-                  min="60"
-                  max="720"
-                  step="30"
-                  value={formData.duration}
-                  onChange={(e) => setFormData(prev => ({ ...prev, duration: parseInt(e.target.value) || 240 }))}
-                  className="border border-slate-200"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="difficulty">難易度（1-5）</Label>
-                <Select 
-                  value={formData.difficulty.toString()} 
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, difficulty: parseInt(value) as 1 | 2 | 3 | 4 | 5 }))}
-                >
-                  <SelectTrigger className="border border-slate-200">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">1 - 初心者向け</SelectItem>
-                    <SelectItem value="2">2 - 簡単</SelectItem>
-                    <SelectItem value="3">3 - 普通</SelectItem>
-                    <SelectItem value="4">4 - 難しい</SelectItem>
-                    <SelectItem value="5">5 - 上級者向け</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="status">ステータス</Label>
-                <Select 
-                  value={formData.status} 
-                  onValueChange={(value: any) => setFormData(prev => ({ ...prev, status: value }))}
-                >
-                  <SelectTrigger className="border border-slate-200">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statusOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="minPlayers">最小参加人数</Label>
+                <Label htmlFor="minPlayers" className="text-sm font-medium">
+                  最小参加人数
+                </Label>
                 <Input
                   id="minPlayers"
                   type="number"
@@ -451,12 +430,14 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
                       max: prev.playerCount?.max || 6 
                     }
                   }))}
-                  className="border border-slate-200"
-                  required
+                  placeholder="例: 3"
+                  className="border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
-                <Label htmlFor="maxPlayers">最大参加人数</Label>
+                <Label htmlFor="maxPlayers" className="text-sm font-medium">
+                  最大参加人数
+                </Label>
                 <Input
                   id="maxPlayers"
                   type="number"
@@ -470,12 +451,136 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
                       max: parseInt(e.target.value) || 6 
                     }
                   }))}
-                  className="border border-slate-200"
-                  required
+                  placeholder="例: 6"
+                  className="border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="description" className="text-sm font-medium">
+                説明
+              </Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={handleDescriptionChange}
+                placeholder="シナリオの説明、あらすじ、特徴などを入力してください"
+                rows={3}
+                className="border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          {/* 収益情報 */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">収益情報</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="productionCost" className="text-sm font-medium">制作費（円）</Label>
+                <Input
+                  id="productionCost"
+                  type="text"
+                  value={formatNumber(formData.productionCost || 0)}
+                  onChange={(e) => {
+                    const value = parseNumber(e.target.value);
+                    updateFormData('productionCost', value);
+                  }}
+                  placeholder="例: 50,000"
+                  className="border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
-                <Label htmlFor="rating">評価（1-5）</Label>
+                <Label htmlFor="revenue" className="text-sm font-medium">売上（円）</Label>
+                <Input
+                  id="revenue"
+                  type="text"
+                  value={formatNumber(formData.revenue || 0)}
+                  onChange={(e) => {
+                    const value = parseNumber(e.target.value);
+                    updateFormData('revenue', value);
+                  }}
+                  placeholder="例: 100,000"
+                  className="border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <Label htmlFor="gmFee" className="text-sm font-medium">GM代（円）</Label>
+                <Input
+                  id="gmFee"
+                  type="text"
+                  value={formatNumber(formData.gmFee || 0)}
+                  onChange={(e) => {
+                    const value = parseNumber(e.target.value);
+                    updateFormData('gmFee', value);
+                  }}
+                  placeholder="例: 5,000"
+                  className="border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <Label htmlFor="miscellaneousExpenses" className="text-sm font-medium">雑費（円）</Label>
+                <Input
+                  id="miscellaneousExpenses"
+                  type="text"
+                  value={formatNumber(formData.miscellaneousExpenses || 0)}
+                  onChange={(e) => {
+                    const value = parseNumber(e.target.value);
+                    updateFormData('miscellaneousExpenses', value);
+                  }}
+                  placeholder="例: 2,000"
+                  className="border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 運営情報 */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">運営情報</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="difficulty" className="text-sm font-medium">
+                  難易度
+                </Label>
+                <Select 
+                  value={formData.difficulty.toString()} 
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, difficulty: parseInt(value) as 1 | 2 | 3 | 4 | 5 }))}
+                >
+                  <SelectTrigger className="border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 - 初心者向け</SelectItem>
+                    <SelectItem value="2">2 - 簡単</SelectItem>
+                    <SelectItem value="3">3 - 普通</SelectItem>
+                    <SelectItem value="4">4 - 難しい</SelectItem>
+                    <SelectItem value="5">5 - 上級者向け</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="status" className="text-sm font-medium">
+                  ステータス
+                </Label>
+                <Select 
+                  value={formData.status} 
+                  onValueChange={(value: any) => setFormData(prev => ({ ...prev, status: value }))}
+                >
+                  <SelectTrigger className="border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusOptions.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="rating" className="text-sm font-medium">評価（1-5）</Label>
                 <Input
                   id="rating"
                   type="number"
@@ -484,7 +589,8 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
                   step="0.1"
                   value={formData.rating}
                   onChange={(e) => setFormData(prev => ({ ...prev, rating: parseFloat(e.target.value) || 4.0 }))}
-                  className="border border-slate-200"
+                  placeholder="例: 4.0"
+                  className="border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
@@ -492,7 +598,7 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
 
           {/* 対応可能GM */}
           <div className="space-y-4">
-            <h3>対応可能GM</h3>
+            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">対応可能GM</h3>
             <div className="grid grid-cols-3 gap-2">
               {availableGMStaff.map(staffMember => (
                 <label key={staffMember.id} className="flex items-center space-x-2 cursor-pointer">
@@ -526,38 +632,79 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
 
           {/* 必要道具・準備物 */}
           <div className="space-y-4">
-            <h3>必要道具・準備物</h3>
-            <div className="flex gap-2">
-              <Input
-                placeholder="必要な道具や準備物を追加"
-                value={newProp}
-                onChange={(e) => setNewProp(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addProp())}
-                className="border border-slate-200"
-              />
-              <Button type="button" onClick={addProp}>
-                <Plus className="w-4 h-4" />
-              </Button>
+            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">必要道具・準備物</h3>
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="道具名を入力"
+                  value={newProp}
+                  onChange={(e) => setNewProp(e.target.value)}
+                  className="border border-slate-200"
+                />
+                <Input
+                  placeholder="金額"
+                  value={newPropCost}
+                  onChange={(e) => setNewPropCost(e.target.value)}
+                  className="border border-slate-200 w-24"
+                />
+                <Button type="button" onClick={addProp}>
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="flex gap-2">
+                <Label className="text-sm font-medium">コストタイプ:</Label>
+                <Select 
+                  value={newPropCostType} 
+                  onValueChange={(value: 'per_play' | 'one_time') => setNewPropCostType(value)}
+                >
+                  <SelectTrigger className="w-32 border border-slate-200">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="per_play">毎回</SelectItem>
+                    <SelectItem value="one_time">1度きり</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {(formData.requiredProps || []).map(prop => (
-                <Badge key={prop} variant="outline" className="flex items-center gap-1">
-                  {prop}
+            <div className="space-y-2">
+              {(formData.props || []).map((prop, index) => (
+                <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">{prop.name}</span>
+                    <span className="text-sm text-gray-600">{formatNumber(prop.cost)}円</span>
+                    <Badge variant={prop.costType === 'per_play' ? 'default' : 'secondary'} className="text-xs">
+                      {prop.costType === 'per_play' ? '毎回' : '1度きり'}
+                    </Badge>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => removeProp(prop)}
-                    className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+                    onClick={() => removeProp(prop.name)}
+                    className="hover:bg-destructive/20 rounded-full p-1"
                   >
-                    <X className="w-3 h-3" />
+                    <X className="w-4 h-4" />
                   </button>
-                </Badge>
+                </div>
               ))}
             </div>
+            {formData.props.length > 0 && (
+              <div className="text-sm text-gray-600 space-y-1">
+                <div>
+                  毎回コスト合計: {formatNumber(formData.props.filter(p => p.costType === 'per_play').reduce((sum, prop) => sum + prop.cost, 0))}円
+                </div>
+                <div>
+                  1度きりコスト合計: {formatNumber(formData.props.filter(p => p.costType === 'one_time').reduce((sum, prop) => sum + prop.cost, 0))}円
+                </div>
+                <div className="font-medium">
+                  総合計: {formatNumber(formData.props.reduce((sum, prop) => sum + prop.cost, 0))}円
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ジャンル */}
           <div className="space-y-4">
-            <h3>ジャンル</h3>
+            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">ジャンル</h3>
             <div className="flex gap-2">
               <Input
                 placeholder="ジャンルを追加"
@@ -588,8 +735,9 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
 
           {/* 備考 */}
           <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">備考</h3>
             <div>
-              <Label htmlFor="notes">備考</Label>
+              <Label htmlFor="notes" className="text-sm font-medium">備考</Label>
               <Textarea
                 id="notes"
                 value={formData.notes}
@@ -650,6 +798,98 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
                 </div>
               </div>
             </form>
+          </TabsContent>
+
+          <TabsContent value="preview">
+            <div className="space-y-6">
+              <div className="bg-gray-50 p-6 rounded-lg">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">シナリオ情報プレビュー</h3>
+                
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="font-semibold text-gray-700 mb-2">基本情報</h4>
+                    <div className="space-y-2 text-sm">
+                      <p><span className="font-medium">タイトル:</span> {formData.title || '未入力'}</p>
+                      <p><span className="font-medium">作者:</span> {formData.author || '未入力'}</p>
+                      <p><span className="font-medium">所要時間:</span> {formData.duration / 60}時間</p>
+                      <p><span className="font-medium">難易度:</span> {formData.difficulty}/5</p>
+                      <p><span className="font-medium">参加人数:</span> {formData.playerCount?.min}-{formData.playerCount?.max}人</p>
+                      <p><span className="font-medium">ステータス:</span> {statusOptions.find(opt => opt.value === formData.status)?.label || '未設定'}</p>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold text-gray-700 mb-2">収益情報</h4>
+                    <div className="space-y-2 text-sm">
+                      <p><span className="font-medium">ライセンス料:</span> {formatNumber(formData.licenseAmount)}円</p>
+                      <p><span className="font-medium">参加費:</span> {formatNumber(formData.participationFee || 0)}円</p>
+                      <p><span className="font-medium">制作費:</span> {formatNumber(formData.productionCost || 0)}円</p>
+                      <p><span className="font-medium">GM代:</span> {formatNumber(formData.gmFee || 0)}円</p>
+                      <p><span className="font-medium">雑費:</span> {formatNumber(formData.miscellaneousExpenses || 0)}円</p>
+                    </div>
+                  </div>
+                </div>
+                
+                {formData.description && (
+                  <div className="mt-4">
+                    <h4 className="font-semibold text-gray-700 mb-2">説明</h4>
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap">{formData.description}</p>
+                  </div>
+                )}
+                
+                {formData.availableGMs.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="font-semibold text-gray-700 mb-2">対応可能GM</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.availableGMs.map(gm => (
+                        <Badge key={gm} variant="secondary">{gm}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {formData.props.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="font-semibold text-gray-700 mb-2">必要道具・準備物</h4>
+                    <div className="space-y-1">
+                      {formData.props.map((prop, index) => (
+                        <div key={index} className="flex justify-between items-center text-sm">
+                          <div className="flex items-center gap-2">
+                            <span>{prop.name}</span>
+                            <Badge variant={prop.costType === 'per_play' ? 'default' : 'secondary'} className="text-xs">
+                              {prop.costType === 'per_play' ? '毎回' : '1度きり'}
+                            </Badge>
+                          </div>
+                          <span className="text-gray-600">{formatNumber(prop.cost)}円</span>
+                        </div>
+                      ))}
+                      <div className="border-t pt-1 space-y-1">
+                        <div className="text-sm">
+                          毎回コスト: {formatNumber(formData.props.filter(p => p.costType === 'per_play').reduce((sum, prop) => sum + prop.cost, 0))}円
+                        </div>
+                        <div className="text-sm">
+                          1度きりコスト: {formatNumber(formData.props.filter(p => p.costType === 'one_time').reduce((sum, prop) => sum + prop.cost, 0))}円
+                        </div>
+                        <div className="font-medium">
+                          総合計: {formatNumber(formData.props.reduce((sum, prop) => sum + prop.cost, 0))}円
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {formData.genre.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="font-semibold text-gray-700 mb-2">ジャンル</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.genre.map(genre => (
+                        <Badge key={genre} variant="outline">{genre}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="history">

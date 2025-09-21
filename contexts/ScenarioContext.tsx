@@ -30,6 +30,7 @@ export interface Scenario {
   playCount: number;
   status: 'available' | 'maintenance' | 'retired';
   requiredProps: string[];
+  props?: { name: string; cost: number; costType: 'per_play' | 'one_time' }[]; // 道具とコスト（毎回/1度きり）
   genre: string[]; // 追加: ジャンル
   notes?: string;
   hasPreReading: boolean; // 事前読み込みの有無
@@ -785,6 +786,7 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
             // 配列フィールドの安全な変換（スネークケース統一）
             availableGMs: Array.isArray(scenario.available_gms) ? scenario.available_gms : [],
             requiredProps: Array.isArray(scenario.required_props) ? scenario.required_props : [],
+            props: Array.isArray(scenario.props) ? scenario.props : [],
             genre: Array.isArray(scenario.genre) ? scenario.genre : [],
             // その他のフィールドマッピング（スネークケース統一）
             hasPreReading: scenario.has_pre_reading || false,
@@ -929,6 +931,7 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
         play_count: scenario.playCount,
         status: scenario.status,
         required_props: scenario.requiredProps || [],
+        props: scenario.props || [],
         genre: scenario.genre || [],
         notes: scenario.notes,
         has_pre_reading: scenario.hasPreReading,
@@ -978,6 +981,7 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
         play_count: scenario.playCount,
         status: scenario.status,
         required_props: scenario.requiredProps || [],
+        props: scenario.props || [],
         genre: scenario.genre || [],
         notes: scenario.notes,
         has_pre_reading: scenario.hasPreReading,
