@@ -229,7 +229,7 @@ export const ScenarioManager = React.memo(() => {
   const [activeTab, setActiveTab] = useState('basic');
 
   // ソート状態の管理
-  const [sortField, setSortField] = useState<keyof Scenario | 'playCount' | 'roi' | 'paybackPeriod' | 'profitMargin' | null>(null);
+  const [sortField, setSortField] = useState<keyof Scenario | 'playCount' | 'roi' | 'paybackPeriod' | 'profitMargin' | 'revenuePerPlay' | 'costPerPlay' | 'totalRevenue' | 'totalCost' | 'finalProfit' | 'recoveryRate' | 'gmFee' | 'miscellaneousExpenses' | 'licenseAmount' | 'grossProfit' | 'recoverySpeed' | 'recoveryStatus' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // 回収期間設定（月単位）
@@ -349,7 +349,7 @@ export const ScenarioManager = React.memo(() => {
   };
 
   // ソート処理関数
-  const handleSort = (field: keyof Scenario | 'playCount' | 'roi' | 'paybackPeriod' | 'profitMargin') => {
+  const handleSort = (field: keyof Scenario | 'playCount' | 'roi' | 'paybackPeriod' | 'profitMargin' | 'revenuePerPlay' | 'costPerPlay' | 'totalRevenue' | 'totalCost' | 'finalProfit' | 'recoveryRate' | 'gmFee' | 'miscellaneousExpenses' | 'licenseAmount' | 'grossProfit' | 'recoverySpeed' | 'recoveryStatus') => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -394,9 +394,14 @@ export const ScenarioManager = React.memo(() => {
     // 回収期間計算（月単位）
     const profitPerPlay = revenuePerPlay - costPerPlay;
     const paybackPeriod = profitPerPlay > 0 ? Math.ceil(productionCost / profitPerPlay) : Infinity;
+    
 
     // 純利益率計算
     const profitMargin = totalRevenue > 0 ? (finalProfit / totalRevenue) * 100 : 0;
+
+    // 回収率計算（回収済み金額 ÷ 制作費 × 100）
+    const recoveredAmount = Math.min(totalRevenue, productionCost);
+    const recoveryRate = productionCost > 0 ? (recoveredAmount / productionCost) * 100 : 0;
 
     return {
       revenuePerPlay,
@@ -406,13 +411,15 @@ export const ScenarioManager = React.memo(() => {
       finalProfit,
       roi: Math.round(roi * 10) / 10,
       paybackPeriod: paybackPeriod === Infinity ? '未回収' : `${paybackPeriod}回`,
-      profitMargin: Math.round(profitMargin * 10) / 10
+      profitMargin: Math.round(profitMargin * 10) / 10,
+      recoveryRate: Math.round(recoveryRate * 10) / 10
     };
   };
 
   // 回収指標の計算関数
   const calculateRecoveryMetrics = (scenario: Scenario) => {
     const releaseDate = scenario.releaseDate;
+    
     if (!releaseDate) {
       return {
         recoverySpeedScore: null,
@@ -425,46 +432,66 @@ export const ScenarioManager = React.memo(() => {
 
     const release = new Date(releaseDate);
     const now = new Date();
-    const monthsElapsed = Math.floor((now.getTime() - release.getTime()) / (1000 * 60 * 60 * 24 * 30.44)); // 平均月日数
+    
+    // 日付が有効かチェック
+    if (isNaN(release.getTime())) {
+      return {
+        recoverySpeedScore: null,
+        timelineStatus: '無効なリリース日',
+        recoveryStatus: 'unknown',
+        monthsElapsed: 0,
+        remainingMonths: null
+      };
+    }
+    
+    const daysElapsed = Math.floor((now.getTime() - release.getTime()) / (1000 * 60 * 60 * 24)); // 日数
+    
+    // 未来の日付の場合は0日経過として扱う
+    const actualDaysElapsed = Math.max(0, daysElapsed);
 
     const metrics = calculateFinancialMetrics(scenario);
-    const paybackPeriodMonths = metrics.paybackPeriod === '未回収' ? Infinity : parseInt(metrics.paybackPeriod.replace('回', ''));
+    const paybackPeriodPlays = metrics.paybackPeriod === '未回収' ? Infinity : parseInt(metrics.paybackPeriod.replace('回', ''));
 
-    if (paybackPeriodMonths === Infinity) {
+    if (paybackPeriodPlays === Infinity) {
       return {
         recoverySpeedScore: null,
         timelineStatus: '回収不可',
         recoveryStatus: 'unrecoverable',
-        monthsElapsed,
+        monthsElapsed: 0,
         remainingMonths: null
       };
     }
 
-    const recoverySpeedScore = monthsElapsed > 0 ? paybackPeriodMonths / monthsElapsed : null;
-    const remainingMonths = Math.max(0, paybackPeriodMonths - monthsElapsed);
+    // 回収期間を日数に変換（1ヶ月=30日として計算）
+    const paybackPeriodDays = paybackPeriodPlays * 30;
+    
+    const recoverySpeedScore = actualDaysElapsed > 0 ? paybackPeriodDays / actualDaysElapsed : null;
+    const remainingDays = Math.max(0, paybackPeriodDays - actualDaysElapsed);
     
     let timelineStatus = '';
     let recoveryStatus = '';
 
-    if (remainingMonths === 0) {
+    if (remainingDays === 0) {
       timelineStatus = '回収完了';
       recoveryStatus = 'completed';
     } else if (recoverySpeedScore !== null) {
+      const remainingDaysText = remainingDays >= 30 ? `${Math.floor(remainingDays / 30)}ヶ月${remainingDays % 30}日` : `${remainingDays}日`;
       if (recoverySpeedScore <= 1.0) {
-        timelineStatus = `優秀 (${remainingMonths}ヶ月残り)`;
+        timelineStatus = `優秀 (${remainingDaysText}残り)`;
         recoveryStatus = 'excellent';
       } else if (recoverySpeedScore <= 1.5) {
-        timelineStatus = `良好 (${remainingMonths}ヶ月残り)`;
+        timelineStatus = `良好 (${remainingDaysText}残り)`;
         recoveryStatus = 'good';
       } else if (recoverySpeedScore <= 2.0) {
-        timelineStatus = `普通 (${remainingMonths}ヶ月残り)`;
+        timelineStatus = `普通 (${remainingDaysText}残り)`;
         recoveryStatus = 'average';
       } else {
-        timelineStatus = `要改善 (${remainingMonths}ヶ月残り)`;
+        timelineStatus = `要改善 (${remainingDaysText}残り)`;
         recoveryStatus = 'poor';
       }
     } else {
-      timelineStatus = `回収予定まで${remainingMonths}ヶ月`;
+      const remainingDaysText = remainingDays >= 30 ? `${Math.floor(remainingDays / 30)}ヶ月${remainingDays % 30}日` : `${remainingDays}日`;
+      timelineStatus = `回収予定まで${remainingDaysText}`;
       recoveryStatus = 'pending';
     }
 
@@ -472,8 +499,8 @@ export const ScenarioManager = React.memo(() => {
       recoverySpeedScore: recoverySpeedScore ? Math.round(recoverySpeedScore * 100) / 100 : null,
       timelineStatus,
       recoveryStatus,
-      monthsElapsed,
-      remainingMonths
+      monthsElapsed: Math.floor(actualDaysElapsed / 30), // 日数を月数に変換して表示
+      remainingMonths: Math.floor(remainingDays / 30) // 残り日数を月数に変換して表示
     };
   };
 
@@ -551,10 +578,54 @@ export const ScenarioManager = React.memo(() => {
       const bPayback = calculateFinancialMetrics(b).paybackPeriod;
       aValue = aPayback === '未回収' ? Infinity : parseInt(aPayback.replace('回', ''));
       bValue = bPayback === '未回収' ? Infinity : parseInt(bPayback.replace('回', ''));
-    } else if (sortField === 'profitMargin') {
-      aValue = calculateFinancialMetrics(a).profitMargin;
-      bValue = calculateFinancialMetrics(b).profitMargin;
-    } else if (sortField === 'playerCount') {
+        } else if (sortField === 'profitMargin') {
+          aValue = calculateFinancialMetrics(a).profitMargin;
+          bValue = calculateFinancialMetrics(b).profitMargin;
+        } else if (sortField === 'revenuePerPlay') {
+          aValue = calculateFinancialMetrics(a).revenuePerPlay;
+          bValue = calculateFinancialMetrics(b).revenuePerPlay;
+        } else if (sortField === 'costPerPlay') {
+          aValue = calculateFinancialMetrics(a).costPerPlay;
+          bValue = calculateFinancialMetrics(b).costPerPlay;
+        } else if (sortField === 'totalRevenue') {
+          aValue = calculateFinancialMetrics(a).totalRevenue;
+          bValue = calculateFinancialMetrics(b).totalRevenue;
+        } else if (sortField === 'totalCost') {
+          aValue = calculateFinancialMetrics(a).totalCost;
+          bValue = calculateFinancialMetrics(b).totalCost;
+        } else if (sortField === 'finalProfit') {
+          aValue = calculateFinancialMetrics(a).finalProfit;
+          bValue = calculateFinancialMetrics(b).finalProfit;
+        } else if (sortField === 'recoveryRate') {
+          aValue = calculateFinancialMetrics(a).recoveryRate;
+          bValue = calculateFinancialMetrics(b).recoveryRate;
+        } else if (sortField === 'gmFee') {
+          aValue = a.gmFee || 0;
+          bValue = b.gmFee || 0;
+        } else if (sortField === 'miscellaneousExpenses') {
+          aValue = a.miscellaneousExpenses || 0;
+          bValue = b.miscellaneousExpenses || 0;
+        } else if (sortField === 'licenseAmount') {
+          aValue = a.licenseAmount || 0;
+          bValue = b.licenseAmount || 0;
+        } else if (sortField === 'grossProfit') {
+          const aMetrics = calculateFinancialMetrics(a);
+          const bMetrics = calculateFinancialMetrics(b);
+          aValue = aMetrics.revenuePerPlay - aMetrics.costPerPlay;
+          bValue = bMetrics.revenuePerPlay - bMetrics.costPerPlay;
+        } else if (sortField === 'recoverySpeed') {
+          const aRecovery = calculateRecoveryMetrics(a);
+          const bRecovery = calculateRecoveryMetrics(b);
+          aValue = aRecovery.recoverySpeedScore || 0;
+          bValue = bRecovery.recoverySpeedScore || 0;
+        } else if (sortField === 'recoveryStatus') {
+          const aRecovery = calculateRecoveryMetrics(a);
+          const bRecovery = calculateRecoveryMetrics(b);
+          // ステータスの優先順位で並び替え
+          const statusOrder = { 'completed': 0, 'excellent': 1, 'good': 2, 'average': 3, 'poor': 4, 'pending': 5, 'unrecoverable': 6, 'unknown': 7 };
+          aValue = statusOrder[aRecovery.recoveryStatus as keyof typeof statusOrder] || 7;
+          bValue = statusOrder[bRecovery.recoveryStatus as keyof typeof statusOrder] || 7;
+        } else if (sortField === 'playerCount') {
       aValue = a.playerCount?.min || 0;
       bValue = b.playerCount?.min || 0;
     } else {
@@ -580,13 +651,9 @@ export const ScenarioManager = React.memo(() => {
   }) : [];
 
   // ソートアイコンの表示
-  const getSortIcon = (field: keyof Scenario | 'playCount' | 'roi' | 'paybackPeriod' | 'profitMargin') => {
-    if (sortField !== field) {
-      return <ArrowUpDown className="w-4 h-4 opacity-50" />;
-    }
-    return sortDirection === 'asc' ? 
-      <ArrowUp className="w-4 h-4" /> : 
-      <ArrowDown className="w-4 h-4" />;
+  const getSortIcon = (field: keyof Scenario | 'playCount' | 'roi' | 'paybackPeriod' | 'profitMargin' | 'revenuePerPlay' | 'costPerPlay' | 'totalRevenue' | 'totalCost' | 'finalProfit' | 'recoveryRate' | 'gmFee' | 'miscellaneousExpenses' | 'licenseAmount' | 'grossProfit' | 'recoverySpeed' | 'recoveryStatus') => {
+    // 矢印は表示しない
+    return null;
   };
 
   // GM可能なスタッフを取得（GMまたはマネージャーの役割を持つスタッフ）
@@ -996,62 +1063,224 @@ export const ScenarioManager = React.memo(() => {
                     <Table>
                       <TableHeader>
                         <TableRow className="border-b border-gray-300">
-                        <TableHead className="w-8 border-r border-gray-300">
+                        <TableHead className="border-r border-gray-300" style={{ width: '50px' }}>
                           <GripVertical className="w-4 h-4 opacity-50" />
                         </TableHead>
                         <TableHead className="border-r border-gray-300">タイトル</TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 w-[60px] border-r border-gray-300"
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          style={{ 
+                            width: '50px',
+                            borderTop: sortField === 'playCount' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
+                            borderBottom: sortField === 'playCount' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
+                          }}
                           onClick={() => handleSort('playCount')}
                         >
-                          <div className="flex items-center gap-2">
-                            累計公演数
-                            {getSortIcon('playCount')}
+                          <div className="flex items-center gap-2" style={{ width: '50px', overflow: 'hidden' }}>
+                            <span className="truncate">公演数</span>
                           </div>
                         </TableHead>
-                        <TableHead className="w-[60px] border-r border-gray-300">売上/回</TableHead>
-                        <TableHead className="w-[60px] border-r border-gray-300">GM代/回</TableHead>
-                        <TableHead className="w-[60px] border-r border-gray-300">雑費/回</TableHead>
-                        <TableHead className="w-[60px] border-r border-gray-300">ライセンス/回</TableHead>
-                        <TableHead className="w-[60px] border-r border-gray-300">コスト/回</TableHead>
-                        <TableHead className="w-[60px] border-r border-gray-300">粗利/回</TableHead>
-                        <TableHead className="w-[100px] border-r border-gray-300">売上累計</TableHead>
-                        <TableHead className="w-[100px] border-r border-gray-300">コスト累計</TableHead>
-                        <TableHead className="w-[100px] border-r border-gray-300">最終純利益</TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 w-[60px] border-r border-gray-300"
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          style={{ 
+                            width: '50px',
+                            borderTop: sortField === 'revenuePerPlay' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
+                            borderBottom: sortField === 'revenuePerPlay' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
+                          }}
+                          onClick={() => handleSort('revenuePerPlay')}
+                        >
+                          <div style={{ width: '50px', overflow: 'hidden' }}>
+                            <span className="truncate">売上/回</span>
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          style={{ 
+                            width: '50px',
+                            borderTop: sortField === 'gmFee' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
+                            borderBottom: sortField === 'gmFee' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
+                          }}
+                          onClick={() => handleSort('gmFee')}
+                        >
+                          <div style={{ width: '50px', overflow: 'hidden' }}>
+                            <span className="truncate">GM代/回</span>
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          style={{ 
+                            width: '50px',
+                            borderTop: sortField === 'miscellaneousExpenses' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
+                            borderBottom: sortField === 'miscellaneousExpenses' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
+                          }}
+                          onClick={() => handleSort('miscellaneousExpenses')}
+                        >
+                          <div style={{ width: '50px', overflow: 'hidden' }}>
+                            <span className="truncate">雑費/回</span>
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          style={{ 
+                            width: '50px',
+                            borderTop: sortField === 'licenseAmount' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
+                            borderBottom: sortField === 'licenseAmount' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
+                          }}
+                          onClick={() => handleSort('licenseAmount')}
+                        >
+                          <div style={{ width: '50px', overflow: 'hidden' }}>
+                            <span className="truncate">ライセンス</span>
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          style={{ 
+                            width: '50px',
+                            borderTop: sortField === 'costPerPlay' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
+                            borderBottom: sortField === 'costPerPlay' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
+                          }}
+                          onClick={() => handleSort('costPerPlay')}
+                        >
+                          <div style={{ width: '50px', overflow: 'hidden' }}>
+                            <span className="truncate">コスト/回</span>
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          style={{ 
+                            width: '50px',
+                            borderTop: sortField === 'grossProfit' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
+                            borderBottom: sortField === 'grossProfit' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
+                          }}
+                          onClick={() => handleSort('grossProfit')}
+                        >
+                          <div style={{ width: '50px', overflow: 'hidden' }}>
+                            <span className="truncate">粗利/回</span>
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          style={{ 
+                            width: '50px',
+                            borderTop: sortField === 'totalRevenue' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
+                            borderBottom: sortField === 'totalRevenue' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
+                          }}
+                          onClick={() => handleSort('totalRevenue')}
+                        >
+                          <div style={{ width: '50px', overflow: 'hidden' }}>
+                            <span className="truncate">売上累計</span>
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          style={{ 
+                            width: '50px',
+                            borderTop: sortField === 'totalCost' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
+                            borderBottom: sortField === 'totalCost' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
+                          }}
+                          onClick={() => handleSort('totalCost')}
+                        >
+                          <div style={{ width: '50px', overflow: 'hidden' }}>
+                            <span className="truncate">コスト累計</span>
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          style={{ 
+                            width: '50px',
+                            borderTop: sortField === 'finalProfit' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
+                            borderBottom: sortField === 'finalProfit' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
+                          }}
+                          onClick={() => handleSort('finalProfit')}
+                        >
+                          <div style={{ width: '50px', overflow: 'hidden' }}>
+                            <span className="truncate">最終純利益</span>
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          style={{ 
+                            width: '50px',
+                            borderTop: sortField === 'roi' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
+                            borderBottom: sortField === 'roi' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
+                          }}
                           onClick={() => handleSort('roi')}
                         >
-                          <div className="flex items-center gap-2">
-                            ROI (%)
-                            {getSortIcon('roi')}
+                          <div className="flex items-center gap-2" style={{ width: '50px', overflow: 'hidden' }}>
+                            <span className="truncate">ROI</span>
                           </div>
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 w-[60px] border-r border-gray-300"
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          style={{ 
+                            width: '50px',
+                            borderTop: sortField === 'paybackPeriod' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
+                            borderBottom: sortField === 'paybackPeriod' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
+                          }}
                           onClick={() => handleSort('paybackPeriod')}
                         >
-                          <div className="flex items-center gap-2">
-                            回収期間
-                            {getSortIcon('paybackPeriod')}
+                          <div className="flex items-center gap-2" style={{ width: '50px', overflow: 'hidden' }}>
+                            <span className="truncate">回収期間</span>
                           </div>
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 w-[60px] border-r border-gray-300"
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          style={{ 
+                            width: '50px',
+                            borderTop: sortField === 'profitMargin' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
+                            borderBottom: sortField === 'profitMargin' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
+                          }}
                           onClick={() => handleSort('profitMargin')}
                         >
-                          <div className="flex items-center gap-2">
-                            純利益率 (%)
-                            {getSortIcon('profitMargin')}
+                          <div className="flex items-center gap-2" style={{ width: '50px', overflow: 'hidden' }}>
+                            <span className="truncate">純利%</span>
                           </div>
                         </TableHead>
-                        <TableHead className="w-[80px] border-r border-gray-300">回収速度</TableHead>
-                        <TableHead className="w-[120px] border-r border-gray-300">回収状況</TableHead>
-                        <TableHead className="w-20">操作</TableHead>
+                        <TableHead 
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          style={{ 
+                            width: '50px',
+                            borderTop: sortField === 'recoveryRate' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
+                            borderBottom: sortField === 'recoveryRate' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
+                          }}
+                          onClick={() => handleSort('recoveryRate')}
+                        >
+                          <div style={{ width: '50px', overflow: 'hidden' }}>
+                            <span className="truncate">回収率</span>
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          style={{ 
+                            width: '50px',
+                            borderTop: sortField === 'recoverySpeed' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
+                            borderBottom: sortField === 'recoverySpeed' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
+                          }}
+                          onClick={() => handleSort('recoverySpeed')}
+                        >
+                          <div style={{ width: '50px', overflow: 'hidden' }}>
+                            <span className="truncate">回収速度</span>
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          style={{ 
+                            width: '50px',
+                            borderTop: sortField === 'recoveryStatus' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
+                            borderBottom: sortField === 'recoveryStatus' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
+                          }}
+                          onClick={() => handleSort('recoveryStatus')}
+                        >
+                          <div style={{ width: '50px', overflow: 'hidden' }}>
+                            <span className="truncate">回収状況</span>
+                          </div>
+                        </TableHead>
+                        <TableHead style={{ width: '50px' }}>操作</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {sortedScenarios.map((scenario, index) => {
+                        
                         const moveRow = (dragIndex: number, hoverIndex: number) => {
                           const newScenarios = [...sortedScenarios];
                           const draggedScenario = newScenarios[dragIndex];
@@ -1085,8 +1314,8 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* 累計公演数 */}
-                            <TableCell className="w-[60px] border-r border-gray-300">
-                              <div className="w-[60px] text-right">
+                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
+                              <div style={{ width: '50px' }} className="text-right">
                                 <span className="text-sm">
                                   {scenario.playCount}回
                                 </span>
@@ -1094,8 +1323,8 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* 売上/回 */}
-                            <TableCell className="w-[60px] border-r border-gray-300">
-                              <div className="w-[60px] text-right">
+                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
+                              <div style={{ width: '50px' }} className="text-right">
                                 <span className="text-sm text-green-600">
                                   {formatLicenseAmount((scenario.playerCount?.max || 0) * (scenario.participationFee || 0))}
                                 </span>
@@ -1103,8 +1332,8 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* GM代/回 */}
-                            <TableCell className="w-[60px] border-r border-gray-300">
-                              <div className="w-[60px] text-right">
+                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
+                              <div style={{ width: '50px' }} className="text-right">
                                 <span className="text-sm text-red-600">
                                   {formatLicenseAmount(scenario.gmFee || 0)}
                                 </span>
@@ -1112,8 +1341,8 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* 雑費/回 */}
-                            <TableCell className="w-[60px] border-r border-gray-300">
-                              <div className="w-[60px] text-right">
+                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
+                              <div style={{ width: '50px' }} className="text-right">
                                 <span className="text-sm text-red-600">
                                   {formatLicenseAmount(scenario.miscellaneousExpenses || 0)}
                                 </span>
@@ -1121,8 +1350,8 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* ライセンス/回 */}
-                            <TableCell className="w-[60px] border-r border-gray-300">
-                              <div className="w-[60px] text-right">
+                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
+                              <div style={{ width: '50px' }} className="text-right">
                                 <span className="text-sm text-orange-600">
                                   {formatLicenseAmount(scenario.licenseAmount || 0)}
                                 </span>
@@ -1130,8 +1359,8 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* コスト/回 */}
-                            <TableCell className="w-[60px] border-r border-gray-300">
-                              <div className="w-[60px] text-right">
+                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
+                              <div style={{ width: '50px' }} className="text-right">
                                 <span className="text-sm text-red-600">
                                   {formatLicenseAmount((scenario.gmFee || 0) + (scenario.miscellaneousExpenses || 0))}
                                 </span>
@@ -1139,8 +1368,8 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* 粗利/回 */}
-                            <TableCell className="w-[60px] border-r border-gray-300">
-                              <div className="w-[60px] text-right">
+                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
+                              <div style={{ width: '50px' }} className="text-right">
                                 <span className="text-sm text-blue-600 font-medium">
                                   {formatLicenseAmount(((scenario.playerCount?.max || 0) * (scenario.participationFee || 0)) - (scenario.gmFee || 0) - (scenario.miscellaneousExpenses || 0))}
                                 </span>
@@ -1148,8 +1377,8 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* 売上累計 */}
-                            <TableCell className="w-[100px] border-r border-gray-300">
-                              <div className="w-[100px] text-right">
+                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
+                              <div style={{ width: '50px' }} className="text-right">
                                 <span className="text-sm text-green-600 font-medium">
                                   {formatLicenseAmount((scenario.playerCount?.max || 0) * (scenario.participationFee || 0) * scenario.playCount)}
                                 </span>
@@ -1157,8 +1386,8 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* コスト累計 */}
-                            <TableCell className="w-[100px] border-r border-gray-300">
-                              <div className="w-[100px] text-right">
+                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
+                              <div style={{ width: '50px' }} className="text-right">
                                 <span className="text-sm text-red-600 font-medium">
                                   {formatLicenseAmount(((scenario.gmFee || 0) + (scenario.miscellaneousExpenses || 0)) * scenario.playCount + (scenario.productionCost || 0))}
                                 </span>
@@ -1166,8 +1395,8 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* 最終純利益 */}
-                            <TableCell className="w-[100px] border-r border-gray-300">
-                              <div className="w-[100px] text-right">
+                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
+                              <div style={{ width: '50px' }} className="text-right">
                                 <span className="text-sm text-blue-600 font-medium">
                                   {formatLicenseAmount(((scenario.playerCount?.max || 0) * (scenario.participationFee || 0) * scenario.playCount) - ((scenario.gmFee || 0) + (scenario.miscellaneousExpenses || 0)) * scenario.playCount - (scenario.productionCost || 0))}
                                 </span>
@@ -1175,8 +1404,8 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* ROI (%) */}
-                            <TableCell className="w-[60px] border-r border-gray-300">
-                              <div className="w-[60px] text-right">
+                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
+                              <div style={{ width: '50px' }} className="text-right">
                                 <span className={`text-sm font-medium ${calculateFinancialMetrics(scenario).roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                   {calculateFinancialMetrics(scenario).roi}%
                                 </span>
@@ -1184,8 +1413,8 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* 回収期間 */}
-                            <TableCell className="w-[60px] border-r border-gray-300">
-                              <div className="w-[60px] text-right">
+                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
+                              <div style={{ width: '50px' }} className="text-right">
                                 <span className="text-sm text-orange-600 font-medium">
                                   {calculateFinancialMetrics(scenario).paybackPeriod}
                                 </span>
@@ -1193,17 +1422,26 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* 純利益率 (%) */}
-                            <TableCell className="w-[60px] border-r border-gray-300">
-                              <div className="w-[60px] text-right">
+                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
+                              <div style={{ width: '50px' }} className="text-right">
                                 <span className={`text-sm font-medium ${calculateFinancialMetrics(scenario).profitMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                   {calculateFinancialMetrics(scenario).profitMargin}%
                                 </span>
                               </div>
                             </TableCell>
 
+                            {/* 回収率 */}
+                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
+                              <div style={{ width: '50px' }} className="text-right">
+                                <span className={`text-sm font-medium ${calculateFinancialMetrics(scenario).recoveryRate >= 100 ? 'text-green-600' : 'text-blue-600'}`}>
+                                  {calculateFinancialMetrics(scenario).recoveryRate}%
+                                </span>
+                              </div>
+                            </TableCell>
+
                             {/* 回収速度スコア */}
-                            <TableCell className="w-[80px] border-r border-gray-300">
-                              <div className="w-[80px] text-center">
+                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
+                              <div style={{ width: '50px' }} className="text-center">
                                 {(() => {
                                   const recoveryMetrics = calculateRecoveryMetrics(scenario);
                                   if (recoveryMetrics.recoverySpeedScore === null) {
@@ -1223,8 +1461,8 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* 回収状況 */}
-                            <TableCell className="w-[120px] border-r border-gray-300">
-                              <div className="w-[120px] text-center">
+                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
+                              <div style={{ width: '50px' }} className="text-center">
                                 {(() => {
                                   const recoveryMetrics = calculateRecoveryMetrics(scenario);
                                   const getStatusBadge = (status: string) => {
@@ -1255,7 +1493,7 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* 操作 */}
-                            <TableCell>
+                            <TableCell style={{ width: '50px' }}>
                               <div className="flex gap-1">
                             <Tooltip>
                               <TooltipTrigger asChild>

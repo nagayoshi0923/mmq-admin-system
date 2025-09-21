@@ -298,6 +298,19 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
                 />
               </div>
               <div>
+                <Label htmlFor="releaseDate">リリース日</Label>
+                <Input
+                  id="releaseDate"
+                  type="date"
+                  value={formData.releaseDate || ''}
+                  onChange={(e) => setFormData(prev => ({ 
+                    ...prev, 
+                    releaseDate: e.target.value 
+                  }))}
+                  className="border border-slate-200"
+                />
+              </div>
+              <div>
                 <Label htmlFor="productionCost">制作費（円）</Label>
                 <Input
                   id="productionCost"
