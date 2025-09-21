@@ -627,8 +627,8 @@ export const ScenarioManager = React.memo(() => {
                 <div>
                   <h4 className="font-semibold text-orange-600 mb-2">減価償却</h4>
                   <ul className="space-y-1 text-muted-foreground">
-                    <li>• <strong>減価償却/回</strong>: 減価償却 ÷ 累計公演数</li>
-                    <li>• <strong>未償却残高</strong>: 制作費 - 減価償却</li>
+                    <li>• <strong>減価償却/回</strong>: 制作費 ÷ 累計公演数</li>
+                    <li>• <strong>未償却残高</strong>: 公演回数0回なら制作費、1回以上なら0円</li>
                   </ul>
                 </div>
                 <div>
@@ -976,7 +976,7 @@ export const ScenarioManager = React.memo(() => {
                             <TableCell className="w-[100px]">
                               <div className="w-[100px] text-right">
                                 <span className="text-sm text-red-600">
-                                  {formatLicenseAmount((scenario.depreciation || 0) / Math.max(scenario.playCount, 1))}
+                                  {formatLicenseAmount((scenario.productionCost || 0) / Math.max(scenario.playCount, 1))}
                                 </span>
                               </div>
                             </TableCell>
@@ -1012,7 +1012,7 @@ export const ScenarioManager = React.memo(() => {
                             <TableCell className="w-[100px]">
                               <div className="w-[100px] text-right">
                                 <span className="text-sm text-red-600 font-medium">
-                                  {formatLicenseAmount((scenario.productionCost || 0) - (scenario.depreciation || 0))}
+                                  {formatLicenseAmount(scenario.playCount > 0 ? 0 : (scenario.productionCost || 0))}
                                 </span>
                               </div>
                             </TableCell>
