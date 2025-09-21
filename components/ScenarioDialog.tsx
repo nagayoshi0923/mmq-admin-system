@@ -46,6 +46,7 @@ const parseNumber = (value: string): number => {
 interface Prop {
   name: string;
   cost: number;
+  costType: 'per_play' | 'one_time';
 }
 
 const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, trigger, open: externalOpen, onOpenChange }: ScenarioDialogProps) {
@@ -149,6 +150,15 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
           releaseDate: scenario.releaseDate || '',
           participationFee: scenario.participationFee || 0
         });
+        // 制作費項目を復元（既存のシナリオの場合）
+        const items = scenario.productionCostItems || [];
+        setProductionCostItems(items);
+        // 制作費を動的に計算
+        const totalCost = items.reduce((sum, item) => sum + item.cost, 0);
+        setFormData(prev => ({
+          ...prev,
+          productionCost: totalCost
+        }));
       } else {
         setFormData({
           id: Date.now().toString(),
@@ -176,6 +186,13 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
           notes: '',
           participationFee: 0
         });
+        // 制作費項目を初期化（新規シナリオの場合）
+        setProductionCostItems([]);
+        // 制作費を0に初期化
+        setFormData(prev => ({
+          ...prev,
+          productionCost: 0
+        }));
       }
     }
   }, [scenario, open]);
@@ -217,7 +234,10 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
     });
     
     console.log('onSave呼び出し前:', formData);
-    onSave(formData);
+    onSave({
+      ...formData,
+      productionCostItems: productionCostItems
+    });
     console.log('onSave呼び出し後');
     setOpen(false);
   };
@@ -252,11 +272,16 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
       const cost = parseNumber(newProductionCostAmount);
       if (cost > 0) {
         const newItem = { name: newProductionCost.trim(), cost };
-        setProductionCostItems(prev => [...prev, newItem]);
-        setFormData(prev => ({
-          ...prev,
-          productionCost: (prev.productionCost || 0) + cost
-        }));
+        setProductionCostItems(prev => {
+          const updated = [...prev, newItem];
+          // 制作費を動的に計算
+          const totalCost = updated.reduce((sum, item) => sum + item.cost, 0);
+          setFormData(prevForm => ({
+            ...prevForm,
+            productionCost: totalCost
+          }));
+          return updated;
+        });
         setNewProductionCost('');
         setNewProductionCostAmount('');
       }
@@ -280,12 +305,16 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
   };
 
   const removeProductionCostItem = (index: number) => {
-    const item = productionCostItems[index];
-    setProductionCostItems(prev => prev.filter((_, i) => i !== index));
-    setFormData(prev => ({
-      ...prev,
-      productionCost: (prev.productionCost || 0) - item.cost
-    }));
+    setProductionCostItems(prev => {
+      const updated = prev.filter((_, i) => i !== index);
+      // 制作費を動的に計算
+      const totalCost = updated.reduce((sum, item) => sum + item.cost, 0);
+      setFormData(prevForm => ({
+        ...prevForm,
+        productionCost: totalCost
+      }));
+      return updated;
+    });
   };
 
   const removeRevenueItem = (index: number) => {
@@ -306,18 +335,22 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
 
   const saveEditProductionCost = () => {
     if (editingProductionCostIndex !== null && editProductionCostName.trim() && editProductionCostAmount.trim()) {
-      const oldItem = productionCostItems[editingProductionCostIndex];
       const newCost = parseNumber(editProductionCostAmount);
       if (newCost > 0) {
-        setProductionCostItems(prev => prev.map((item, index) => 
-          index === editingProductionCostIndex 
-            ? { name: editProductionCostName.trim(), cost: newCost }
-            : item
-        ));
-        setFormData(prev => ({
-          ...prev,
-          productionCost: (prev.productionCost || 0) - oldItem.cost + newCost
-        }));
+        setProductionCostItems(prev => {
+          const updated = prev.map((item, index) => 
+            index === editingProductionCostIndex 
+              ? { name: editProductionCostName.trim(), cost: newCost }
+              : item
+          );
+          // 制作費を動的に計算
+          const totalCost = updated.reduce((sum, item) => sum + item.cost, 0);
+          setFormData(prevForm => ({
+            ...prevForm,
+            productionCost: totalCost
+          }));
+          return updated;
+        });
         setEditingProductionCostIndex(null);
         setEditProductionCostName('');
         setEditProductionCostAmount('');
@@ -639,7 +672,7 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
                   placeholder="金額"
                   value={newProductionCostAmount}
                   onChange={(e) => setNewProductionCostAmount(e.target.value)}
-                  className="border border-slate-200 w-24"
+                  className="border border-slate-200 w-40"
                 />
                 <Button type="button" onClick={addProductionCost}>
                   <Plus className="w-4 h-4" />
@@ -659,7 +692,7 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
                         <Input
                           value={editProductionCostAmount}
                           onChange={(e) => setEditProductionCostAmount(e.target.value)}
-                          className="border border-slate-200 text-xs h-6 w-20"
+                          className="border border-slate-200 text-xs h-6 w-36"
                           placeholder="金額"
                         />
                         <Button
@@ -814,30 +847,24 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">必要道具・準備物</h3>
             <div className="space-y-2">
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
                 <Input
                   placeholder="道具名を入力"
                   value={newProp}
                   onChange={(e) => setNewProp(e.target.value)}
-                  className="border border-slate-200"
+                  className="border border-slate-200 flex-1"
                 />
                 <Input
                   placeholder="金額"
                   value={newPropCost}
                   onChange={(e) => setNewPropCost(e.target.value)}
-                  className="border border-slate-200 w-24"
+                  className="border border-slate-200 w-32"
                 />
-                <Button type="button" onClick={addProp}>
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-              <div className="flex gap-2">
-                <Label className="text-sm font-medium">コストタイプ:</Label>
                 <Select 
                   value={newPropCostType} 
                   onValueChange={(value: 'per_play' | 'one_time') => setNewPropCostType(value)}
                 >
-                  <SelectTrigger className="w-32 border border-slate-200">
+                  <SelectTrigger className="w-24 border border-slate-200">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -845,6 +872,9 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
                     <SelectItem value="one_time">1度きり</SelectItem>
                   </SelectContent>
                 </Select>
+                <Button type="button" onClick={addProp}>
+                  <Plus className="w-4 h-4" />
+                </Button>
               </div>
             </div>
             <div className="space-y-2">
@@ -855,13 +885,13 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
                       <Input
                         value={editPropName}
                         onChange={(e) => setEditPropName(e.target.value)}
-                        className="border border-slate-200 text-xs h-6"
+                        className="border border-slate-200 text-xs h-6 flex-1"
                         placeholder="道具名"
                       />
                       <Input
                         value={editPropCost}
                         onChange={(e) => setEditPropCost(e.target.value)}
-                        className="border border-slate-200 text-xs h-6 w-20"
+                        className="border border-slate-200 text-xs h-6 w-28"
                         placeholder="金額"
                       />
                       <Select value={editPropCostType} onValueChange={(value: 'per_play' | 'one_time') => setEditPropCostType(value)}>

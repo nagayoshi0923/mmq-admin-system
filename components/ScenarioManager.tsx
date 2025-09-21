@@ -247,6 +247,7 @@ export const ScenarioManager = React.memo(() => {
       props: scenarioData.props || [],
       genre: scenarioData.genre || [],
       production_cost: scenarioData.productionCost || 0,
+      production_cost_items: scenarioData.productionCostItems || [],
       revenue: scenarioData.revenue || 0,
       gm_fee: scenarioData.gmFee || 0,
       miscellaneous_expenses: scenarioData.miscellaneousExpenses || 0,
@@ -561,6 +562,7 @@ export const ScenarioManager = React.memo(() => {
       props: dbScenario.props || [],
       genre: dbScenario.genre || [],
       productionCost: dbScenario.production_cost || 0,
+      productionCostItems: dbScenario.production_cost_items || [],
       revenue: dbScenario.revenue || 0,
       gmFee: dbScenario.gm_fee || 0,
       miscellaneousExpenses: dbScenario.miscellaneous_expenses || 0,
@@ -1131,9 +1133,9 @@ export const ScenarioManager = React.memo(() => {
                     <Table>
                       <TableHeader>
                         <TableRow className="border-b border-gray-300">
-                        <TableHead className="border-r border-gray-300">タイトル</TableHead>
+                        <TableHead className="border-r border-gray-300 text-center">タイトル</TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300 text-center"
                           style={{ 
                             width: '60px',
                             borderTop: sortField === 'playCount' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
@@ -1141,12 +1143,12 @@ export const ScenarioManager = React.memo(() => {
                           }}
                           onClick={() => handleSort('playCount')}
                         >
-                          <div className="flex items-center gap-2" style={{ width: '60px', overflow: 'hidden' }}>
+                          <div className="flex items-center justify-center gap-2" style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">公演数</span>
                           </div>
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300 text-center"
                           style={{ 
                             width: '60px',
                             borderTop: sortField === 'revenuePerPlay' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
@@ -1154,12 +1156,12 @@ export const ScenarioManager = React.memo(() => {
                           }}
                           onClick={() => handleSort('revenuePerPlay')}
                         >
-                          <div style={{ width: '60px', overflow: 'hidden' }}>
+                          <div className="flex items-center justify-center" style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">売上/回</span>
                           </div>
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300 text-center"
                           style={{ 
                             width: '60px',
                             borderTop: sortField === 'gmFee' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
@@ -1167,12 +1169,12 @@ export const ScenarioManager = React.memo(() => {
                           }}
                           onClick={() => handleSort('gmFee')}
                         >
-                          <div style={{ width: '60px', overflow: 'hidden' }}>
+                          <div className="flex items-center justify-center" style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">GM代/回</span>
                           </div>
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300 text-center"
                           style={{ 
                             width: '60px',
                             borderTop: sortField === 'licenseAmount' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
@@ -1180,12 +1182,12 @@ export const ScenarioManager = React.memo(() => {
                           }}
                           onClick={() => handleSort('licenseAmount')}
                         >
-                          <div style={{ width: '60px', overflow: 'hidden' }}>
+                          <div className="flex items-center justify-center" style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">ライセンス</span>
                           </div>
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300 text-center"
                           style={{ 
                             width: '60px',
                             borderTop: sortField === 'propsCost' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
@@ -1193,12 +1195,12 @@ export const ScenarioManager = React.memo(() => {
                           }}
                           onClick={() => handleSort('propsCost')}
                         >
-                          <div style={{ width: '60px', overflow: 'hidden' }}>
+                          <div className="flex items-center justify-center" style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">道具</span>
                           </div>
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300 text-center"
                           style={{ 
                             width: '60px',
                             borderTop: sortField === 'productionCost' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
@@ -1206,12 +1208,12 @@ export const ScenarioManager = React.memo(() => {
                           }}
                           onClick={() => handleSort('productionCost')}
                         >
-                          <div style={{ width: '60px', overflow: 'hidden' }}>
+                          <div className="flex items-center justify-center" style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">制作費合計</span>
                           </div>
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300 text-center"
                           style={{ 
                             width: '60px',
                             borderTop: sortField === 'costPerPlay' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
@@ -1219,12 +1221,12 @@ export const ScenarioManager = React.memo(() => {
                           }}
                           onClick={() => handleSort('costPerPlay')}
                         >
-                          <div style={{ width: '60px', overflow: 'hidden' }}>
+                          <div className="flex items-center justify-center" style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">コスト/回</span>
                           </div>
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300 text-center"
                           style={{ 
                             width: '60px',
                             borderTop: sortField === 'grossProfit' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
@@ -1232,12 +1234,12 @@ export const ScenarioManager = React.memo(() => {
                           }}
                           onClick={() => handleSort('grossProfit')}
                         >
-                          <div style={{ width: '60px', overflow: 'hidden' }}>
+                          <div className="flex items-center justify-center" style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">粗利/回</span>
                           </div>
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300 text-center"
                           style={{ 
                             width: '60px',
                             borderTop: sortField === 'totalRevenue' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
@@ -1245,12 +1247,12 @@ export const ScenarioManager = React.memo(() => {
                           }}
                           onClick={() => handleSort('totalRevenue')}
                         >
-                          <div style={{ width: '60px', overflow: 'hidden' }}>
+                          <div className="flex items-center justify-center" style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">売上累計</span>
                           </div>
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300 text-center"
                           style={{ 
                             width: '60px',
                             borderTop: sortField === 'totalCost' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
@@ -1258,12 +1260,12 @@ export const ScenarioManager = React.memo(() => {
                           }}
                           onClick={() => handleSort('totalCost')}
                         >
-                          <div style={{ width: '60px', overflow: 'hidden' }}>
+                          <div className="flex items-center justify-center" style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">コスト累計</span>
                           </div>
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300 text-center"
                           style={{ 
                             width: '60px',
                             borderTop: sortField === 'finalProfit' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
@@ -1271,12 +1273,12 @@ export const ScenarioManager = React.memo(() => {
                           }}
                           onClick={() => handleSort('finalProfit')}
                         >
-                          <div style={{ width: '60px', overflow: 'hidden' }}>
+                          <div className="flex items-center justify-center" style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">最終純利益</span>
                           </div>
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300 text-center"
                           style={{ 
                             width: '60px',
                             borderTop: sortField === 'roi' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
@@ -1284,12 +1286,12 @@ export const ScenarioManager = React.memo(() => {
                           }}
                           onClick={() => handleSort('roi')}
                         >
-                          <div className="flex items-center gap-2" style={{ width: '60px', overflow: 'hidden' }}>
+                          <div className="flex items-center justify-center gap-2" style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">ROI</span>
                           </div>
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300 text-center"
                           style={{ 
                             width: '60px',
                             borderTop: sortField === 'paybackPeriod' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
@@ -1297,12 +1299,12 @@ export const ScenarioManager = React.memo(() => {
                           }}
                           onClick={() => handleSort('paybackPeriod')}
                         >
-                          <div className="flex items-center gap-2" style={{ width: '60px', overflow: 'hidden' }}>
+                          <div className="flex items-center justify-center gap-2" style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">回収回数</span>
                           </div>
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300 text-center"
                           style={{ 
                             width: '60px',
                             borderTop: sortField === 'profitMargin' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
@@ -1310,12 +1312,12 @@ export const ScenarioManager = React.memo(() => {
                           }}
                           onClick={() => handleSort('profitMargin')}
                         >
-                          <div className="flex items-center gap-2" style={{ width: '60px', overflow: 'hidden' }}>
+                          <div className="flex items-center justify-center gap-2" style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">純利%</span>
                           </div>
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300 text-center"
                           style={{ 
                             width: '60px',
                             borderTop: sortField === 'recoveryRate' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
@@ -1323,12 +1325,12 @@ export const ScenarioManager = React.memo(() => {
                           }}
                           onClick={() => handleSort('recoveryRate')}
                         >
-                          <div style={{ width: '60px', overflow: 'hidden' }}>
+                          <div className="flex items-center justify-center" style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">回収率</span>
                           </div>
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300 text-center"
                           style={{ 
                             width: '80px',
                             borderTop: sortField === 'recoverySpeed' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
@@ -1336,12 +1338,12 @@ export const ScenarioManager = React.memo(() => {
                           }}
                           onClick={() => handleSort('recoverySpeed')}
                         >
-                          <div style={{ width: '80px', overflow: 'hidden' }}>
+                          <div className="flex items-center justify-center" style={{ width: '80px', overflow: 'hidden' }}>
                             <span className="truncate">残数</span>
                           </div>
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
+                          className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300 text-center"
                           style={{ 
                             width: '60px',
                             borderTop: sortField === 'recoveryStatus' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
@@ -1349,11 +1351,11 @@ export const ScenarioManager = React.memo(() => {
                           }}
                           onClick={() => handleSort('recoveryStatus')}
                         >
-                          <div style={{ width: '60px', overflow: 'hidden' }}>
+                          <div className="flex items-center justify-center" style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">状況</span>
                           </div>
                         </TableHead>
-                        <TableHead style={{ width: '60px' }}>操作</TableHead>
+                        <TableHead className="text-center" style={{ width: '60px' }}>操作</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
