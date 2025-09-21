@@ -98,51 +98,56 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
   }, [updateFormData]);
 
   useEffect(() => {
-    if (scenario) {
-      setFormData({
-        ...scenario,
-        availableGMs: scenario.availableGMs || [],
-        notes: scenario.notes || '',
-        licenseAmount: scenario.licenseAmount || 2500,
-        productionCost: scenario.productionCost || 0,
-        depreciation: scenario.depreciation || 0,
-        revenue: scenario.revenue || 0,
-        gmFee: scenario.gmFee || 0,
-        miscellaneousExpenses: scenario.miscellaneousExpenses || 0,
-        licenseRateOverride: scenario.licenseRateOverride || 0,
-        hasPreReading: scenario.hasPreReading || false,
-        releaseDate: scenario.releaseDate || '',
-        participationFee: scenario.participationFee || 0
-      });
-    } else {
-      setFormData({
-        id: Date.now().toString(),
-        title: '',
-        description: '',
-        author: 'クインズワルツ',
-        licenseAmount: 2500,
-        duration: 240,
-        playerCount: { min: 3, max: 6 },
-        difficulty: 3 as 1 | 2 | 3 | 4 | 5,
-        availableGMs: [],
-        rating: 4.0,
-        playCount: 0,
-        status: 'available',
-        requiredProps: [],
-        genre: [],
-        productionCost: 0,
-        depreciation: 0,
-        revenue: 0,
-        gmFee: 0,
-        miscellaneousExpenses: 0,
-        licenseRateOverride: 0,
-        hasPreReading: false,
-        releaseDate: '',
-        notes: '',
-        participationFee: 0
-      });
+    if (open) {
+      if (scenario) {
+        setFormData({
+          ...scenario,
+          availableGMs: scenario.availableGMs || [],
+          notes: scenario.notes || '',
+          licenseAmount: scenario.licenseAmount || 2500,
+          playerCount: scenario.playerCount || { min: 3, max: 6 },
+          requiredProps: scenario.requiredProps || [],
+          genre: scenario.genre || [],
+          productionCost: scenario.productionCost || 0,
+          depreciation: scenario.depreciation || 0,
+          revenue: scenario.revenue || 0,
+          gmFee: scenario.gmFee || 0,
+          miscellaneousExpenses: scenario.miscellaneousExpenses || 0,
+          licenseRateOverride: scenario.licenseRateOverride || 0,
+          hasPreReading: scenario.hasPreReading || false,
+          releaseDate: scenario.releaseDate || '',
+          participationFee: scenario.participationFee || 0
+        });
+      } else {
+        setFormData({
+          id: Date.now().toString(),
+          title: '',
+          description: '',
+          author: 'クインズワルツ',
+          licenseAmount: 2500,
+          duration: 240,
+          playerCount: { min: 3, max: 6 },
+          difficulty: 3 as 1 | 2 | 3 | 4 | 5,
+          availableGMs: [],
+          rating: 4.0,
+          playCount: 0,
+          status: 'available',
+          requiredProps: [],
+          genre: [],
+          productionCost: 0,
+          depreciation: 0,
+          revenue: 0,
+          gmFee: 0,
+          miscellaneousExpenses: 0,
+          licenseRateOverride: 0,
+          hasPreReading: false,
+          releaseDate: '',
+          notes: '',
+          participationFee: 0
+        });
+      }
     }
-  }, [scenario]);
+  }, [scenario, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -284,10 +289,10 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
                   type="number"
                   min="0"
                   step="100"
-                  value={formData.participationFee || ''}
+                  value={formData.participationFee ?? ''}
                   onChange={(e) => setFormData(prev => ({ 
                     ...prev, 
-                    participationFee: e.target.value ? parseInt(e.target.value) : undefined 
+                    participationFee: e.target.value ? parseInt(e.target.value) : 0 
                   }))}
                   className="border border-slate-200"
                 />
@@ -440,10 +445,13 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
                   type="number"
                   min="1"
                   max="20"
-                  value={formData.playerCount.min}
+                  value={formData.playerCount?.min || 3}
                   onChange={(e) => setFormData(prev => ({ 
                     ...prev, 
-                    playerCount: { ...prev.playerCount, min: parseInt(e.target.value) || 1 }
+                    playerCount: { 
+                      min: parseInt(e.target.value) || 1, 
+                      max: prev.playerCount?.max || 6 
+                    }
                   }))}
                   className="border border-slate-200"
                   required
@@ -456,10 +464,13 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
                   type="number"
                   min="1"
                   max="20"
-                  value={formData.playerCount.max}
+                  value={formData.playerCount?.max || 6}
                   onChange={(e) => setFormData(prev => ({ 
                     ...prev, 
-                    playerCount: { ...prev.playerCount, max: parseInt(e.target.value) || 6 }
+                    playerCount: { 
+                      min: prev.playerCount?.min || 3, 
+                      max: parseInt(e.target.value) || 6 
+                    }
                   }))}
                   className="border border-slate-200"
                   required
@@ -497,7 +508,7 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {formData.availableGMs.map(gm => (
+              {(formData.availableGMs || []).map(gm => (
                 <Badge key={gm} variant="secondary" className="flex items-center gap-1">
                   {gm}
                   <button
@@ -531,7 +542,7 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
               </Button>
             </div>
             <div className="flex flex-wrap gap-2">
-              {formData.requiredProps.map(prop => (
+              {(formData.requiredProps || []).map(prop => (
                 <Badge key={prop} variant="outline" className="flex items-center gap-1">
                   {prop}
                   <button
@@ -562,7 +573,7 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
               </Button>
             </div>
             <div className="flex flex-wrap gap-2">
-              {formData.genre.map(genre => (
+              {(formData.genre || []).map(genre => (
                 <Badge key={genre} variant="outline" className="flex items-center gap-1">
                   {genre}
                   <button

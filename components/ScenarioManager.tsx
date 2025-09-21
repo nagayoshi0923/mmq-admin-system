@@ -201,7 +201,7 @@ function DraggableScenarioRow({ index, scenario, moveRow, children, setSelectedS
 }
 
 export const ScenarioManager = React.memo(() => {
-  const { scenarios, addScenario, updateScenario, removeScenario, updateScenarios } = useScenarios();
+  const { scenarios, updateScenario, removeScenario, updateScenarios } = useScenarios();
   const { staff } = useStaff();
   const { stores, getKitsByScenario } = useStores();
   const { addEditEntry } = useEditHistory();
@@ -209,7 +209,7 @@ export const ScenarioManager = React.memo(() => {
   // 公演回数はデータベースで管理するため、useScheduleは不要
   
   // Supabaseからのリアルタイムデータ取得
-  const {
+  const { 
     data: supabaseScenarios, 
     loading: supabaseLoading, 
     error: supabaseError,
@@ -236,24 +236,42 @@ export const ScenarioManager = React.memo(() => {
   // シナリオ保存関数
   const handleSaveScenario = async (scenarioData: Scenario) => {
     console.log('handleSaveScenario呼び出し:', scenarioData);
-    const existingScenario = scenarios.find(s => s.id === scenarioData.id);
+    const dataSource = supabaseScenarios || scenarios;
+    const existingScenario = dataSource.find(s => s.id === scenarioData.id);
     console.log('既存シナリオ:', existingScenario);
     
-    // 最小限のカラムのみで保存（テーブルに存在するカラムのみ）
+    // データベースに存在するカラムのみで保存データを構築
     const cleanedData = {
-      id: scenarioData.id,
       title: scenarioData.title,
       description: scenarioData.description || '',
       author: scenarioData.author || '',
-      duration: scenarioData.duration || 0
-      // 他のカラムは一時的に除外（テーブルに存在しない可能性があるため）
+      duration: scenarioData.duration || 0,
+      player_count_min: scenarioData.playerCount?.min || 3,
+      player_count_max: scenarioData.playerCount?.max || 6,
+      difficulty: scenarioData.difficulty || 1,
+      rating: scenarioData.rating || 0,
+      play_count: scenarioData.playCount || 0,
+      status: scenarioData.status || 'available',
+      required_props: scenarioData.requiredProps || [],
+      genre: scenarioData.genre || [],
+      production_cost: scenarioData.productionCost || 0,
+      depreciation: scenarioData.depreciation || 0,
+      revenue: scenarioData.revenue || 0,
+      gm_fee: scenarioData.gmFee || 0,
+      miscellaneous_expenses: scenarioData.miscellaneousExpenses || 0,
+      license_rate_override: scenarioData.licenseRateOverride || 0,
+      has_pre_reading: scenarioData.hasPreReading || false,
+      release_date: scenarioData.releaseDate || null,
+      notes: scenarioData.notes || '',
+      participation_fee: scenarioData.participationFee || 0,
+      license_amount: scenarioData.licenseAmount || 0
     };
     
     try {
       if (existingScenario) {
         // 更新
         console.log('シナリオ更新開始');
-        const result = await updateScenarioInSupabase(scenarioData.id, cleanedData);
+        const result = await updateScenarioInSupabase(scenarioData.id, cleanedData as any);
         console.log('シナリオ更新結果:', result);
         if (result.error) {
           console.error('シナリオ更新エラー:', result.error);
@@ -265,7 +283,7 @@ export const ScenarioManager = React.memo(() => {
           user: 'ユーザー',
           action: 'update',
           target: `${scenarioData.title}`,
-          summary: `${scenarioData.title}の情報を更新しました`,
+          summary: `シナリオを更新：${scenarioData.title}`,
           category: 'scenario',
           changes: [
             { field: '全般', newValue: '情報が更新されました' }
@@ -274,7 +292,7 @@ export const ScenarioManager = React.memo(() => {
       } else {
         // 新規追加
         console.log('シナリオ新規追加開始');
-        const result = await addScenarioToSupabase(cleanedData);
+        const result = await addScenarioToSupabase(cleanedData as any);
         console.log('シナリオ新規追加結果:', result);
         if (result.error) {
           console.error('シナリオ追加エラー:', result.error);
@@ -304,7 +322,7 @@ export const ScenarioManager = React.memo(() => {
   // 削除処理関数
   const handleDeleteScenario = async (scenario: Scenario) => {
     try {
-      const result = await removeScenario(scenario.id);
+      const result = await deleteScenario(scenario.id);
       if (result.error) {
         console.error('シナリオ削除エラー:', result.error);
         return;
@@ -337,15 +355,56 @@ export const ScenarioManager = React.memo(() => {
     }
   };
 
-  // シナリオリスト（データベースのplay_countカラムを直接使用）
+  // データベースのカラム名をフロントエンドの形式に変換する関数
+  const transformDatabaseToFrontend = (dbScenario: any): Scenario => {
+    return {
+      id: dbScenario.id,
+      title: dbScenario.title,
+      description: dbScenario.description || '',
+      author: dbScenario.author || '',
+      duration: dbScenario.duration || 0,
+      playerCount: {
+        min: dbScenario.player_count_min || 3,
+        max: dbScenario.player_count_max || 6
+      },
+      difficulty: dbScenario.difficulty || 1,
+      rating: dbScenario.rating || 0,
+      playCount: dbScenario.play_count || 0,
+      status: dbScenario.status || 'available',
+      requiredProps: dbScenario.required_props || [],
+      genre: dbScenario.genre || [],
+      productionCost: dbScenario.production_cost || 0,
+      depreciation: dbScenario.depreciation || 0,
+      revenue: dbScenario.revenue || 0,
+      gmFee: dbScenario.gm_fee || 0,
+      miscellaneousExpenses: dbScenario.miscellaneous_expenses || 0,
+      licenseRateOverride: dbScenario.license_rate_override || 0,
+      hasPreReading: dbScenario.has_pre_reading || false,
+      releaseDate: dbScenario.release_date || '',
+      notes: dbScenario.notes || '',
+      participationFee: dbScenario.participation_fee || 0,
+      licenseAmount: dbScenario.license_amount || 0,
+      availableGMs: [] // データベースに存在しないため空配列
+    };
+  };
+
+  // シナリオリスト（Supabaseから取得したデータを使用）
   const scenariosWithPlayCount = useMemo(() => {
-    if (!Array.isArray(scenarios)) return [];
+    const dataSource = supabaseScenarios || scenarios;
+    if (!Array.isArray(dataSource)) return [];
     
-    return scenarios.map(scenario => ({
-      ...scenario,
-      playCount: scenario.playCount || 0 // データベースのplay_countカラムを使用
-    }));
-  }, [scenarios]);
+    return dataSource.map(scenario => {
+      // Supabaseから取得したデータの場合は変換を適用
+      if (supabaseScenarios && supabaseScenarios.includes(scenario)) {
+        return transformDatabaseToFrontend(scenario);
+      }
+      // Contextから取得したデータの場合はそのまま使用
+      return {
+        ...scenario,
+        playCount: scenario.playCount || 0
+      };
+    });
+  }, [supabaseScenarios, scenarios]);
 
   // ソートされたシナリオリスト（安全な配列処理）
   const sortedScenarios = Array.isArray(scenariosWithPlayCount) ? [...scenariosWithPlayCount].sort((a, b) => {
@@ -415,11 +474,38 @@ export const ScenarioManager = React.memo(() => {
 
   // 作者ごとのシナリオ数を取得
   const getAuthorScenarioCount = (authorName: string) => {
-    return scenarios.filter(s => s.author === authorName).length;
+    const dataSource = supabaseScenarios || scenarios;
+    return dataSource.filter(s => s.author === authorName).length;
   };
 
   // 作者一覧を取得（重複なし）
-  const uniqueAuthors = Array.from(new Set(scenarios.map(s => s.author)));
+  const uniqueAuthors = Array.from(new Set((supabaseScenarios || scenarios).map(s => s.author)));
+
+  // ローディング状態の表示
+  if (supabaseLoading) {
+      return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="w-8 h-8 animate-spin mr-2" />
+        <span>シナリオデータを読み込み中...</span>
+              </div>
+      );
+    }
+
+  // エラー状態の表示
+  if (supabaseError) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <CloudOff className="w-8 h-8 text-red-500 mx-auto mb-2" />
+          <p className="text-red-600 mb-2">データの読み込みに失敗しました</p>
+          <Button onClick={refetchSupabaseData} variant="outline">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            再試行
+          </Button>
+            </div>
+          </div>
+        );
+  }
 
   return (
     <TooltipProvider>
@@ -428,12 +514,25 @@ export const ScenarioManager = React.memo(() => {
           <div className="flex items-center justify-between">
             <h2>シナリオ管理</h2>
             <div className="flex gap-4 items-center">
+              <div className="flex items-center gap-2">
+                {isConnected ? (
+                  <Cloud className="w-4 h-4 text-green-500" />
+                ) : (
+                  <CloudOff className="w-4 h-4 text-red-500" />
+                )}
+                <span className="text-sm text-muted-foreground">
+                  {isConnected ? 'Supabase接続中' : 'Supabase未接続'}
+                </span>
+              </div>
               <Button
                 variant="outline"
                 onClick={() => {
                   console.log('=== 双方向連携テスト ===');
-                  console.log('現在のシナリオ数:', scenarios.length);
-                  scenarios.forEach(scenario => {
+                  const dataSource = supabaseScenarios || scenarios;
+                  console.log('現在のシナリオ数:', dataSource.length);
+                  console.log('Supabaseデータ:', supabaseScenarios?.length || 0);
+                  console.log('Contextデータ:', scenarios.length);
+                  dataSource.forEach(scenario => {
                     console.log(`シナリオ「${scenario.title}」のGM:`, scenario.availableGMs);
                   });
                 }}
@@ -460,7 +559,7 @@ export const ScenarioManager = React.memo(() => {
                   <BookOpen className="w-5 h-5 text-blue-500" />
                   <div>
                     <p className="text-sm text-muted-foreground">総シナリオ数</p>
-                    <p className="text-lg">{scenarios.length}</p>
+                    <p className="text-lg">{(supabaseScenarios || scenarios).length}</p>
                   </div>
                 </div>
               </CardContent>
@@ -471,7 +570,7 @@ export const ScenarioManager = React.memo(() => {
                   <Users className="w-5 h-5 text-green-500" />
                   <div>
                     <p className="text-sm text-muted-foreground">総プレイ回数</p>
-                    <p className="text-lg">{scenarios.reduce((sum, s) => sum + s.playCount, 0)}</p>
+                    <p className="text-lg">{(supabaseScenarios || scenarios).reduce((sum, s) => sum + (s.playCount || 0), 0)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -727,6 +826,7 @@ export const ScenarioManager = React.memo(() => {
                             {getSortIcon('playCount')}
                           </div>
                         </TableHead>
+                        <TableHead className="w-[100px]">ライセンス額/回</TableHead>
                         <TableHead className="w-[100px]">売上/回</TableHead>
                         <TableHead className="w-[100px]">GM代/回</TableHead>
                         <TableHead className="w-[100px]">雑費/回</TableHead>
@@ -778,6 +878,15 @@ export const ScenarioManager = React.memo(() => {
                               <div className="w-[100px] text-right">
                                 <span className="text-sm">
                                   {scenario.playCount}回
+                                </span>
+                              </div>
+                            </TableCell>
+
+                            {/* ライセンス額/回 */}
+                            <TableCell className="w-[100px]">
+                              <div className="w-[100px] text-right">
+                                <span className="text-sm text-red-600">
+                                  {formatLicenseAmount(scenario.licenseAmount || 0)}
                                 </span>
                               </div>
                             </TableCell>
@@ -953,37 +1062,35 @@ export const ScenarioManager = React.memo(() => {
           </Dialog>
 
           {/* 編集ダイアログ */}
-          {selectedScenario && (
             <ScenarioDialog
               scenario={selectedScenario}
               onSave={handleSaveScenario}
-              onDelete={async (scenarioId: string) => {
-                console.log('シナリオ削除開始:', scenarioId);
-                try {
-                  const result = await deleteScenario(scenarioId);
-                  if (result.error) {
-                    console.error('シナリオ削除エラー:', result.error);
-                    alert('シナリオの削除に失敗しました: ' + result.error);
-                  } else {
-                    console.log('シナリオ削除成功');
-                    // 編集ダイアログを閉じる
-                    setIsEditDialogOpen(false);
-                    setSelectedScenario(null);
-                  }
-                } catch (error) {
-                  console.error('シナリオ削除エラー:', error);
-                  alert('シナリオの削除に失敗しました');
-                }
-              }}
-              open={isEditDialogOpen}
-              onOpenChange={(open) => {
-                setIsEditDialogOpen(open);
-                if (!open) {
+            onDelete={async (scenarioId: string) => {
+              console.log('シナリオ削除開始:', scenarioId);
+              try {
+                const result = await deleteScenario(scenarioId);
+                if (result.error) {
+                  console.error('シナリオ削除エラー:', result.error);
+                  alert('シナリオの削除に失敗しました: ' + result.error);
+                } else {
+                  console.log('シナリオ削除成功');
+                  // 編集ダイアログを閉じる
+                  setIsEditDialogOpen(false);
                   setSelectedScenario(null);
                 }
-              }}
-            />
-          )}
+              } catch (error) {
+                console.error('シナリオ削除エラー:', error);
+                alert('シナリオの削除に失敗しました');
+              }
+            }}
+              open={isEditDialogOpen}
+            onOpenChange={(open) => {
+              setIsEditDialogOpen(open);
+              if (!open) {
+                setSelectedScenario(null);
+              }
+            }}
+          />
         </div>
       </DndProvider>
     </TooltipProvider>

@@ -783,15 +783,22 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
               min: scenario.player_count_min || 1,
               max: scenario.player_count_max || 1
             },
-            // 配列フィールドの安全な変換
+            // 配列フィールドの安全な変換（スネークケース統一）
             availableGMs: Array.isArray(scenario.available_gms) ? scenario.available_gms : [],
             requiredProps: Array.isArray(scenario.required_props) ? scenario.required_props : [],
             genre: Array.isArray(scenario.genre) ? scenario.genre : [],
-            // その他のフィールドマッピング
+            // その他のフィールドマッピング（スネークケース統一）
             hasPreReading: scenario.has_pre_reading || false,
             licenseAmount: scenario.license_amount || 2500,
             playCount: scenario.play_count || 0,
-            releaseDate: scenario.release_date || undefined
+            releaseDate: scenario.release_date || undefined,
+            productionCost: scenario.production_cost || 0,
+            depreciation: scenario.depreciation || 0,
+            revenue: scenario.revenue || 0,
+            gmFee: scenario.gm_fee || 0,
+            miscellaneousExpenses: scenario.miscellaneous_expenses || 0,
+            licenseRateOverride: scenario.license_rate_override || 0,
+            participationFee: scenario.participation_fee || 0
           };
           return safeScenario;
         })
@@ -909,7 +916,7 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // ローカル構造をSupabase構造に変換（不要なフィールドを除外）
+      // ローカル構造をSupabase構造に変換（スネークケース統一）
       const supabaseScenario = {
         title: scenario.title,
         description: scenario.description,
@@ -927,7 +934,14 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
         genre: scenario.genre || [],
         notes: scenario.notes,
         has_pre_reading: scenario.hasPreReading,
-        release_date: scenario.releaseDate
+        release_date: scenario.releaseDate,
+        production_cost: scenario.productionCost || 0,
+        depreciation: scenario.depreciation || 0,
+        revenue: scenario.revenue || 0,
+        gm_fee: scenario.gmFee || 0,
+        miscellaneous_expenses: scenario.miscellaneousExpenses || 0,
+        license_rate_override: scenario.licenseRateOverride || 0,
+        participation_fee: scenario.participationFee || 0
       };
       
       const result = await insert(supabaseScenario as any);
@@ -952,7 +966,7 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
 
   const updateScenario = useCallback(async (scenario: Scenario) => {
     try {
-      // ローカル構造をSupabase構造に変換（不要なフィールドを除外）
+      // ローカル構造をSupabase構造に変換（スネークケース統一）
       const supabaseScenario = {
         title: scenario.title,
         description: scenario.description,
@@ -970,7 +984,14 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
         genre: scenario.genre || [],
         notes: scenario.notes,
         has_pre_reading: scenario.hasPreReading,
-        release_date: scenario.releaseDate
+        release_date: scenario.releaseDate,
+        production_cost: scenario.productionCost || 0,
+        depreciation: scenario.depreciation || 0,
+        revenue: scenario.revenue || 0,
+        gm_fee: scenario.gmFee || 0,
+        miscellaneous_expenses: scenario.miscellaneousExpenses || 0,
+        license_rate_override: scenario.licenseRateOverride || 0,
+        participation_fee: scenario.participationFee || 0
       };
       
       const result = await update(scenario.id, supabaseScenario as any);
