@@ -34,7 +34,7 @@ import { useStaff } from '../contexts/StaffContext';
 import { useStores } from '../contexts/StoreContext';
 import { useSupabaseData } from '../hooks/useSupabaseData';
 import { useSupabase } from '../contexts/SupabaseContext';
-// useScheduleは不要になったため削除
+import { useSchedule } from '../contexts/ScheduleContext';
 import { SupabaseSyncIndicator } from './SupabaseSyncIndicator';
 import { ScenarioDialog } from './ScenarioDialog';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
@@ -206,7 +206,7 @@ export const ScenarioManager = React.memo(() => {
   const { stores, getKitsByScenario } = useStores();
   const { addEditEntry } = useEditHistory();
   const { isConnected } = useSupabase();
-  // 公演回数はデータベースで管理するため、useScheduleは不要
+  const { events: scheduleEvents } = useSchedule();
   
   // Supabaseからのリアルタイムデータ取得
   const { 
@@ -355,6 +355,16 @@ export const ScenarioManager = React.memo(() => {
     }
   };
 
+  // スケジュールイベントからシナリオの実際の公演回数を計算する関数
+  const calculateActualPlayCount = (scenarioTitle: string): number => {
+    if (!scheduleEvents || !Array.isArray(scheduleEvents)) return 0;
+    
+    return scheduleEvents.filter(event => 
+      event.scenario === scenarioTitle && 
+      !event.is_cancelled
+    ).length;
+  };
+
   // データベースのカラム名をフロントエンドの形式に変換する関数
   const transformDatabaseToFrontend = (dbScenario: any): Scenario => {
     return {
@@ -396,15 +406,20 @@ export const ScenarioManager = React.memo(() => {
     return dataSource.map(scenario => {
       // Supabaseから取得したデータの場合は変換を適用
       if (supabaseScenarios && supabaseScenarios.includes(scenario)) {
-        return transformDatabaseToFrontend(scenario);
+        const transformedScenario = transformDatabaseToFrontend(scenario);
+        // 実際の公演回数を計算して上書き
+        return {
+          ...transformedScenario,
+          playCount: calculateActualPlayCount(transformedScenario.title)
+        };
       }
-      // Contextから取得したデータの場合はそのまま使用
+      // Contextから取得したデータの場合は実際の公演回数を計算
       return {
         ...scenario,
-        playCount: scenario.playCount || 0
+        playCount: calculateActualPlayCount(scenario.title)
       };
     });
-  }, [supabaseScenarios, scenarios]);
+  }, [supabaseScenarios, scenarios, scheduleEvents]);
 
   // ソートされたシナリオリスト（安全な配列処理）
   const sortedScenarios = Array.isArray(scenariosWithPlayCount) ? [...scenariosWithPlayCount].sort((a, b) => {
@@ -587,6 +602,45 @@ export const ScenarioManager = React.memo(() => {
               </CardContent>
             </Card>
           </div>
+
+          {/* 計算方法の説明 */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-lg">収益計算の方法</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <h4 className="font-semibold text-green-600 mb-2">売上計算</h4>
+                  <ul className="space-y-1 text-muted-foreground">
+                    <li>• <strong>売上/回</strong>: 最大参加人数 × 参加費</li>
+                    <li>• <strong>売上累計</strong>: 売上/回 × 累計公演数</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-red-600 mb-2">コスト計算</h4>
+                  <ul className="space-y-1 text-muted-foreground">
+                    <li>• <strong>コスト/回</strong>: GM代 + 雑費</li>
+                    <li>• <strong>コスト累計</strong>: (GM代 + 雑費) × 累計公演数 + 制作費</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-orange-600 mb-2">減価償却</h4>
+                  <ul className="space-y-1 text-muted-foreground">
+                    <li>• <strong>減価償却/回</strong>: 減価償却 ÷ 累計公演数</li>
+                    <li>• <strong>未償却残高</strong>: 制作費 - 減価償却</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-blue-600 mb-2">利益計算</h4>
+                  <ul className="space-y-1 text-muted-foreground">
+                    <li>• <strong>粗利/回</strong>: 売上/回 - コスト/回</li>
+                    <li>• <strong>最終純利益</strong>: 売上累計 - コスト累計</li>
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>
