@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Textarea } from './ui/textarea';
 import { Checkbox } from './ui/checkbox';
 import { Badge } from './ui/badge';
-import { X, Plus, Trash2 } from 'lucide-react';
+import { X, Plus, Trash2, Edit2, Check, XCircle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { ItemEditHistory } from './ItemEditHistory';
 import { useEditHistory } from '../contexts/EditHistoryContext';
@@ -91,6 +91,13 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
   const [newRevenueAmount, setNewRevenueAmount] = useState('');
   const [productionCostItems, setProductionCostItems] = useState<{ name: string; cost: number }[]>([]);
   const [revenueItems, setRevenueItems] = useState<{ name: string; cost: number }[]>([]);
+  const [editingProductionCostIndex, setEditingProductionCostIndex] = useState<number | null>(null);
+  const [editingPropIndex, setEditingPropIndex] = useState<number | null>(null);
+  const [editProductionCostName, setEditProductionCostName] = useState('');
+  const [editProductionCostAmount, setEditProductionCostAmount] = useState('');
+  const [editPropName, setEditPropName] = useState('');
+  const [editPropCost, setEditPropCost] = useState('');
+  const [editPropCostType, setEditPropCostType] = useState<'per_play' | 'one_time'>('per_play');
   const [newGenre, setNewGenre] = useState('');
 
   // GM可能なスタッフを取得（GMまたはマネージャーの役割を持つアクティブなスタッフ）
@@ -288,6 +295,76 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
       ...prev,
       revenue: (prev.revenue || 0) - item.cost
     }));
+  };
+
+  const startEditProductionCost = (index: number) => {
+    const item = productionCostItems[index];
+    setEditingProductionCostIndex(index);
+    setEditProductionCostName(item.name);
+    setEditProductionCostAmount(item.cost.toString());
+  };
+
+  const saveEditProductionCost = () => {
+    if (editingProductionCostIndex !== null && editProductionCostName.trim() && editProductionCostAmount.trim()) {
+      const oldItem = productionCostItems[editingProductionCostIndex];
+      const newCost = parseNumber(editProductionCostAmount);
+      if (newCost > 0) {
+        setProductionCostItems(prev => prev.map((item, index) => 
+          index === editingProductionCostIndex 
+            ? { name: editProductionCostName.trim(), cost: newCost }
+            : item
+        ));
+        setFormData(prev => ({
+          ...prev,
+          productionCost: (prev.productionCost || 0) - oldItem.cost + newCost
+        }));
+        setEditingProductionCostIndex(null);
+        setEditProductionCostName('');
+        setEditProductionCostAmount('');
+      }
+    }
+  };
+
+  const cancelEditProductionCost = () => {
+    setEditingProductionCostIndex(null);
+    setEditProductionCostName('');
+    setEditProductionCostAmount('');
+  };
+
+  const startEditProp = (index: number) => {
+    const prop = formData.props[index];
+    setEditingPropIndex(index);
+    setEditPropName(prop.name);
+    setEditPropCost(prop.cost.toString());
+    setEditPropCostType(prop.costType);
+  };
+
+  const saveEditProp = () => {
+    if (editingPropIndex !== null && editPropName.trim() && editPropCost.trim()) {
+      const oldProp = formData.props[editingPropIndex];
+      const newCost = parseNumber(editPropCost);
+      if (newCost > 0) {
+        setFormData(prev => ({
+          ...prev,
+          props: prev.props.map((prop, index) => 
+            index === editingPropIndex 
+              ? { name: editPropName.trim(), cost: newCost, costType: editPropCostType }
+              : prop
+          )
+        }));
+        setEditingPropIndex(null);
+        setEditPropName('');
+        setEditPropCost('');
+        setEditPropCostType('per_play');
+      }
+    }
+  };
+
+  const cancelEditProp = () => {
+    setEditingPropIndex(null);
+    setEditPropName('');
+    setEditPropCost('');
+    setEditPropCostType('per_play');
   };
 
   const removeProp = (propName: string) => {
@@ -571,19 +648,64 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
               <div className="space-y-2">
                 {productionCostItems.map((item, index) => (
                   <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">
-                        {item.name}
-                      </Badge>
-                      <span className="text-sm text-gray-600">{formatNumber(item.cost)}円</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeProductionCostItem(index)}
-                      className="hover:bg-destructive/20 rounded-full p-1"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                    {editingProductionCostIndex === index ? (
+                      <div className="flex items-center gap-2 flex-1">
+                        <Input
+                          value={editProductionCostName}
+                          onChange={(e) => setEditProductionCostName(e.target.value)}
+                          className="border border-slate-200 text-xs h-6"
+                          placeholder="項目名"
+                        />
+                        <Input
+                          value={editProductionCostAmount}
+                          onChange={(e) => setEditProductionCostAmount(e.target.value)}
+                          className="border border-slate-200 text-xs h-6 w-20"
+                          placeholder="金額"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={saveEditProductionCost}
+                          className="h-6 px-2"
+                        >
+                          <Check className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={cancelEditProductionCost}
+                          className="h-6 px-2"
+                        >
+                          <XCircle className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            {item.name}
+                          </Badge>
+                          <span className="text-sm text-gray-600">{formatNumber(item.cost)}円</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => startEditProductionCost(index)}
+                            className="hover:bg-blue-100 rounded-full p-1"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeProductionCostItem(index)}
+                            className="hover:bg-destructive/20 rounded-full p-1"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
@@ -728,20 +850,74 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
             <div className="space-y-2">
               {(formData.props || []).map((prop, index) => (
                 <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{prop.name}</span>
-                    <span className="text-sm text-gray-600">{formatNumber(prop.cost)}円</span>
-                    <Badge variant={prop.costType === 'per_play' ? 'default' : 'secondary'} className="text-xs">
-                      {prop.costType === 'per_play' ? '毎回' : '1度きり'}
-                    </Badge>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeProp(prop.name)}
-                    className="hover:bg-destructive/20 rounded-full p-1"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                  {editingPropIndex === index ? (
+                    <div className="flex items-center gap-2 flex-1">
+                      <Input
+                        value={editPropName}
+                        onChange={(e) => setEditPropName(e.target.value)}
+                        className="border border-slate-200 text-xs h-6"
+                        placeholder="道具名"
+                      />
+                      <Input
+                        value={editPropCost}
+                        onChange={(e) => setEditPropCost(e.target.value)}
+                        className="border border-slate-200 text-xs h-6 w-20"
+                        placeholder="金額"
+                      />
+                      <Select value={editPropCostType} onValueChange={(value: 'per_play' | 'one_time') => setEditPropCostType(value)}>
+                        <SelectTrigger className="w-20 h-6 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="per_play">毎回</SelectItem>
+                          <SelectItem value="one_time">1度きり</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={saveEditProp}
+                        className="h-6 px-2"
+                      >
+                        <Check className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={cancelEditProp}
+                        className="h-6 px-2"
+                      >
+                        <XCircle className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">{prop.name}</span>
+                        <span className="text-sm text-gray-600">{formatNumber(prop.cost)}円</span>
+                        <Badge variant={prop.costType === 'per_play' ? 'default' : 'secondary'} className="text-xs">
+                          {prop.costType === 'per_play' ? '毎回' : '1度きり'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => startEditProp(index)}
+                          className="hover:bg-blue-100 rounded-full p-1"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeProp(prop.name)}
+                          className="hover:bg-destructive/20 rounded-full p-1"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
