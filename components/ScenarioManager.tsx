@@ -924,17 +924,17 @@ export const ScenarioManager = React.memo(() => {
                   </Table>
                 </TabsContent>
 
-
                 <TabsContent value="management">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-8">
+                  <div className="border border-gray-300 rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-b border-gray-300">
+                        <TableHead className="w-8 border-r border-gray-300">
                           <GripVertical className="w-4 h-4 opacity-50" />
                         </TableHead>
-                        <TableHead>タイトル</TableHead>
+                        <TableHead className="border-r border-gray-300">タイトル</TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 w-[60px]"
+                          className="cursor-pointer select-none hover:bg-muted/50 w-[60px] border-r border-gray-300"
                           onClick={() => handleSort('playCount')}
                         >
                           <div className="flex items-center gap-2">
@@ -942,14 +942,14 @@ export const ScenarioManager = React.memo(() => {
                             {getSortIcon('playCount')}
                           </div>
                         </TableHead>
-                        <TableHead className="w-[60px]">売上/回</TableHead>
-                        <TableHead className="w-[60px]">コスト/回</TableHead>
-                        <TableHead className="w-[60px]">粗利/回</TableHead>
-                        <TableHead className="w-[100px]">売上累計</TableHead>
-                        <TableHead className="w-[100px]">コスト累計</TableHead>
-                        <TableHead className="w-[100px]">最終純利益</TableHead>
+                        <TableHead className="w-[60px] border-r border-gray-300">売上/回</TableHead>
+                        <TableHead className="w-[60px] border-r border-gray-300">コスト/回</TableHead>
+                        <TableHead className="w-[60px] border-r border-gray-300">粗利/回</TableHead>
+                        <TableHead className="w-[100px] border-r border-gray-300">売上累計</TableHead>
+                        <TableHead className="w-[100px] border-r border-gray-300">コスト累計</TableHead>
+                        <TableHead className="w-[100px] border-r border-gray-300">最終純利益</TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 w-[60px]"
+                          className="cursor-pointer select-none hover:bg-muted/50 w-[60px] border-r border-gray-300"
                           onClick={() => handleSort('roi')}
                         >
                           <div className="flex items-center gap-2">
@@ -958,7 +958,7 @@ export const ScenarioManager = React.memo(() => {
                           </div>
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 w-[60px]"
+                          className="cursor-pointer select-none hover:bg-muted/50 w-[60px] border-r border-gray-300"
                           onClick={() => handleSort('paybackPeriod')}
                         >
                           <div className="flex items-center gap-2">
@@ -967,7 +967,7 @@ export const ScenarioManager = React.memo(() => {
                           </div>
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 w-[60px]"
+                          className="cursor-pointer select-none hover:bg-muted/50 w-[60px] border-r border-gray-300"
                           onClick={() => handleSort('profitMargin')}
                         >
                           <div className="flex items-center gap-2">
@@ -998,7 +998,7 @@ export const ScenarioManager = React.memo(() => {
                             setIsEditDialogOpen={setIsEditDialogOpen}
                           >
                             {/* タイトル */}
-                            <TableCell>
+                            <TableCell className="border-r border-gray-300">
                               <div className="max-w-xs">
                                 <p 
                                   className="text-sm truncate cursor-pointer hover:text-blue-600 hover:underline"
@@ -1013,7 +1013,7 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* 累計公演数 */}
-                            <TableCell className="w-[60px]">
+                            <TableCell className="w-[60px] border-r border-gray-300">
                               <div className="w-[60px] text-right">
                                 <span className="text-sm">
                                   {scenario.playCount}回
@@ -1022,7 +1022,7 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* 売上/回 */}
-                            <TableCell className="w-[60px]">
+                            <TableCell className="w-[60px] border-r border-gray-300">
                               <div className="w-[60px] text-right">
                                 <span className="text-sm text-green-600">
                                   {formatLicenseAmount((scenario.playerCount?.max || 0) * (scenario.participationFee || 0))}
@@ -1031,7 +1031,7 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* コスト/回 */}
-                            <TableCell className="w-[60px]">
+                            <TableCell className="w-[60px] border-r border-gray-300">
                               <div className="w-[60px] text-right">
                                 <span className="text-sm text-red-600">
                                   {formatLicenseAmount((scenario.gmFee || 0) + (scenario.miscellaneousExpenses || 0))}
@@ -1040,7 +1040,7 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* 粗利/回 */}
-                            <TableCell className="w-[60px]">
+                            <TableCell className="w-[60px] border-r border-gray-300">
                               <div className="w-[60px] text-right">
                                 <span className="text-sm text-blue-600 font-medium">
                                   {formatLicenseAmount(((scenario.playerCount?.max || 0) * (scenario.participationFee || 0)) - (scenario.gmFee || 0) - (scenario.miscellaneousExpenses || 0))}
@@ -1049,7 +1049,7 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* 売上累計 */}
-                            <TableCell className="w-[100px]">
+                            <TableCell className="w-[100px] border-r border-gray-300">
                               <div className="w-[100px] text-right">
                                 <span className="text-sm text-green-600 font-medium">
                                   {formatLicenseAmount((scenario.playerCount?.max || 0) * (scenario.participationFee || 0) * scenario.playCount)}
@@ -1058,7 +1058,7 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* コスト累計 */}
-                            <TableCell className="w-[100px]">
+                            <TableCell className="w-[100px] border-r border-gray-300">
                               <div className="w-[100px] text-right">
                                 <span className="text-sm text-red-600 font-medium">
                                   {formatLicenseAmount(((scenario.gmFee || 0) + (scenario.miscellaneousExpenses || 0)) * scenario.playCount + (scenario.productionCost || 0))}
@@ -1067,7 +1067,7 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* 最終純利益 */}
-                            <TableCell className="w-[100px]">
+                            <TableCell className="w-[100px] border-r border-gray-300">
                               <div className="w-[100px] text-right">
                                 <span className="text-sm text-blue-600 font-medium">
                                   {formatLicenseAmount(((scenario.playerCount?.max || 0) * (scenario.participationFee || 0) * scenario.playCount) - ((scenario.gmFee || 0) + (scenario.miscellaneousExpenses || 0)) * scenario.playCount - (scenario.productionCost || 0))}
@@ -1076,7 +1076,7 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* ROI (%) */}
-                            <TableCell className="w-[60px]">
+                            <TableCell className="w-[60px] border-r border-gray-300">
                               <div className="w-[60px] text-right">
                                 <span className={`text-sm font-medium ${calculateFinancialMetrics(scenario).roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                   {calculateFinancialMetrics(scenario).roi}%
@@ -1085,7 +1085,7 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* 回収期間 */}
-                            <TableCell className="w-[60px]">
+                            <TableCell className="w-[60px] border-r border-gray-300">
                               <div className="w-[60px] text-right">
                                 <span className="text-sm text-orange-600 font-medium">
                                   {calculateFinancialMetrics(scenario).paybackPeriod}
@@ -1094,7 +1094,7 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* 純利益率 (%) */}
-                            <TableCell className="w-[60px]">
+                            <TableCell className="w-[60px] border-r border-gray-300">
                               <div className="w-[60px] text-right">
                                 <span className={`text-sm font-medium ${calculateFinancialMetrics(scenario).profitMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                   {calculateFinancialMetrics(scenario).profitMargin}%
@@ -1128,6 +1128,7 @@ export const ScenarioManager = React.memo(() => {
                   })}
                 </TableBody>
               </Table>
+            </div>
                 </TabsContent>
               </Tabs>
             </CardContent>
