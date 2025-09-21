@@ -17,7 +17,6 @@ import Pencil from 'lucide-react/dist/esm/icons/pencil';
 import ArrowUpDown from 'lucide-react/dist/esm/icons/arrow-up-down';
 import ArrowUp from 'lucide-react/dist/esm/icons/arrow-up';
 import ArrowDown from 'lucide-react/dist/esm/icons/arrow-down';
-import GripVertical from 'lucide-react/dist/esm/icons/grip-vertical';
 import Star from 'lucide-react/dist/esm/icons/star';
 import TestTube from 'lucide-react/dist/esm/icons/test-tube';
 import Package from 'lucide-react/dist/esm/icons/package';
@@ -184,17 +183,6 @@ function DraggableScenarioRow({ index, scenario, moveRow, children, setSelectedS
       style={{ opacity: isDragging ? 0.5 : 1 }}
       className={isDragging ? 'cursor-grabbing' : ''}
     >
-      <TableCell className="w-8">
-        <div 
-          className="cursor-pointer hover:text-blue-600" 
-          onClick={() => {
-            setSelectedScenario(scenario);
-            setIsEditDialogOpen(true);
-          }}
-        >
-          <GripVertical className="w-4 h-4" />
-        </div>
-      </TableCell>
       {children}
     </TableRow>
   );
@@ -258,7 +246,6 @@ export const ScenarioManager = React.memo(() => {
       required_props: scenarioData.requiredProps || [],
       genre: scenarioData.genre || [],
       production_cost: scenarioData.productionCost || 0,
-      depreciation: scenarioData.depreciation || 0,
       revenue: scenarioData.revenue || 0,
       gm_fee: scenarioData.gmFee || 0,
       miscellaneous_expenses: scenarioData.miscellaneousExpenses || 0,
@@ -381,8 +368,9 @@ export const ScenarioManager = React.memo(() => {
     const revenuePerPlay = maxPlayers * participationFee;
     const totalRevenue = revenuePerPlay * playCount;
 
-    // コスト計算
-    const costPerPlay = gmFee + miscellaneousExpenses;
+    // コスト計算（ライセンス料も含める）
+    const licenseAmount = scenario.licenseAmount || 0;
+    const costPerPlay = gmFee + miscellaneousExpenses + licenseAmount;
     const totalCost = costPerPlay * playCount + productionCost;
 
     // 利益計算
@@ -391,7 +379,7 @@ export const ScenarioManager = React.memo(() => {
     // ROI計算
     const roi = productionCost > 0 ? (finalProfit / productionCost) * 100 : 0;
 
-    // 回収期間計算（月単位）
+    // 回収回数計算（1回あたりの純利益は既にライセンス料込みのcostPerPlayを使用）
     const profitPerPlay = revenuePerPlay - costPerPlay;
     const paybackPeriod = profitPerPlay > 0 ? Math.ceil(productionCost / profitPerPlay) : Infinity;
     
@@ -399,9 +387,8 @@ export const ScenarioManager = React.memo(() => {
     // 純利益率計算
     const profitMargin = totalRevenue > 0 ? (finalProfit / totalRevenue) * 100 : 0;
 
-    // 回収率計算（回収済み金額 ÷ 制作費 × 100）
-    const recoveredAmount = Math.min(totalRevenue, productionCost);
-    const recoveryRate = productionCost > 0 ? (recoveredAmount / productionCost) * 100 : 0;
+    // 回収率計算（総収益 ÷ 制作費 × 100）
+    const recoveryRate = productionCost > 0 ? (totalRevenue / productionCost) * 100 : 0;
 
     return {
       revenuePerPlay,
@@ -426,7 +413,9 @@ export const ScenarioManager = React.memo(() => {
         timelineStatus: 'リリース日未設定',
         recoveryStatus: 'unknown',
         monthsElapsed: 0,
-        remainingMonths: null
+        remainingMonths: null,
+        remainingDays: null,
+        progressPercentage: 0
       };
     }
 
@@ -440,7 +429,9 @@ export const ScenarioManager = React.memo(() => {
         timelineStatus: '無効なリリース日',
         recoveryStatus: 'unknown',
         monthsElapsed: 0,
-        remainingMonths: null
+        remainingMonths: null,
+        remainingDays: null,
+        progressPercentage: 0
       };
     }
     
@@ -458,15 +449,27 @@ export const ScenarioManager = React.memo(() => {
         timelineStatus: '回収不可',
         recoveryStatus: 'unrecoverable',
         monthsElapsed: 0,
-        remainingMonths: null
+        remainingMonths: null,
+        remainingDays: null,
+        progressPercentage: 0
       };
     }
 
-    // 回収期間を日数に変換（1ヶ月=30日として計算）
-    const paybackPeriodDays = paybackPeriodPlays * 30;
+    // 回収日を設定（デフォルトでリリースから1年後）
+    const recoveryDate = new Date(release);
+    recoveryDate.setFullYear(recoveryDate.getFullYear() + 1); // 1年後
     
-    const recoverySpeedScore = actualDaysElapsed > 0 ? paybackPeriodDays / actualDaysElapsed : null;
-    const remainingDays = Math.max(0, paybackPeriodDays - actualDaysElapsed);
+    // 回収日までの総日数
+    const totalRecoveryDays = Math.floor((recoveryDate.getTime() - release.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // 回収日までの残り日数（負の値は超過日数を表す）
+    const remainingDays = Math.floor((recoveryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // 進捗率の計算（経過日数 ÷ 総回収期間）
+    const progressPercentage = Math.min(100, Math.max(0, (actualDaysElapsed / totalRecoveryDays) * 100));
+    
+    // 速度スコア（進捗率に基づく）
+    const recoverySpeedScore = actualDaysElapsed > 0 ? actualDaysElapsed / totalRecoveryDays : null;
     
     let timelineStatus = '';
     let recoveryStatus = '';
@@ -475,14 +478,27 @@ export const ScenarioManager = React.memo(() => {
       timelineStatus = '回収完了';
       recoveryStatus = 'completed';
     } else if (recoverySpeedScore !== null) {
-      const remainingDaysText = remainingDays >= 30 ? `${Math.floor(remainingDays / 30)}ヶ月${remainingDays % 30}日` : `${remainingDays}日`;
-      if (recoverySpeedScore <= 1.0) {
+      const remainingDaysText = remainingDays > 0 
+        ? (remainingDays >= 30 ? `${Math.floor(remainingDays / 30)}ヶ月${remainingDays % 30}日` : `${remainingDays}日`)
+        : remainingDays === 0 
+        ? '今日' 
+        : `${Math.abs(remainingDays)}日超過`;
+      
+      // 回収率が100%を超えている場合は回収状況を緩和
+      const metrics = calculateFinancialMetrics(scenario);
+      const isProfitable = metrics.recoveryRate >= 100;
+      
+      if (recoverySpeedScore < 0.5) {
         timelineStatus = `優秀 (${remainingDaysText}残り)`;
         recoveryStatus = 'excellent';
-      } else if (recoverySpeedScore <= 1.5) {
+      } else if (recoverySpeedScore < 0.75) {
         timelineStatus = `良好 (${remainingDaysText}残り)`;
         recoveryStatus = 'good';
-      } else if (recoverySpeedScore <= 2.0) {
+      } else if (recoverySpeedScore < 1.0) {
+        timelineStatus = `普通 (${remainingDaysText}残り)`;
+        recoveryStatus = 'average';
+      } else if (recoverySpeedScore < 1.5 && isProfitable) {
+        // 回収率100%以上で速度が1.5未満の場合は「普通」に格上げ
         timelineStatus = `普通 (${remainingDaysText}残り)`;
         recoveryStatus = 'average';
       } else {
@@ -490,8 +506,14 @@ export const ScenarioManager = React.memo(() => {
         recoveryStatus = 'poor';
       }
     } else {
-      const remainingDaysText = remainingDays >= 30 ? `${Math.floor(remainingDays / 30)}ヶ月${remainingDays % 30}日` : `${remainingDays}日`;
-      timelineStatus = `回収予定まで${remainingDaysText}`;
+      const remainingDaysText = remainingDays > 0 
+        ? (remainingDays >= 30 ? `${Math.floor(remainingDays / 30)}ヶ月${remainingDays % 30}日` : `${remainingDays}日`)
+        : remainingDays === 0 
+        ? '今日' 
+        : `${Math.abs(remainingDays)}日超過`;
+      timelineStatus = remainingDays > 0 ? `回収予定まで${remainingDaysText}` : 
+                      remainingDays === 0 ? '回収予定日' : 
+                      `回収予定から${Math.abs(remainingDays)}日超過`;
       recoveryStatus = 'pending';
     }
 
@@ -500,7 +522,9 @@ export const ScenarioManager = React.memo(() => {
       timelineStatus,
       recoveryStatus,
       monthsElapsed: Math.floor(actualDaysElapsed / 30), // 日数を月数に変換して表示
-      remainingMonths: Math.floor(remainingDays / 30) // 残り日数を月数に変換して表示
+      remainingMonths: Math.floor(remainingDays / 30), // 残り日数を月数に変換して表示
+      remainingDays: remainingDays, // 残り日数（日単位）
+      progressPercentage: Math.round(progressPercentage * 10) / 10 // 進捗率（小数点第1位まで）
     };
   };
 
@@ -523,7 +547,6 @@ export const ScenarioManager = React.memo(() => {
       requiredProps: dbScenario.required_props || [],
       genre: dbScenario.genre || [],
       productionCost: dbScenario.production_cost || 0,
-      depreciation: dbScenario.depreciation || 0,
       revenue: dbScenario.revenue || 0,
       gmFee: dbScenario.gm_fee || 0,
       miscellaneousExpenses: dbScenario.miscellaneous_expenses || 0,
@@ -693,17 +716,17 @@ export const ScenarioManager = React.memo(() => {
 
   // ローディング状態の表示
   if (supabaseLoading) {
-      return (
+        return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="w-8 h-8 animate-spin mr-2" />
         <span>シナリオデータを読み込み中...</span>
-              </div>
-      );
+          </div>
+        );
     }
 
   // エラー状態の表示
   if (supabaseError) {
-    return (
+        return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
           <CloudOff className="w-8 h-8 text-red-500 mx-auto mb-2" />
@@ -804,35 +827,56 @@ export const ScenarioManager = React.memo(() => {
               <CardTitle className="text-lg">収益計算の方法</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <h4 className="font-semibold text-green-600 mb-2">売上計算</h4>
-                  <ul className="space-y-1 text-muted-foreground">
-                    <li>• <strong>売上/回</strong>: 最大参加人数 × 参加費</li>
-                    <li>• <strong>売上累計</strong>: 売上/回 × 累計公演数</li>
-                  </ul>
+              <div className="space-y-3 text-sm">
+                {/* 基本計算 */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="bg-green-50 p-3 rounded-lg">
+                    <h4 className="font-semibold text-green-700 mb-1">売上</h4>
+                    <div className="text-xs text-gray-600 space-y-0.5">
+                      <div><strong>売上/回</strong>: 最大参加人数 × 参加費</div>
+                      <div><strong>売上累計</strong>: 売上/回 × 累計公演数</div>
+                    </div>
+                  </div>
+                  <div className="bg-red-50 p-3 rounded-lg">
+                    <h4 className="font-semibold text-red-700 mb-1">コスト</h4>
+                    <div className="text-xs text-gray-600 space-y-0.5">
+                      <div><strong>コスト/回</strong>: GM代 + 雑費</div>
+                      <div><strong>コスト累計</strong>: (GM代 + 雑費) × 累計公演数 + 制作費</div>
+                    </div>
+                  </div>
+                  <div className="bg-blue-50 p-3 rounded-lg">
+                    <h4 className="font-semibold text-blue-700 mb-1">利益</h4>
+                    <div className="text-xs text-gray-600 space-y-0.5">
+                      <div><strong>粗利/回</strong>: 売上/回 - コスト/回</div>
+                      <div><strong>最終純利益</strong>: 売上累計 - コスト累計</div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-semibold text-red-600 mb-2">コスト計算</h4>
-                  <ul className="space-y-1 text-muted-foreground">
-                    <li>• <strong>コスト/回</strong>: GM代 + 雑費</li>
-                    <li>• <strong>コスト累計</strong>: (GM代 + 雑費) × 累計公演数 + 制作費</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-blue-600 mb-2">利益計算</h4>
-                  <ul className="space-y-1 text-muted-foreground">
-                    <li>• <strong>粗利/回</strong>: 売上/回 - コスト/回</li>
-                    <li>• <strong>最終純利益</strong>: 売上累計 - コスト累計</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-purple-600 mb-2">収益性分析</h4>
-                  <ul className="space-y-1 text-muted-foreground">
-                    <li>• <strong>ROI</strong>: (最終純利益 ÷ 制作費) × 100</li>
-                    <li>• <strong>回収期間</strong>: 制作費 ÷ 1公演あたりの純利益</li>
-                    <li>• <strong>純利益率</strong>: (最終純利益 ÷ 売上累計) × 100</li>
-                  </ul>
+
+                {/* 分析指標 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="bg-purple-50 p-3 rounded-lg">
+                    <h4 className="font-semibold text-purple-700 mb-2">収益性分析</h4>
+                    <div className="text-xs space-y-1">
+                      <div><strong>ROI率</strong>: (最終純利益 ÷ 制作費) × 100</div>
+                      <div className="ml-2 text-gray-600">🟢 100%以上: 黒字 | 🟡 50-100%: 回収中 | 🔴 50%未満: 赤字</div>
+                      <div><strong>回収回数</strong>: 制作費を回収するのに必要な公演回数</div>
+                      <div className="ml-2 text-gray-600">🟢 10回以下: 優秀 | 🟡 10-20回: 普通 | 🔴 20回以上: 要改善</div>
+                      <div><strong>純利益率</strong>: (最終純利益 ÷ 売上累計) × 100</div>
+                      <div className="ml-2 text-gray-600">🟢 20%以上: 高収益 | 🟡 10-20%: 普通 | 🔴 10%未満: 低収益</div>
+                    </div>
+                  </div>
+                  <div className="bg-orange-50 p-3 rounded-lg">
+                    <h4 className="font-semibold text-orange-700 mb-2">回収分析</h4>
+                    <div className="text-xs space-y-1">
+                      <div><strong>回収率</strong>: 総収益 ÷ 制作費 × 100</div>
+                      <div className="ml-2 text-gray-600">🟢 100%以上: 完全回収 | 🟡 50-100%: 部分回収 | 🔴 50%未満: 未回収</div>
+                      <div><strong>残数</strong>: 回収日までの残り日数</div>
+                      <div className="ml-2 text-gray-600">📅 リリース日から1年後の回収日までの残り日数</div>
+                      <div><strong>時系列回収状況</strong>: 速度に基づく評価</div>
+                      <div className="ml-2 text-gray-600">🟢 完了/優秀 | 🟡 良好/普通 | 🔴 要改善 | ⚫ 不可</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -853,9 +897,6 @@ export const ScenarioManager = React.memo(() => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-8">
-                      <GripVertical className="w-4 h-4 opacity-50" />
-                    </TableHead>
                     <TableHead 
                       className="cursor-pointer select-none hover:bg-muted/50"
                       onClick={() => handleSort('title')}
@@ -1063,219 +1104,216 @@ export const ScenarioManager = React.memo(() => {
                     <Table>
                       <TableHeader>
                         <TableRow className="border-b border-gray-300">
-                        <TableHead className="border-r border-gray-300" style={{ width: '50px' }}>
-                          <GripVertical className="w-4 h-4 opacity-50" />
-                        </TableHead>
                         <TableHead className="border-r border-gray-300">タイトル</TableHead>
                         <TableHead 
                           className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
                           style={{ 
-                            width: '50px',
+                            width: '60px',
                             borderTop: sortField === 'playCount' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
                             borderBottom: sortField === 'playCount' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
                           }}
                           onClick={() => handleSort('playCount')}
                         >
-                          <div className="flex items-center gap-2" style={{ width: '50px', overflow: 'hidden' }}>
+                          <div className="flex items-center gap-2" style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">公演数</span>
                           </div>
                         </TableHead>
                         <TableHead 
                           className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
                           style={{ 
-                            width: '50px',
+                            width: '60px',
                             borderTop: sortField === 'revenuePerPlay' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
                             borderBottom: sortField === 'revenuePerPlay' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
                           }}
                           onClick={() => handleSort('revenuePerPlay')}
                         >
-                          <div style={{ width: '50px', overflow: 'hidden' }}>
+                          <div style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">売上/回</span>
                           </div>
                         </TableHead>
                         <TableHead 
                           className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
                           style={{ 
-                            width: '50px',
+                            width: '60px',
                             borderTop: sortField === 'gmFee' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
                             borderBottom: sortField === 'gmFee' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
                           }}
                           onClick={() => handleSort('gmFee')}
                         >
-                          <div style={{ width: '50px', overflow: 'hidden' }}>
+                          <div style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">GM代/回</span>
                           </div>
                         </TableHead>
                         <TableHead 
                           className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
                           style={{ 
-                            width: '50px',
+                            width: '60px',
                             borderTop: sortField === 'miscellaneousExpenses' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
                             borderBottom: sortField === 'miscellaneousExpenses' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
                           }}
                           onClick={() => handleSort('miscellaneousExpenses')}
                         >
-                          <div style={{ width: '50px', overflow: 'hidden' }}>
+                          <div style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">雑費/回</span>
                           </div>
                         </TableHead>
                         <TableHead 
                           className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
                           style={{ 
-                            width: '50px',
+                            width: '60px',
                             borderTop: sortField === 'licenseAmount' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
                             borderBottom: sortField === 'licenseAmount' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
                           }}
                           onClick={() => handleSort('licenseAmount')}
                         >
-                          <div style={{ width: '50px', overflow: 'hidden' }}>
+                          <div style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">ライセンス</span>
                           </div>
                         </TableHead>
                         <TableHead 
                           className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
                           style={{ 
-                            width: '50px',
+                            width: '60px',
                             borderTop: sortField === 'costPerPlay' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
                             borderBottom: sortField === 'costPerPlay' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
                           }}
                           onClick={() => handleSort('costPerPlay')}
                         >
-                          <div style={{ width: '50px', overflow: 'hidden' }}>
+                          <div style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">コスト/回</span>
                           </div>
                         </TableHead>
                         <TableHead 
                           className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
                           style={{ 
-                            width: '50px',
+                            width: '60px',
                             borderTop: sortField === 'grossProfit' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
                             borderBottom: sortField === 'grossProfit' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
                           }}
                           onClick={() => handleSort('grossProfit')}
                         >
-                          <div style={{ width: '50px', overflow: 'hidden' }}>
+                          <div style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">粗利/回</span>
                           </div>
                         </TableHead>
                         <TableHead 
                           className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
                           style={{ 
-                            width: '50px',
+                            width: '60px',
                             borderTop: sortField === 'totalRevenue' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
                             borderBottom: sortField === 'totalRevenue' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
                           }}
                           onClick={() => handleSort('totalRevenue')}
                         >
-                          <div style={{ width: '50px', overflow: 'hidden' }}>
+                          <div style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">売上累計</span>
                           </div>
                         </TableHead>
                         <TableHead 
                           className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
                           style={{ 
-                            width: '50px',
+                            width: '60px',
                             borderTop: sortField === 'totalCost' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
                             borderBottom: sortField === 'totalCost' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
                           }}
                           onClick={() => handleSort('totalCost')}
                         >
-                          <div style={{ width: '50px', overflow: 'hidden' }}>
+                          <div style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">コスト累計</span>
                           </div>
                         </TableHead>
                         <TableHead 
                           className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
                           style={{ 
-                            width: '50px',
+                            width: '60px',
                             borderTop: sortField === 'finalProfit' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
                             borderBottom: sortField === 'finalProfit' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
                           }}
                           onClick={() => handleSort('finalProfit')}
                         >
-                          <div style={{ width: '50px', overflow: 'hidden' }}>
+                          <div style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">最終純利益</span>
                           </div>
                         </TableHead>
                         <TableHead 
                           className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
                           style={{ 
-                            width: '50px',
+                            width: '60px',
                             borderTop: sortField === 'roi' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
                             borderBottom: sortField === 'roi' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
                           }}
                           onClick={() => handleSort('roi')}
                         >
-                          <div className="flex items-center gap-2" style={{ width: '50px', overflow: 'hidden' }}>
+                          <div className="flex items-center gap-2" style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">ROI</span>
                           </div>
                         </TableHead>
                         <TableHead 
                           className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
                           style={{ 
-                            width: '50px',
+                            width: '60px',
                             borderTop: sortField === 'paybackPeriod' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
                             borderBottom: sortField === 'paybackPeriod' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
                           }}
                           onClick={() => handleSort('paybackPeriod')}
                         >
-                          <div className="flex items-center gap-2" style={{ width: '50px', overflow: 'hidden' }}>
-                            <span className="truncate">回収期間</span>
+                          <div className="flex items-center gap-2" style={{ width: '60px', overflow: 'hidden' }}>
+                            <span className="truncate">回収回数</span>
                           </div>
                         </TableHead>
                         <TableHead 
                           className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
                           style={{ 
-                            width: '50px',
+                            width: '60px',
                             borderTop: sortField === 'profitMargin' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
                             borderBottom: sortField === 'profitMargin' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
                           }}
                           onClick={() => handleSort('profitMargin')}
                         >
-                          <div className="flex items-center gap-2" style={{ width: '50px', overflow: 'hidden' }}>
+                          <div className="flex items-center gap-2" style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">純利%</span>
                           </div>
                         </TableHead>
                         <TableHead 
                           className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
                           style={{ 
-                            width: '50px',
+                            width: '60px',
                             borderTop: sortField === 'recoveryRate' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
                             borderBottom: sortField === 'recoveryRate' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
                           }}
                           onClick={() => handleSort('recoveryRate')}
                         >
-                          <div style={{ width: '50px', overflow: 'hidden' }}>
+                          <div style={{ width: '60px', overflow: 'hidden' }}>
                             <span className="truncate">回収率</span>
                           </div>
                         </TableHead>
                         <TableHead 
                           className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
                           style={{ 
-                            width: '50px',
+                            width: '80px',
                             borderTop: sortField === 'recoverySpeed' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
                             borderBottom: sortField === 'recoverySpeed' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
                           }}
                           onClick={() => handleSort('recoverySpeed')}
                         >
-                          <div style={{ width: '50px', overflow: 'hidden' }}>
-                            <span className="truncate">回収速度</span>
+                          <div style={{ width: '80px', overflow: 'hidden' }}>
+                            <span className="truncate">残数</span>
                           </div>
                         </TableHead>
                         <TableHead 
                           className="cursor-pointer select-none hover:bg-muted/50 border-r border-gray-300"
                           style={{ 
-                            width: '50px',
+                            width: '60px',
                             borderTop: sortField === 'recoveryStatus' && sortDirection === 'asc' ? '3px solid #374151' : '1px solid #d1d5db',
                             borderBottom: sortField === 'recoveryStatus' && sortDirection === 'desc' ? '3px solid #374151' : '1px solid #d1d5db'
                           }}
                           onClick={() => handleSort('recoveryStatus')}
                         >
-                          <div style={{ width: '50px', overflow: 'hidden' }}>
-                            <span className="truncate">回収状況</span>
+                          <div style={{ width: '60px', overflow: 'hidden' }}>
+                            <span className="truncate">状況</span>
                           </div>
                         </TableHead>
-                        <TableHead style={{ width: '50px' }}>操作</TableHead>
+                        <TableHead style={{ width: '60px' }}>操作</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1314,8 +1352,8 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* 累計公演数 */}
-                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
-                              <div style={{ width: '50px' }} className="text-right">
+                            <TableCell className="border-r border-gray-300" style={{ width: '60px' }}>
+                              <div style={{ width: '60px' }} className="text-right">
                                 <span className="text-sm">
                                   {scenario.playCount}回
                                 </span>
@@ -1323,8 +1361,8 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* 売上/回 */}
-                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
-                              <div style={{ width: '50px' }} className="text-right">
+                            <TableCell className="border-r border-gray-300" style={{ width: '60px' }}>
+                              <div style={{ width: '60px' }} className="text-right">
                                 <span className="text-sm text-green-600">
                                   {formatLicenseAmount((scenario.playerCount?.max || 0) * (scenario.participationFee || 0))}
                                 </span>
@@ -1332,8 +1370,8 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* GM代/回 */}
-                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
-                              <div style={{ width: '50px' }} className="text-right">
+                            <TableCell className="border-r border-gray-300" style={{ width: '60px' }}>
+                              <div style={{ width: '60px' }} className="text-right">
                                 <span className="text-sm text-red-600">
                                   {formatLicenseAmount(scenario.gmFee || 0)}
                                 </span>
@@ -1341,8 +1379,8 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* 雑費/回 */}
-                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
-                              <div style={{ width: '50px' }} className="text-right">
+                            <TableCell className="border-r border-gray-300" style={{ width: '60px' }}>
+                              <div style={{ width: '60px' }} className="text-right">
                                 <span className="text-sm text-red-600">
                                   {formatLicenseAmount(scenario.miscellaneousExpenses || 0)}
                                 </span>
@@ -1350,8 +1388,8 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* ライセンス/回 */}
-                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
-                              <div style={{ width: '50px' }} className="text-right">
+                            <TableCell className="border-r border-gray-300" style={{ width: '60px' }}>
+                              <div style={{ width: '60px' }} className="text-right">
                                 <span className="text-sm text-orange-600">
                                   {formatLicenseAmount(scenario.licenseAmount || 0)}
                                 </span>
@@ -1359,8 +1397,8 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* コスト/回 */}
-                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
-                              <div style={{ width: '50px' }} className="text-right">
+                            <TableCell className="border-r border-gray-300" style={{ width: '60px' }}>
+                              <div style={{ width: '60px' }} className="text-right">
                                 <span className="text-sm text-red-600">
                                   {formatLicenseAmount((scenario.gmFee || 0) + (scenario.miscellaneousExpenses || 0))}
                                 </span>
@@ -1368,8 +1406,8 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* 粗利/回 */}
-                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
-                              <div style={{ width: '50px' }} className="text-right">
+                            <TableCell className="border-r border-gray-300" style={{ width: '60px' }}>
+                              <div style={{ width: '60px' }} className="text-right">
                                 <span className="text-sm text-blue-600 font-medium">
                                   {formatLicenseAmount(((scenario.playerCount?.max || 0) * (scenario.participationFee || 0)) - (scenario.gmFee || 0) - (scenario.miscellaneousExpenses || 0))}
                                 </span>
@@ -1377,8 +1415,8 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* 売上累計 */}
-                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
-                              <div style={{ width: '50px' }} className="text-right">
+                            <TableCell className="border-r border-gray-300" style={{ width: '60px' }}>
+                              <div style={{ width: '60px' }} className="text-right">
                                 <span className="text-sm text-green-600 font-medium">
                                   {formatLicenseAmount((scenario.playerCount?.max || 0) * (scenario.participationFee || 0) * scenario.playCount)}
                                 </span>
@@ -1386,8 +1424,8 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* コスト累計 */}
-                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
-                              <div style={{ width: '50px' }} className="text-right">
+                            <TableCell className="border-r border-gray-300" style={{ width: '60px' }}>
+                              <div style={{ width: '60px' }} className="text-right">
                                 <span className="text-sm text-red-600 font-medium">
                                   {formatLicenseAmount(((scenario.gmFee || 0) + (scenario.miscellaneousExpenses || 0)) * scenario.playCount + (scenario.productionCost || 0))}
                                 </span>
@@ -1395,74 +1433,99 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* 最終純利益 */}
-                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
-                              <div style={{ width: '50px' }} className="text-right">
+                            <TableCell className="border-r border-gray-300" style={{ width: '60px' }}>
+                              <div style={{ width: '60px' }} className="text-right">
                                 <span className="text-sm text-blue-600 font-medium">
                                   {formatLicenseAmount(((scenario.playerCount?.max || 0) * (scenario.participationFee || 0) * scenario.playCount) - ((scenario.gmFee || 0) + (scenario.miscellaneousExpenses || 0)) * scenario.playCount - (scenario.productionCost || 0))}
                                 </span>
                               </div>
                             </TableCell>
 
-                            {/* ROI (%) */}
-                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
-                              <div style={{ width: '50px' }} className="text-right">
-                                <span className={`text-sm font-medium ${calculateFinancialMetrics(scenario).roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {/* ROI率 */}
+                            <TableCell className="border-r border-gray-300" style={{ width: '60px' }}>
+                              <div style={{ width: '60px' }} className="text-right">
+                                <span className={`text-sm font-medium ${
+                                  calculateFinancialMetrics(scenario).roi >= 100 ? 'text-green-600' :
+                                  calculateFinancialMetrics(scenario).roi >= 50 ? 'text-yellow-600' :
+                                  'text-red-600'
+                                }`}>
                                   {calculateFinancialMetrics(scenario).roi}%
                                 </span>
                               </div>
                             </TableCell>
 
-                            {/* 回収期間 */}
-                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
-                              <div style={{ width: '50px' }} className="text-right">
-                                <span className="text-sm text-orange-600 font-medium">
+                            {/* 回収回数 */}
+                            <TableCell className="border-r border-gray-300" style={{ width: '60px' }}>
+                              <div style={{ width: '60px' }} className="text-right">
+                                <span className={`text-sm font-medium ${
+                                  calculateFinancialMetrics(scenario).paybackPeriod === '未回収' ? 'text-gray-600' :
+                                  parseInt(calculateFinancialMetrics(scenario).paybackPeriod.replace('回', '')) <= 10 ? 'text-green-600' :
+                                  parseInt(calculateFinancialMetrics(scenario).paybackPeriod.replace('回', '')) <= 20 ? 'text-yellow-600' :
+                                  'text-red-600'
+                                }`}>
                                   {calculateFinancialMetrics(scenario).paybackPeriod}
                                 </span>
                               </div>
                             </TableCell>
 
                             {/* 純利益率 (%) */}
-                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
-                              <div style={{ width: '50px' }} className="text-right">
-                                <span className={`text-sm font-medium ${calculateFinancialMetrics(scenario).profitMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            <TableCell className="border-r border-gray-300" style={{ width: '60px' }}>
+                              <div style={{ width: '60px' }} className="text-right">
+                                <span className={`text-sm font-medium ${
+                                  calculateFinancialMetrics(scenario).profitMargin >= 20 ? 'text-green-600' :
+                                  calculateFinancialMetrics(scenario).profitMargin >= 10 ? 'text-yellow-600' :
+                                  calculateFinancialMetrics(scenario).profitMargin >= 0 ? 'text-red-600' :
+                                  'text-gray-600'
+                                }`}>
                                   {calculateFinancialMetrics(scenario).profitMargin}%
                                 </span>
                               </div>
                             </TableCell>
 
                             {/* 回収率 */}
-                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
-                              <div style={{ width: '50px' }} className="text-right">
-                                <span className={`text-sm font-medium ${calculateFinancialMetrics(scenario).recoveryRate >= 100 ? 'text-green-600' : 'text-blue-600'}`}>
+                            <TableCell className="border-r border-gray-300" style={{ width: '60px' }}>
+                              <div style={{ width: '60px' }} className="text-right">
+                                <span className={`text-sm font-medium ${
+                                  calculateFinancialMetrics(scenario).recoveryRate >= 100 ? 'text-green-600' :
+                                  calculateFinancialMetrics(scenario).recoveryRate >= 50 ? 'text-yellow-600' :
+                                  'text-red-600'
+                                }`}>
                                   {calculateFinancialMetrics(scenario).recoveryRate}%
                                 </span>
                               </div>
                             </TableCell>
 
-                            {/* 回収速度スコア */}
-                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
-                              <div style={{ width: '50px' }} className="text-center">
+                            {/* 残数 */}
+                            <TableCell className="border-r border-gray-300" style={{ width: '80px' }}>
+                              <div style={{ width: '80px' }} className="text-center">
                                 {(() => {
                                   const recoveryMetrics = calculateRecoveryMetrics(scenario);
-                                  if (recoveryMetrics.recoverySpeedScore === null) {
+                                  const remainingDays = recoveryMetrics.remainingDays;
+                                  
+                                  if (remainingDays === null) {
                                     return <span className="text-xs text-gray-500">-</span>;
                                   }
+                                  
                                   return (
-                                    <span className={`text-xs font-medium ${
-                                      recoveryMetrics.recoverySpeedScore <= 1.0 ? 'text-green-600' :
-                                      recoveryMetrics.recoverySpeedScore <= 1.5 ? 'text-blue-600' :
-                                      recoveryMetrics.recoverySpeedScore <= 2.0 ? 'text-yellow-600' : 'text-red-600'
-                                    }`}>
-                                      {recoveryMetrics.recoverySpeedScore}
-                                    </span>
+                                    <div className="text-center">
+                                      <div className={`text-sm font-medium ${
+                                        remainingDays > 0 ? 'text-gray-900' : 
+                                        remainingDays === 0 ? 'text-blue-600' : 
+                                        'text-red-600'
+                                      }`}>
+                                        {remainingDays > 0 ? `${remainingDays}日` : 
+                                         remainingDays === 0 ? '今日' : 
+                                         `${Math.abs(remainingDays)}日超過`}
+                                      </div>
+                                    </div>
                                   );
                                 })()}
                               </div>
                             </TableCell>
 
                             {/* 回収状況 */}
-                            <TableCell className="border-r border-gray-300" style={{ width: '50px' }}>
-                              <div style={{ width: '50px' }} className="text-center">
+                            <TableCell className="border-r border-gray-300" style={{ width: '60px' }}>
+                              <div style={{ width: '60px' }} className="text-center">
                                 {(() => {
                                   const recoveryMetrics = calculateRecoveryMetrics(scenario);
                                   const getStatusBadge = (status: string) => {
@@ -1493,7 +1556,7 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* 操作 */}
-                            <TableCell style={{ width: '50px' }}>
+                            <TableCell style={{ width: '60px' }}>
                               <div className="flex gap-1">
                             <Tooltip>
                               <TooltipTrigger asChild>

@@ -55,7 +55,6 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
     requiredProps: [],
     genre: [],
     productionCost: 0,
-    depreciation: 0,
     revenue: 0,
     gmFee: 0,
     miscellaneousExpenses: 0,
@@ -109,7 +108,6 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
           requiredProps: scenario.requiredProps || [],
           genre: scenario.genre || [],
           productionCost: scenario.productionCost || 0,
-          depreciation: scenario.depreciation || 0,
           revenue: scenario.revenue || 0,
           gmFee: scenario.gmFee || 0,
           miscellaneousExpenses: scenario.miscellaneousExpenses || 0,
@@ -135,7 +133,6 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
           requiredProps: [],
           genre: [],
           productionCost: 0,
-          depreciation: 0,
           revenue: 0,
           gmFee: 0,
           miscellaneousExpenses: 0,
@@ -319,18 +316,6 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
                   step="100"
                   value={formData.productionCost || 0}
                   onChange={(e) => updateFormData('productionCost', parseInt(e.target.value) || 0)}
-                  className="border border-slate-200"
-                />
-              </div>
-              <div>
-                <Label htmlFor="depreciation">減価償却（円）</Label>
-                <Input
-                  id="depreciation"
-                  type="number"
-                  min="0"
-                  step="100"
-                  value={formData.depreciation || 0}
-                  onChange={(e) => updateFormData('depreciation', parseInt(e.target.value) || 0)}
                   className="border border-slate-200"
                 />
               </div>

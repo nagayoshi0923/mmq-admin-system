@@ -35,7 +35,6 @@ export interface Scenario {
   hasPreReading: boolean; // 事前読み込みの有無
   releaseDate?: string; // リリース日（YYYY-MM-DD形式）
   productionCost?: number; // 制作費（円）
-  depreciation?: number; // 減価償却（円）
   revenue?: number; // 売上（円）
   gmFee?: number; // GM代（円）
   miscellaneousExpenses?: number; // 雑費（円）
@@ -793,7 +792,6 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
             playCount: scenario.play_count || 0,
             releaseDate: scenario.release_date || undefined,
             productionCost: scenario.production_cost || 0,
-            depreciation: scenario.depreciation || 0,
             revenue: scenario.revenue || 0,
             gmFee: scenario.gm_fee || 0,
             miscellaneousExpenses: scenario.miscellaneous_expenses || 0,
@@ -936,7 +934,6 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
         has_pre_reading: scenario.hasPreReading,
         release_date: scenario.releaseDate,
         production_cost: scenario.productionCost || 0,
-        depreciation: scenario.depreciation || 0,
         revenue: scenario.revenue || 0,
         gm_fee: scenario.gmFee || 0,
         miscellaneous_expenses: scenario.miscellaneousExpenses || 0,
@@ -986,7 +983,6 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
         has_pre_reading: scenario.hasPreReading,
         release_date: scenario.releaseDate,
         production_cost: scenario.productionCost || 0,
-        depreciation: scenario.depreciation || 0,
         revenue: scenario.revenue || 0,
         gm_fee: scenario.gmFee || 0,
         miscellaneous_expenses: scenario.miscellaneousExpenses || 0,
