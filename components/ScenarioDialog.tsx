@@ -85,6 +85,12 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
   const [newProp, setNewProp] = useState('');
   const [newPropCost, setNewPropCost] = useState('');
   const [newPropCostType, setNewPropCostType] = useState<'per_play' | 'one_time'>('per_play');
+  const [newProductionCost, setNewProductionCost] = useState('');
+  const [newProductionCostAmount, setNewProductionCostAmount] = useState('');
+  const [newRevenue, setNewRevenue] = useState('');
+  const [newRevenueAmount, setNewRevenueAmount] = useState('');
+  const [productionCostItems, setProductionCostItems] = useState<{ name: string; cost: number }[]>([]);
+  const [revenueItems, setRevenueItems] = useState<{ name: string; cost: number }[]>([]);
   const [newGenre, setNewGenre] = useState('');
 
   // GM可能なスタッフを取得（GMまたはマネージャーの役割を持つアクティブなスタッフ）
@@ -232,6 +238,56 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
       setNewPropCost('');
       setNewPropCostType('per_play');
     }
+  };
+
+  const addProductionCost = () => {
+    if (newProductionCost.trim() && newProductionCostAmount.trim()) {
+      const cost = parseNumber(newProductionCostAmount);
+      if (cost > 0) {
+        const newItem = { name: newProductionCost.trim(), cost };
+        setProductionCostItems(prev => [...prev, newItem]);
+        setFormData(prev => ({
+          ...prev,
+          productionCost: (prev.productionCost || 0) + cost
+        }));
+        setNewProductionCost('');
+        setNewProductionCostAmount('');
+      }
+    }
+  };
+
+  const addRevenue = () => {
+    if (newRevenue.trim() && newRevenueAmount.trim()) {
+      const revenue = parseNumber(newRevenueAmount);
+      if (revenue > 0) {
+        const newItem = { name: newRevenue.trim(), cost: revenue };
+        setRevenueItems(prev => [...prev, newItem]);
+        setFormData(prev => ({
+          ...prev,
+          revenue: (prev.revenue || 0) + revenue
+        }));
+        setNewRevenue('');
+        setNewRevenueAmount('');
+      }
+    }
+  };
+
+  const removeProductionCostItem = (index: number) => {
+    const item = productionCostItems[index];
+    setProductionCostItems(prev => prev.filter((_, i) => i !== index));
+    setFormData(prev => ({
+      ...prev,
+      productionCost: (prev.productionCost || 0) - item.cost
+    }));
+  };
+
+  const removeRevenueItem = (index: number) => {
+    const item = revenueItems[index];
+    setRevenueItems(prev => prev.filter((_, i) => i !== index));
+    setFormData(prev => ({
+      ...prev,
+      revenue: (prev.revenue || 0) - item.cost
+    }));
   };
 
   const removeProp = (propName: string) => {
@@ -455,6 +511,22 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
                   className="border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
+              <div>
+                <Label htmlFor="gmFee" className="text-sm font-medium">
+                  GM代
+                </Label>
+                <Input
+                  id="gmFee"
+                  type="text"
+                  value={formatNumber(formData.gmFee || 0)}
+                  onChange={(e) => {
+                    const value = parseNumber(e.target.value);
+                    setFormData(prev => ({ ...prev, gmFee: value }));
+                  }}
+                  placeholder="例: 2,000"
+                  className="border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
             </div>
 
             <div>
@@ -475,62 +547,48 @@ const ScenarioDialog = function ScenarioDialog({ scenario, onSave, onDelete, tri
           {/* 収益情報 */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">収益情報</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="productionCost" className="text-sm font-medium">制作費（円）</Label>
+            
+            {/* 制作費 */}
+            <div className="space-y-2">
+              <h4 className="text-md font-medium text-gray-700">制作費</h4>
+              <div className="flex gap-2">
                 <Input
-                  id="productionCost"
-                  type="text"
-                  value={formatNumber(formData.productionCost || 0)}
-                  onChange={(e) => {
-                    const value = parseNumber(e.target.value);
-                    updateFormData('productionCost', value);
-                  }}
-                  placeholder="例: 50,000"
-                  className="border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="制作費項目名を入力"
+                  value={newProductionCost}
+                  onChange={(e) => setNewProductionCost(e.target.value)}
+                  className="border border-slate-200"
                 />
+                <Input
+                  placeholder="金額"
+                  value={newProductionCostAmount}
+                  onChange={(e) => setNewProductionCostAmount(e.target.value)}
+                  className="border border-slate-200 w-24"
+                />
+                <Button type="button" onClick={addProductionCost}>
+                  <Plus className="w-4 h-4" />
+                </Button>
               </div>
-              <div>
-                <Label htmlFor="revenue" className="text-sm font-medium">売上（円）</Label>
-                <Input
-                  id="revenue"
-                  type="text"
-                  value={formatNumber(formData.revenue || 0)}
-                  onChange={(e) => {
-                    const value = parseNumber(e.target.value);
-                    updateFormData('revenue', value);
-                  }}
-                  placeholder="例: 100,000"
-                  className="border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
+              <div className="space-y-2">
+                {productionCostItems.map((item, index) => (
+                  <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        {item.name}
+                      </Badge>
+                      <span className="text-sm text-gray-600">{formatNumber(item.cost)}円</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeProductionCostItem(index)}
+                      className="hover:bg-destructive/20 rounded-full p-1"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
               </div>
-              <div>
-                <Label htmlFor="gmFee" className="text-sm font-medium">GM代（円）</Label>
-                <Input
-                  id="gmFee"
-                  type="text"
-                  value={formatNumber(formData.gmFee || 0)}
-                  onChange={(e) => {
-                    const value = parseNumber(e.target.value);
-                    updateFormData('gmFee', value);
-                  }}
-                  placeholder="例: 5,000"
-                  className="border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <Label htmlFor="miscellaneousExpenses" className="text-sm font-medium">雑費（円）</Label>
-                <Input
-                  id="miscellaneousExpenses"
-                  type="text"
-                  value={formatNumber(formData.miscellaneousExpenses || 0)}
-                  onChange={(e) => {
-                    const value = parseNumber(e.target.value);
-                    updateFormData('miscellaneousExpenses', value);
-                  }}
-                  placeholder="例: 2,000"
-                  className="border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
+              <div className="text-sm text-gray-600">
+                現在の制作費: {formatNumber(formData.productionCost || 0)}円
               </div>
             </div>
           </div>
