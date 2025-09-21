@@ -891,14 +891,14 @@ export const ScenarioManager = React.memo(() => {
                               </div>
                             </TableCell>
 
-                            {/* 売上/回 */}
-                            <TableCell className="w-[100px]">
-                              <div className="w-[100px] text-right">
-                                <span className="text-sm text-green-600">
-                                  {formatLicenseAmount(scenario.revenue || 0)}
-                                </span>
-                              </div>
-                            </TableCell>
+                             {/* 売上/回 */}
+                             <TableCell className="w-[100px]">
+                               <div className="w-[100px] text-right">
+                                 <span className="text-sm text-green-600">
+                                   {formatLicenseAmount((scenario.playerCount?.max || 0) * (scenario.participationFee || 0))}
+                                 </span>
+                               </div>
+                             </TableCell>
 
                             {/* GM代/回 */}
                             <TableCell className="w-[100px]">
@@ -927,23 +927,23 @@ export const ScenarioManager = React.memo(() => {
                               </div>
                             </TableCell>
 
-                            {/* 粗利/回 */}
-                            <TableCell className="w-[100px]">
-                              <div className="w-[100px] text-right">
-                                <span className="text-sm text-blue-600 font-medium">
-                                  {formatLicenseAmount((scenario.revenue || 0) - (scenario.gmFee || 0) - (scenario.miscellaneousExpenses || 0))}
-                                </span>
-                              </div>
-                            </TableCell>
+                             {/* 粗利/回 */}
+                             <TableCell className="w-[100px]">
+                               <div className="w-[100px] text-right">
+                                 <span className="text-sm text-blue-600 font-medium">
+                                   {formatLicenseAmount(((scenario.playerCount?.max || 0) * (scenario.participationFee || 0)) - (scenario.gmFee || 0) - (scenario.miscellaneousExpenses || 0))}
+                                 </span>
+                               </div>
+                             </TableCell>
 
-                            {/* 売上累計 */}
-                            <TableCell className="w-[100px]">
-                              <div className="w-[100px] text-right">
-                                <span className="text-sm text-green-600 font-medium">
-                                  {formatLicenseAmount((scenario.revenue || 0) * scenario.playCount)}
-                                </span>
-                              </div>
-                            </TableCell>
+                             {/* 売上累計 */}
+                             <TableCell className="w-[100px]">
+                               <div className="w-[100px] text-right">
+                                 <span className="text-sm text-green-600 font-medium">
+                                   {formatLicenseAmount((scenario.playerCount?.max || 0) * (scenario.participationFee || 0) * scenario.playCount)}
+                                 </span>
+                               </div>
+                             </TableCell>
 
                             {/* コスト累計 */}
                             <TableCell className="w-[100px]">
@@ -963,14 +963,14 @@ export const ScenarioManager = React.memo(() => {
                               </div>
                             </TableCell>
 
-                            {/* 最終純利益 */}
-                            <TableCell className="w-[100px]">
-                              <div className="w-[100px] text-right">
-                                <span className="text-sm text-blue-600 font-medium">
-                                  {formatLicenseAmount(((scenario.revenue || 0) * scenario.playCount) - ((scenario.gmFee || 0) + (scenario.miscellaneousExpenses || 0)) * scenario.playCount - (scenario.productionCost || 0))}
-                                </span>
-                              </div>
-                            </TableCell>
+                             {/* 最終純利益 */}
+                             <TableCell className="w-[100px]">
+                               <div className="w-[100px] text-right">
+                                 <span className="text-sm text-blue-600 font-medium">
+                                   {formatLicenseAmount(((scenario.playerCount?.max || 0) * (scenario.participationFee || 0) * scenario.playCount) - ((scenario.gmFee || 0) + (scenario.miscellaneousExpenses || 0)) * scenario.playCount - (scenario.productionCost || 0))}
+                                 </span>
+                               </div>
+                             </TableCell>
 
                             {/* 操作 */}
                             <TableCell>
