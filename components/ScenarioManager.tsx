@@ -410,6 +410,73 @@ export const ScenarioManager = React.memo(() => {
     };
   };
 
+  // 回収指標の計算関数
+  const calculateRecoveryMetrics = (scenario: Scenario) => {
+    const releaseDate = scenario.releaseDate;
+    if (!releaseDate) {
+      return {
+        recoverySpeedScore: null,
+        timelineStatus: 'リリース日未設定',
+        recoveryStatus: 'unknown',
+        monthsElapsed: 0,
+        remainingMonths: null
+      };
+    }
+
+    const release = new Date(releaseDate);
+    const now = new Date();
+    const monthsElapsed = Math.floor((now.getTime() - release.getTime()) / (1000 * 60 * 60 * 24 * 30.44)); // 平均月日数
+
+    const metrics = calculateFinancialMetrics(scenario);
+    const paybackPeriodMonths = metrics.paybackPeriod === '未回収' ? Infinity : parseInt(metrics.paybackPeriod.replace('回', ''));
+
+    if (paybackPeriodMonths === Infinity) {
+      return {
+        recoverySpeedScore: null,
+        timelineStatus: '回収不可',
+        recoveryStatus: 'unrecoverable',
+        monthsElapsed,
+        remainingMonths: null
+      };
+    }
+
+    const recoverySpeedScore = monthsElapsed > 0 ? paybackPeriodMonths / monthsElapsed : null;
+    const remainingMonths = Math.max(0, paybackPeriodMonths - monthsElapsed);
+    
+    let timelineStatus = '';
+    let recoveryStatus = '';
+
+    if (remainingMonths === 0) {
+      timelineStatus = '回収完了';
+      recoveryStatus = 'completed';
+    } else if (recoverySpeedScore !== null) {
+      if (recoverySpeedScore <= 1.0) {
+        timelineStatus = `優秀 (${remainingMonths}ヶ月残り)`;
+        recoveryStatus = 'excellent';
+      } else if (recoverySpeedScore <= 1.5) {
+        timelineStatus = `良好 (${remainingMonths}ヶ月残り)`;
+        recoveryStatus = 'good';
+      } else if (recoverySpeedScore <= 2.0) {
+        timelineStatus = `普通 (${remainingMonths}ヶ月残り)`;
+        recoveryStatus = 'average';
+      } else {
+        timelineStatus = `要改善 (${remainingMonths}ヶ月残り)`;
+        recoveryStatus = 'poor';
+      }
+    } else {
+      timelineStatus = `回収予定まで${remainingMonths}ヶ月`;
+      recoveryStatus = 'pending';
+    }
+
+    return {
+      recoverySpeedScore: recoverySpeedScore ? Math.round(recoverySpeedScore * 100) / 100 : null,
+      timelineStatus,
+      recoveryStatus,
+      monthsElapsed,
+      remainingMonths
+    };
+  };
+
   // データベースのカラム名をフロントエンドの形式に変換する関数
   const transformDatabaseToFrontend = (dbScenario: any): Scenario => {
     return {
@@ -943,6 +1010,9 @@ export const ScenarioManager = React.memo(() => {
                           </div>
                         </TableHead>
                         <TableHead className="w-[60px] border-r border-gray-300">売上/回</TableHead>
+                        <TableHead className="w-[60px] border-r border-gray-300">GM代/回</TableHead>
+                        <TableHead className="w-[60px] border-r border-gray-300">雑費/回</TableHead>
+                        <TableHead className="w-[60px] border-r border-gray-300">ライセンス/回</TableHead>
                         <TableHead className="w-[60px] border-r border-gray-300">コスト/回</TableHead>
                         <TableHead className="w-[60px] border-r border-gray-300">粗利/回</TableHead>
                         <TableHead className="w-[100px] border-r border-gray-300">売上累計</TableHead>
@@ -975,6 +1045,8 @@ export const ScenarioManager = React.memo(() => {
                             {getSortIcon('profitMargin')}
                           </div>
                         </TableHead>
+                        <TableHead className="w-[80px] border-r border-gray-300">回収速度</TableHead>
+                        <TableHead className="w-[120px] border-r border-gray-300">回収状況</TableHead>
                         <TableHead className="w-20">操作</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1026,6 +1098,33 @@ export const ScenarioManager = React.memo(() => {
                               <div className="w-[60px] text-right">
                                 <span className="text-sm text-green-600">
                                   {formatLicenseAmount((scenario.playerCount?.max || 0) * (scenario.participationFee || 0))}
+                                </span>
+                              </div>
+                            </TableCell>
+
+                            {/* GM代/回 */}
+                            <TableCell className="w-[60px] border-r border-gray-300">
+                              <div className="w-[60px] text-right">
+                                <span className="text-sm text-red-600">
+                                  {formatLicenseAmount(scenario.gmFee || 0)}
+                                </span>
+                              </div>
+                            </TableCell>
+
+                            {/* 雑費/回 */}
+                            <TableCell className="w-[60px] border-r border-gray-300">
+                              <div className="w-[60px] text-right">
+                                <span className="text-sm text-red-600">
+                                  {formatLicenseAmount(scenario.miscellaneousExpenses || 0)}
+                                </span>
+                              </div>
+                            </TableCell>
+
+                            {/* ライセンス/回 */}
+                            <TableCell className="w-[60px] border-r border-gray-300">
+                              <div className="w-[60px] text-right">
+                                <span className="text-sm text-orange-600">
+                                  {formatLicenseAmount(scenario.licenseAmount || 0)}
                                 </span>
                               </div>
                             </TableCell>
@@ -1099,6 +1198,59 @@ export const ScenarioManager = React.memo(() => {
                                 <span className={`text-sm font-medium ${calculateFinancialMetrics(scenario).profitMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                   {calculateFinancialMetrics(scenario).profitMargin}%
                                 </span>
+                              </div>
+                            </TableCell>
+
+                            {/* 回収速度スコア */}
+                            <TableCell className="w-[80px] border-r border-gray-300">
+                              <div className="w-[80px] text-center">
+                                {(() => {
+                                  const recoveryMetrics = calculateRecoveryMetrics(scenario);
+                                  if (recoveryMetrics.recoverySpeedScore === null) {
+                                    return <span className="text-xs text-gray-500">-</span>;
+                                  }
+                                  return (
+                                    <span className={`text-xs font-medium ${
+                                      recoveryMetrics.recoverySpeedScore <= 1.0 ? 'text-green-600' :
+                                      recoveryMetrics.recoverySpeedScore <= 1.5 ? 'text-blue-600' :
+                                      recoveryMetrics.recoverySpeedScore <= 2.0 ? 'text-yellow-600' : 'text-red-600'
+                                    }`}>
+                                      {recoveryMetrics.recoverySpeedScore}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
+                            </TableCell>
+
+                            {/* 回収状況 */}
+                            <TableCell className="w-[120px] border-r border-gray-300">
+                              <div className="w-[120px] text-center">
+                                {(() => {
+                                  const recoveryMetrics = calculateRecoveryMetrics(scenario);
+                                  const getStatusBadge = (status: string) => {
+                                    switch (status) {
+                                      case 'completed':
+                                        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">完了</Badge>;
+                                      case 'excellent':
+                                        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">優秀</Badge>;
+                                      case 'good':
+                                        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">良好</Badge>;
+                                      case 'average':
+                                        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">普通</Badge>;
+                                      case 'poor':
+                                        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">要改善</Badge>;
+                                      case 'pending':
+                                        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">予定</Badge>;
+                                      case 'unrecoverable':
+                                        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">不可</Badge>;
+                                      case 'unknown':
+                                        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">未設定</Badge>;
+                                      default:
+                                        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">-</Badge>;
+                                    }
+                                  };
+                                  return getStatusBadge(recoveryMetrics.recoveryStatus);
+                                })()}
                               </div>
                             </TableCell>
 
