@@ -229,8 +229,11 @@ export const ScenarioManager = React.memo(() => {
   const [activeTab, setActiveTab] = useState('basic');
 
   // ソート状態の管理
-  const [sortField, setSortField] = useState<keyof Scenario | null>(null);
+  const [sortField, setSortField] = useState<keyof Scenario | 'playCount' | 'roi' | 'paybackPeriod' | 'profitMargin' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // 回収期間設定（月単位）
+  const [paybackPeriodMonths, setPaybackPeriodMonths] = useState(12);
 
 
   // シナリオ保存関数
@@ -346,7 +349,7 @@ export const ScenarioManager = React.memo(() => {
   };
 
   // ソート処理関数
-  const handleSort = (field: keyof Scenario) => {
+  const handleSort = (field: keyof Scenario | 'playCount' | 'roi' | 'paybackPeriod' | 'profitMargin') => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -363,6 +366,48 @@ export const ScenarioManager = React.memo(() => {
       event.scenario === scenarioTitle && 
       !event.is_cancelled
     ).length;
+  };
+
+  // 経理分析用の計算関数
+  const calculateFinancialMetrics = (scenario: Scenario) => {
+    const playCount = scenario.playCount || 0;
+    const productionCost = scenario.productionCost || 0;
+    const participationFee = scenario.participationFee || 0;
+    const maxPlayers = scenario.playerCount?.max || 0;
+    const gmFee = scenario.gmFee || 0;
+    const miscellaneousExpenses = scenario.miscellaneousExpenses || 0;
+
+    // 売上計算
+    const revenuePerPlay = maxPlayers * participationFee;
+    const totalRevenue = revenuePerPlay * playCount;
+
+    // コスト計算
+    const costPerPlay = gmFee + miscellaneousExpenses;
+    const totalCost = costPerPlay * playCount + productionCost;
+
+    // 利益計算
+    const finalProfit = totalRevenue - totalCost;
+
+    // ROI計算
+    const roi = productionCost > 0 ? (finalProfit / productionCost) * 100 : 0;
+
+    // 回収期間計算（月単位）
+    const profitPerPlay = revenuePerPlay - costPerPlay;
+    const paybackPeriod = profitPerPlay > 0 ? Math.ceil(productionCost / profitPerPlay) : Infinity;
+
+    // 純利益率計算
+    const profitMargin = totalRevenue > 0 ? (finalProfit / totalRevenue) * 100 : 0;
+
+    return {
+      revenuePerPlay,
+      totalRevenue,
+      costPerPlay,
+      totalCost,
+      finalProfit,
+      roi: Math.round(roi * 10) / 10,
+      paybackPeriod: paybackPeriod === Infinity ? '未回収' : `${paybackPeriod}回`,
+      profitMargin: Math.round(profitMargin * 10) / 10
+    };
   };
 
   // データベースのカラム名をフロントエンドの形式に変換する関数
@@ -425,21 +470,37 @@ export const ScenarioManager = React.memo(() => {
   const sortedScenarios = Array.isArray(scenariosWithPlayCount) ? [...scenariosWithPlayCount].sort((a, b) => {
     if (!sortField) return 0;
     
-    let aValue = a[sortField];
-    let bValue = b[sortField];
+    let aValue: any;
+    let bValue: any;
     
-    // playerCountフィールドの特別処理
-    if (sortField === 'playerCount') {
-      aValue = a.playerCount.min as any; // 最小人数で比較
-      bValue = b.playerCount.min as any;
+    if (sortField === 'playCount') {
+      aValue = a.playCount || 0;
+      bValue = b.playCount || 0;
+    } else if (sortField === 'roi') {
+      aValue = calculateFinancialMetrics(a).roi;
+      bValue = calculateFinancialMetrics(b).roi;
+    } else if (sortField === 'paybackPeriod') {
+      const aPayback = calculateFinancialMetrics(a).paybackPeriod;
+      const bPayback = calculateFinancialMetrics(b).paybackPeriod;
+      aValue = aPayback === '未回収' ? Infinity : parseInt(aPayback.replace('回', ''));
+      bValue = bPayback === '未回収' ? Infinity : parseInt(bPayback.replace('回', ''));
+    } else if (sortField === 'profitMargin') {
+      aValue = calculateFinancialMetrics(a).profitMargin;
+      bValue = calculateFinancialMetrics(b).profitMargin;
+    } else if (sortField === 'playerCount') {
+      aValue = a.playerCount?.min || 0;
+      bValue = b.playerCount?.min || 0;
     } else {
+      aValue = a[sortField];
+      bValue = b[sortField];
+      
       // 配列の場合は長さで比較
-      if (Array.isArray(aValue)) aValue = aValue.length as any;
-      if (Array.isArray(bValue)) bValue = bValue.length as any;
+      if (Array.isArray(aValue)) aValue = aValue.length;
+      if (Array.isArray(bValue)) bValue = bValue.length;
       
       // 文字列の場合は大文字小文字を無視して比較
-      if (typeof aValue === 'string') aValue = aValue.toLowerCase() as any;
-      if (typeof bValue === 'string') bValue = bValue.toLowerCase() as any;
+      if (typeof aValue === 'string') aValue = aValue.toLowerCase();
+      if (typeof bValue === 'string') bValue = bValue.toLowerCase();
     }
     
     if (aValue < bValue) {
@@ -452,7 +513,7 @@ export const ScenarioManager = React.memo(() => {
   }) : [];
 
   // ソートアイコンの表示
-  const getSortIcon = (field: keyof Scenario) => {
+  const getSortIcon = (field: keyof Scenario | 'playCount' | 'roi' | 'paybackPeriod' | 'profitMargin') => {
     if (sortField !== field) {
       return <ArrowUpDown className="w-4 h-4 opacity-50" />;
     }
@@ -625,17 +686,18 @@ export const ScenarioManager = React.memo(() => {
                   </ul>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-orange-600 mb-2">減価償却</h4>
-                  <ul className="space-y-1 text-muted-foreground">
-                    <li>• <strong>減価償却/回</strong>: 制作費 ÷ 累計公演数</li>
-                    <li>• <strong>未償却残高</strong>: 公演回数0回なら制作費、1回以上なら0円</li>
-                  </ul>
-                </div>
-                <div>
                   <h4 className="font-semibold text-blue-600 mb-2">利益計算</h4>
                   <ul className="space-y-1 text-muted-foreground">
                     <li>• <strong>粗利/回</strong>: 売上/回 - コスト/回</li>
                     <li>• <strong>最終純利益</strong>: 売上累計 - コスト累計</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-purple-600 mb-2">収益性分析</h4>
+                  <ul className="space-y-1 text-muted-foreground">
+                    <li>• <strong>ROI</strong>: (最終純利益 ÷ 制作費) × 100</li>
+                    <li>• <strong>回収期間</strong>: 制作費 ÷ 1公演あたりの純利益</li>
+                    <li>• <strong>純利益率</strong>: (最終純利益 ÷ 売上累計) × 100</li>
                   </ul>
                 </div>
               </div>
@@ -872,7 +934,7 @@ export const ScenarioManager = React.memo(() => {
                         </TableHead>
                         <TableHead>タイトル</TableHead>
                         <TableHead 
-                          className="cursor-pointer select-none hover:bg-muted/50 w-[100px]"
+                          className="cursor-pointer select-none hover:bg-muted/50 w-[60px]"
                           onClick={() => handleSort('playCount')}
                         >
                           <div className="flex items-center gap-2">
@@ -880,16 +942,39 @@ export const ScenarioManager = React.memo(() => {
                             {getSortIcon('playCount')}
                           </div>
                         </TableHead>
-                        <TableHead className="w-[100px]">ライセンス額/回</TableHead>
-                        <TableHead className="w-[100px]">売上/回</TableHead>
-                        <TableHead className="w-[100px]">GM代/回</TableHead>
-                        <TableHead className="w-[100px]">雑費/回</TableHead>
-                        <TableHead className="w-[100px]">償却/回</TableHead>
-                        <TableHead className="w-[100px]">粗利/回</TableHead>
+                        <TableHead className="w-[60px]">売上/回</TableHead>
+                        <TableHead className="w-[60px]">コスト/回</TableHead>
+                        <TableHead className="w-[60px]">粗利/回</TableHead>
                         <TableHead className="w-[100px]">売上累計</TableHead>
                         <TableHead className="w-[100px]">コスト累計</TableHead>
-                        <TableHead className="w-[100px]">未償却残高</TableHead>
                         <TableHead className="w-[100px]">最終純利益</TableHead>
+                        <TableHead 
+                          className="cursor-pointer select-none hover:bg-muted/50 w-[60px]"
+                          onClick={() => handleSort('roi')}
+                        >
+                          <div className="flex items-center gap-2">
+                            ROI (%)
+                            {getSortIcon('roi')}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer select-none hover:bg-muted/50 w-[60px]"
+                          onClick={() => handleSort('paybackPeriod')}
+                        >
+                          <div className="flex items-center gap-2">
+                            回収期間
+                            {getSortIcon('paybackPeriod')}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer select-none hover:bg-muted/50 w-[60px]"
+                          onClick={() => handleSort('profitMargin')}
+                        >
+                          <div className="flex items-center gap-2">
+                            純利益率 (%)
+                            {getSortIcon('profitMargin')}
+                          </div>
+                        </TableHead>
                         <TableHead className="w-20">操作</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -928,76 +1013,49 @@ export const ScenarioManager = React.memo(() => {
                             </TableCell>
 
                             {/* 累計公演数 */}
-                            <TableCell className="w-[100px]">
-                              <div className="w-[100px] text-right">
+                            <TableCell className="w-[60px]">
+                              <div className="w-[60px] text-right">
                                 <span className="text-sm">
                                   {scenario.playCount}回
                                 </span>
                               </div>
                             </TableCell>
 
-                            {/* ライセンス額/回 */}
-                            <TableCell className="w-[100px]">
-                              <div className="w-[100px] text-right">
-                                <span className="text-sm text-red-600">
-                                  {formatLicenseAmount(scenario.licenseAmount || 0)}
+                            {/* 売上/回 */}
+                            <TableCell className="w-[60px]">
+                              <div className="w-[60px] text-right">
+                                <span className="text-sm text-green-600">
+                                  {formatLicenseAmount((scenario.playerCount?.max || 0) * (scenario.participationFee || 0))}
                                 </span>
                               </div>
                             </TableCell>
 
-                             {/* 売上/回 */}
-                             <TableCell className="w-[100px]">
-                               <div className="w-[100px] text-right">
-                                 <span className="text-sm text-green-600">
-                                   {formatLicenseAmount((scenario.playerCount?.max || 0) * (scenario.participationFee || 0))}
-                                 </span>
-                               </div>
-                             </TableCell>
-
-                            {/* GM代/回 */}
-                            <TableCell className="w-[100px]">
-                              <div className="w-[100px] text-right">
+                            {/* コスト/回 */}
+                            <TableCell className="w-[60px]">
+                              <div className="w-[60px] text-right">
                                 <span className="text-sm text-red-600">
-                                  {formatLicenseAmount(scenario.gmFee || 0)}
+                                  {formatLicenseAmount((scenario.gmFee || 0) + (scenario.miscellaneousExpenses || 0))}
                                 </span>
                               </div>
                             </TableCell>
 
-                            {/* 雑費/回 */}
-                            <TableCell className="w-[100px]">
-                              <div className="w-[100px] text-right">
-                                <span className="text-sm text-red-600">
-                                  {formatLicenseAmount(scenario.miscellaneousExpenses || 0)}
+                            {/* 粗利/回 */}
+                            <TableCell className="w-[60px]">
+                              <div className="w-[60px] text-right">
+                                <span className="text-sm text-blue-600 font-medium">
+                                  {formatLicenseAmount(((scenario.playerCount?.max || 0) * (scenario.participationFee || 0)) - (scenario.gmFee || 0) - (scenario.miscellaneousExpenses || 0))}
                                 </span>
                               </div>
                             </TableCell>
 
-                            {/* 償却/回 */}
+                            {/* 売上累計 */}
                             <TableCell className="w-[100px]">
                               <div className="w-[100px] text-right">
-                                <span className="text-sm text-red-600">
-                                  {formatLicenseAmount((scenario.productionCost || 0) / Math.max(scenario.playCount, 1))}
+                                <span className="text-sm text-green-600 font-medium">
+                                  {formatLicenseAmount((scenario.playerCount?.max || 0) * (scenario.participationFee || 0) * scenario.playCount)}
                                 </span>
                               </div>
                             </TableCell>
-
-                             {/* 粗利/回 */}
-                             <TableCell className="w-[100px]">
-                               <div className="w-[100px] text-right">
-                                 <span className="text-sm text-blue-600 font-medium">
-                                   {formatLicenseAmount(((scenario.playerCount?.max || 0) * (scenario.participationFee || 0)) - (scenario.gmFee || 0) - (scenario.miscellaneousExpenses || 0))}
-                                 </span>
-                               </div>
-                             </TableCell>
-
-                             {/* 売上累計 */}
-                             <TableCell className="w-[100px]">
-                               <div className="w-[100px] text-right">
-                                 <span className="text-sm text-green-600 font-medium">
-                                   {formatLicenseAmount((scenario.playerCount?.max || 0) * (scenario.participationFee || 0) * scenario.playCount)}
-                                 </span>
-                               </div>
-                             </TableCell>
 
                             {/* コスト累計 */}
                             <TableCell className="w-[100px]">
@@ -1008,23 +1066,41 @@ export const ScenarioManager = React.memo(() => {
                               </div>
                             </TableCell>
 
-                            {/* 未償却残高 */}
+                            {/* 最終純利益 */}
                             <TableCell className="w-[100px]">
                               <div className="w-[100px] text-right">
-                                <span className="text-sm text-red-600 font-medium">
-                                  {formatLicenseAmount(scenario.playCount > 0 ? 0 : (scenario.productionCost || 0))}
+                                <span className="text-sm text-blue-600 font-medium">
+                                  {formatLicenseAmount(((scenario.playerCount?.max || 0) * (scenario.participationFee || 0) * scenario.playCount) - ((scenario.gmFee || 0) + (scenario.miscellaneousExpenses || 0)) * scenario.playCount - (scenario.productionCost || 0))}
                                 </span>
                               </div>
                             </TableCell>
 
-                             {/* 最終純利益 */}
-                             <TableCell className="w-[100px]">
-                               <div className="w-[100px] text-right">
-                                 <span className="text-sm text-blue-600 font-medium">
-                                   {formatLicenseAmount(((scenario.playerCount?.max || 0) * (scenario.participationFee || 0) * scenario.playCount) - ((scenario.gmFee || 0) + (scenario.miscellaneousExpenses || 0)) * scenario.playCount - (scenario.productionCost || 0))}
-                                 </span>
-                               </div>
-                             </TableCell>
+                            {/* ROI (%) */}
+                            <TableCell className="w-[60px]">
+                              <div className="w-[60px] text-right">
+                                <span className={`text-sm font-medium ${calculateFinancialMetrics(scenario).roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                  {calculateFinancialMetrics(scenario).roi}%
+                                </span>
+                              </div>
+                            </TableCell>
+
+                            {/* 回収期間 */}
+                            <TableCell className="w-[60px]">
+                              <div className="w-[60px] text-right">
+                                <span className="text-sm text-orange-600 font-medium">
+                                  {calculateFinancialMetrics(scenario).paybackPeriod}
+                                </span>
+                              </div>
+                            </TableCell>
+
+                            {/* 純利益率 (%) */}
+                            <TableCell className="w-[60px]">
+                              <div className="w-[60px] text-right">
+                                <span className={`text-sm font-medium ${calculateFinancialMetrics(scenario).profitMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                  {calculateFinancialMetrics(scenario).profitMargin}%
+                                </span>
+                              </div>
+                            </TableCell>
 
                             {/* 操作 */}
                             <TableCell>
